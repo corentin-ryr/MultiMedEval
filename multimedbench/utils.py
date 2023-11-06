@@ -24,5 +24,5 @@ class Params:
 
 def batchSampler(samples, n):
     for i in range(0, len(samples), n):
-        yield [samples[j] for j in range(i, i+n)]  
+        yield [samples[j] for j in range(i, min(i+n, len(samples)))]  
 
