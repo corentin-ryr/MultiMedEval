@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+hostname
+
+python test.py
