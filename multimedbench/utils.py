@@ -24,5 +24,9 @@ class Params:
 
 def batchSampler(samples, n):
     for i in range(0, len(samples), n):
-        yield [samples[j] for j in range(i, min(i+n, len(samples)))]  
+        # if is a panda dataframe
+        if hasattr(samples, 'iloc'):
+            yield samples.iloc[i:min(i+n, len(samples))]
+        else:
+            yield [samples[j] for j in range(i, min(i+n, len(samples)))]  
 

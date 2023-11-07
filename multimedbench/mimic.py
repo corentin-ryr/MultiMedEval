@@ -4,7 +4,7 @@ from utils import Benchmark
 
 class MIMIC_CXR_classification(Benchmark):
     def __init__(self, task_path, seed=1111):
-        logging.debug('***** Transfer task : SICK-Relatedness*****\n\n')
+        logging.debug('***** Transfer task : MIMIC_CXR *****\n\n')
         self.seed = seed
         
         # Get the dataset
@@ -22,7 +22,6 @@ class MIMIC_CXR_classification(Benchmark):
 
         # Compute the scores
 
-        return {'devpearson': devpr, 'pearson': pr, 'spearman': sr, 'mse': se,
-                'yhat': yhat, 'ndev': len(devA), 'ntest': len(testA)}
+        return {}
 
     
