@@ -1,9 +1,9 @@
 import logging
 import os
-from utils import Benchmark
+from multimedbench.utils import Benchmark
 
 class MIMIC_CXR_classification(Benchmark):
-    def __init__(self, task_path, seed=1111):
+    def __init__(self, seed=1111):
         logging.debug('***** Transfer task : MIMIC_CXR *****\n\n')
         self.seed = seed
         

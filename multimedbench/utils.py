@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-
+import string
 
 class dotdict(dict):
     """ dot.notation access to dictionary attributes """
@@ -8,6 +8,9 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 class Benchmark():
+    def __init__(self) -> None:
+        pass
+
     def do_prepare(self, params, prepare):
         pass
 
@@ -30,3 +33,8 @@ def batchSampler(samples, n):
         else:
             yield [samples[j] for j in range(i, min(i+n, len(samples)))]  
 
+def remove_punctuation(input_string:str):
+    # Make a translator object to replace punctuation with none
+    translator = str.maketrans('', '', string.punctuation)
+    # Use the translator
+    return input_string.translate(translator)

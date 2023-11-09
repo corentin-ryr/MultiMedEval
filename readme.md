@@ -11,9 +11,16 @@ These tasks are text only.
 
 | Dataset  | Modality | Size     |
 | -------- | -------- | -------- |
-| MedQA    |  | 1,273 |
-| MedMCQA  |  | 4,183 |
-| PubMedQA |  | 500 |
+| MedQA    | Text     | 1,273    |
+| MedMCQA  | Text     | 4,183    |
+| PubMedQA | Text     | 500      |
+
+Benchmark:
+| Model    | Mistral7B | MedAlpaca     |
+| -------- | --------- | ------------- |
+| MedQA    | 0.359     |               |
+| MedMCQA  |           |               |
+| PubMedQA | 0.398     |               |
 
 
 ### Report Summarization
