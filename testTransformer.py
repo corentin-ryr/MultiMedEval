@@ -12,8 +12,8 @@ nf4_config = BitsAndBytesConfig(
 device = "cuda" # the device to load the model onto
 os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
 
-model:MistralModel = AutoModelForCausalLM.from_pretrained("mistralai/Mistral-7B-v0.1", quantization_config=nf4_config, device_map="auto")
-tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1")
+model:MistralModel = AutoModelForCausalLM.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1", quantization_config=nf4_config, device_map="auto")
+tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1")
 
 prompt = "Hello, how are you?"
 

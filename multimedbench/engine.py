@@ -1,12 +1,15 @@
 
-import utils
+from multimedbench import utils
 
-from medqa import MedQA
-from mimic import MIMIC_CXR_classification
+from multimedbench.medqa import MedQA, PubMedQA, MedMCQA
+from multimedbench.mimic import MIMIC_CXR_classification
+import json
 
 
 TASKS:dict[str, utils.Benchmark] = {
      "MedQA": MedQA,
+     "PubMedQA": PubMedQA,
+     "MedMCQA": MedMCQA,
      "MIMIC-CXR": MIMIC_CXR_classification
 }
 
@@ -14,7 +17,7 @@ TASKS:dict[str, utils.Benchmark] = {
 class MMB(object):
     def __init__(self, params:utils.Params, batcher, prepare=None):
         self.params = params
-        print(self.params)
+        print(f"\n\nRunning MultiMedBenchmark with {self.params}")
 
         # batcher and prepare
         self.batcher = batcher
@@ -25,23 +28,21 @@ class MMB(object):
     def eval(self, name:str|list[str]):
         # evaluate on evaluation [name], either takes string or list of strings
         if (isinstance(name, list)):
-            self.results = {x: self.eval(x) for x in name}
+            self.results = {}
+            for x in name:
+                currentResults = self.eval(x)
+                self.results[x] = currentResults
+                print(currentResults)
+
+            # Write the results to a file
+            with open("results.json", "w") as f: json.dump(self.results, f)
+
             return self.results
 
-        tpath = self.params.task_path
         assert name in TASKS, str(name) + ' not in ' + str(self.list_tasks)
 
-        self.evaluation:utils.Benchmark = TASKS[name](tpath + '/downstream/' + name, seed=self.params.seed)
-
+        self.evaluation:utils.Benchmark = TASKS[name](seed=self.params.seed)
         self.evaluation.do_prepare(self.params, self.prepare)
+        taskResult = self.evaluation.run(self.params, self.batcher)
 
-        self.results = self.evaluation.run(self.params, self.batcher)
-
-        return self.results
-
-
-# Test the MMB class
-if __name__ == "__main__":
-    params = utils.Params(True, 42, 64)
-
-    mmb = MMB(params, None)
+        return taskResult
