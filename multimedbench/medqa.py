@@ -1,8 +1,6 @@
-import logging
 from datasets import load_dataset
 from multimedbench.utils import Benchmark, batchSampler, Params
-from tqdm import tqdm
-import time
+from tqdm import tqdm 
 import math
 from multimedbench.utils import remove_punctuation
 import random
@@ -10,19 +8,19 @@ import csv
 
 
 class MedQA(Benchmark):
-    def __init__(self, seed=1111):
+    def __init__(self, data_folder="/home/croyer/data", seed=1111):
         self.taskName = "MedQA"
         self.seed = seed
         random.seed(self.seed)
 
         # Get the dataset
         self.dataset = load_dataset(
-            "bigbio/med_qa", split="test", cache_dir="/home/croyer/data/medqa"
+            "bigbio/med_qa", split="test", cache_dir=f"{data_folder}/medqa"
         )
 
         # Create the prompt base
         self.trainDataset = load_dataset(
-            "bigbio/med_qa", split="train", cache_dir="/home/croyer/data/medqa"
+            "bigbio/med_qa", split="train", cache_dir=f"{data_folder}/medqa"
         )
 
         self.prompt = self.getPrompt()
@@ -100,10 +98,11 @@ class MedQA(Benchmark):
             prompt += self.format_question(
                 self.trainDataset[random.randint(0, len(self.trainDataset))], prompt=True
             )
+        return prompt
 
 
 class PubMedQA(MedQA):
-    def __init__(self, seed=42):
+    def __init__(self, data_folder="/home/croyer/data", seed=42):
         self.taskName = "PubMedQA"
         self.seed = seed
         random.seed(self.seed)
@@ -113,14 +112,14 @@ class PubMedQA(MedQA):
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="test",
-            cache_dir="/home/croyer/data/pubmedqa",
+            cache_dir=f"{data_folder}/pubmedqa",
         )
         # Prepare the prompt base
         self.trainDataset = load_dataset(
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="train",
-            cache_dir="/home/croyer/data/pubmedqa",
+            cache_dir=f"{data_folder}/pubmedqa",
         )
 
         self.prompt = self.getPrompt()
@@ -143,7 +142,7 @@ class PubMedQA(MedQA):
 
 
 class MedMCQA(MedQA):
-    def __init__(self, seed=1111):
+    def __init__(self, data_folder="/home/croyer/data", seed=1111):
         self.taskName = "MedMCQA"
         self.seed = seed
         random.seed(self.seed)
@@ -153,7 +152,7 @@ class MedMCQA(MedQA):
             "medmcqa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="validation",
-            cache_dir="/home/croyer/data/medmcqa",
+            cache_dir=f"{data_folder}/medmcqa",
         )
 
         # Prepare the prompt base
@@ -161,7 +160,7 @@ class MedMCQA(MedQA):
             "medmcqa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="train",
-            cache_dir="/home/croyer/data/medmcqa",
+            cache_dir=f"{data_folder}/medmcqa",
         )
         print(self.trainDataset[0])
 

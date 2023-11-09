@@ -104,7 +104,7 @@ class batcherMedAlpaca:
 
 if __name__ == "__main__":
 
-    medqa = MedQA()
+    medqa = MedQA("data")
     raise Exception
 
 
