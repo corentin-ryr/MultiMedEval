@@ -19,8 +19,8 @@ Benchmark:
 | Model    | Mistral7B | MedAlpaca     |
 | -------- | --------- | ------------- |
 | MedQA    | 0.359     |               |
-| MedMCQA  |           |               |
 | PubMedQA | 0.398     |               |
+| MedMCQA  |           |               |
 
 
 ### Report Summarization

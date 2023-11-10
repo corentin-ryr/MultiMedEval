@@ -6,10 +6,13 @@ from transformers import (
     BitsAndBytesConfig,
     LlamaModel,
 )
+from optimum.onnxruntime import ORTModelForCausalLM
 from multimedbench.engine import MMB
 from multimedbench.utils import Params
 from transformers import pipeline
-from multimedbench.medqa import MedQA
+from pathlib import Path
+import time
+
 
 nf4_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -27,8 +30,11 @@ class batcherMistral:
             device_map="cuda:0",
         )
         self.tokenizer = AutoTokenizer.from_pretrained(
-            "mistralai/Mistral-7B-Instruct-v0.1", device_map="cuda:0"
+            "mistralai/Mistral-7B-Instruct-v0.1",
+            device_map="cuda:0",
+            truncation_side="left",
         )
+        print(self.tokenizer.truncation_side)
 
         self.pl = pipeline(
             "text-generation",
@@ -58,16 +64,22 @@ class batcherMistral:
         return answers
 
 
-class batcherMedAlpaca:
+class batcherLlama:
     def __init__(self, device=None) -> None:
-        self.model: LlamaModel = AutoModelForCausalLM.from_pretrained(
-            "medalpaca/medalpaca-7b",
-            quantization_config=nf4_config,
+        self.model = AutoModelForCausalLM.from_pretrained(
+            "TheBloke/Llama-2-7b-Chat-GPTQ",
+            torch_dtype=torch.float16,
             device_map="cuda:0",
         )
+
+        print(self.model.config)
         self.tokenizer = AutoTokenizer.from_pretrained(
-            "medalpaca/medalpaca-7b", device_map="cuda:0"
+            "meta-llama/Llama-2-7b-chat-hf",
+            device_map="cuda:0",
+            truncation_side="left",
+            padding_side="left",
         )
+        self.tokenizer.pad_token_id = self.model.config.eos_token_id
 
         self.pl = pipeline(
             "text-generation",
@@ -76,11 +88,61 @@ class batcherMedAlpaca:
             device_map="cuda:0",
         )
 
-        print(self.model.generation_config)
+    def __call__(self, prompts, instructions: list[dict[str | str]] = None):
+        answers = []
+
+        messagesBatch = [instructions + [prompt[0]] for prompt, _ in prompts]
+        with torch.no_grad():
+            model_inputs = [
+                self.tokenizer.apply_chat_template(
+                    messages, return_tensors="pt", tokenize=False
+                )
+                for messages in messagesBatch
+            ]
+
+            startTime = time.time()
+            answers = self.pl(
+                model_inputs,
+                max_new_tokens=100,
+                pad_token_id=self.tokenizer.pad_token_id,
+            )
+            execTime = time.time() - startTime
+
+        answers = [
+            answer[0]["generated_text"][len(prompt) :]
+            for answer, prompt in zip(answers, model_inputs)
+        ]
+        numberTokens = sum([len(answer) for answer in answers])
+        print(
+            f"Model inference: {execTime:.2f} to create {numberTokens} ({numberTokens / execTime:.2f} t/s.)"
+        )
+        return answers
+
+
+class batcherMedAlpaca:
+    def __init__(self, device=None) -> None:
+        # self.model: LlamaModel = AutoModelForCausalLM.from_pretrained(
+        #     "medalpaca/medalpaca-7b",
+        #     quantization_config=nf4_config,
+        #     device_map="cuda:0",
+        # )
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            "medalpaca/medalpaca-7b",
+            # device_map="cuda:0",
+            truncation_side="left",
+            padding_side="left",
+        )
+
+        # self.pl = pipeline(
+        #     "text-generation",
+        #     model=self.model,
+        #     tokenizer=self.tokenizer,
+        #     device_map="cuda:0",
+        #     batch_size=1,
+        # )
 
     def __call__(self, prompts, instructions: list[dict[str | str]] = None):
         answers = []
-        print(instructions)
 
         messagesBatch = [instructions + [prompt[0]] for prompt, _ in prompts]
         model_inputs = [
@@ -89,27 +151,37 @@ class batcherMedAlpaca:
             )
             for messages in messagesBatch
         ]
-        print(model_inputs[0])
+        startTime = time.time()
 
-        answers = self.pl(model_inputs, max_new_tokens=100)
+        with torch.no_grad():
+            answers = []
+            for message in model_inputs:
+                print(model_inputs)
+                tokens = self.tokenizer.encode([message])
+                print(tokens)
+                answerTokens = self.model.generate(tokens)
+                answer = self.tokenizer.decode(answerTokens)
+                answers.append(answer)
+            
+            # answers = self.pl(model_inputs, max_new_tokens=100)
+
+        execTime = time.time() - startTime
+
         answers = [
             answer[0]["generated_text"][len(prompt) :]
             for answer, prompt in zip(answers, model_inputs)
         ]
-        print(answers[0])
-        print(len(answers[0]))
+
+        numberTokens = sum([len(self.tokenizer.encode(answer)) for answer in answers])
+        print(
+            f"Model inference: {execTime:.2f}s to create {numberTokens} tokens ({numberTokens / execTime:.2f} t/s.)"
+        )
 
         return answers
 
 
 if __name__ == "__main__":
-
-    medqa = MedQA("data")
-    raise Exception
-
-
-
-    params = Params(True, 42, 2)
+    params = Params(True, 42, 8)
 
     device = "cuda:0"
     batcher = batcherMedAlpaca(device=device)
