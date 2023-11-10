@@ -38,3 +38,14 @@ def remove_punctuation(input_string:str):
     translator = str.maketrans('', '', string.punctuation)
     # Use the translator
     return input_string.translate(translator)
+
+
+class RateEstimation():
+    def __init__(self) -> None:
+        self.exectimes = []
+
+    def update(self, value):
+        self.exectimes.append(value)
+
+    def getRate(self):
+        pass

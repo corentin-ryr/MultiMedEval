@@ -24,7 +24,6 @@ class MedQA(Benchmark):
         )
 
         self.prompt = self.getPrompt()
-        print(self.prompt)
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -77,7 +76,6 @@ class MedQA(Benchmark):
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
 
-        print(question)
         return question
 
     def getCorrectAnswer(self, sample):
