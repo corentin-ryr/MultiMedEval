@@ -156,9 +156,7 @@ class batcherMedAlpaca:
         with torch.no_grad():
             answers = []
             for message in model_inputs:
-                print(model_inputs)
-                tokens = self.tokenizer.encode([message])
-                print(tokens)
+                tokens = self.tokenizer.encode(message)
                 answerTokens = self.model.generate(tokens)
                 answer = self.tokenizer.decode(answerTokens)
                 answers.append(answer)
