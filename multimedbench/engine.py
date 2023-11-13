@@ -4,6 +4,7 @@ from multimedbench import utils
 from multimedbench.medqa import MedQA, PubMedQA, MedMCQA
 from multimedbench.mimic import MIMIC_CXR_classification
 import json
+import os
 
 
 TASKS:dict[str, utils.Benchmark] = {
@@ -23,6 +24,10 @@ class MMB(object):
         self.batcher = batcher
         self.prepare = prepare if prepare else lambda x, y: None
 
+        if not os.path.exists(params.run_name):
+            os.mkdir(params.run_name)
+
+
 
 
     def eval(self, name:str|list[str]):
@@ -32,17 +37,19 @@ class MMB(object):
             for x in name:
                 currentResults = self.eval(x)
                 self.results[x] = currentResults
-                print(currentResults)
+                print(f"Done task {x}")
 
-            # Write the results to a file
-            with open("results.json", "w") as f: json.dump(self.results, f)
+                # Write to files
+                for result in currentResults:
+                    if result["type"] == "json": print(result["value"])
+                    utils.fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
+
 
             return self.results
 
         assert name in TASKS, str(name) + ' not in ' + str(self.list_tasks)
 
         self.evaluation:utils.Benchmark = TASKS[name](seed=self.params.seed)
-        self.evaluation.do_prepare(self.params, self.prepare)
         taskResult = self.evaluation.run(self.params, self.batcher)
 
         return taskResult
