@@ -1,10 +1,18 @@
 from datasets import load_dataset
 from multimedbench.utils import Benchmark, batchSampler, Params
-from tqdm import tqdm 
+from tqdm import tqdm
 import math
 from multimedbench.utils import remove_punctuation
 import random
 import csv
+import torch
+from torch.profiler import ProfilerActivity
+from nltk.corpus import stopwords
+import nltk
+nltk.download('stopwords')
+STOPWORDS = stopwords.words('english')
+STOPWORDS.remove("a")
+STOPWORDS.remove("d")
 
 
 class MedQA(Benchmark):
@@ -44,12 +52,16 @@ class MedQA(Benchmark):
             answers = batcher(batchPrompts, self.prompt)
 
             for idx, answer in enumerate(answers):
-                if self.isValid(answer, self.getCorrectAnswer(batch[idx])):
+                isCorrect = False
+                if self.isValid(answer, batch[idx]):
                     correct_answers += 1
+                    isCorrect = True
                 total_answers += 1
 
-                answersLog.append((self.getCorrectAnswer(batch[idx]), answer))
-
+                answersLog.append(
+                    (self.getCorrectAnswer(batch[idx]), answer, isCorrect)
+                )
+            
         # Write answersLog to a csv file
         try:
             with open(f"answerLog{self.taskName}.csv", "w", newline="") as f:
@@ -60,6 +72,11 @@ class MedQA(Benchmark):
 
         # Compute the scores
         return {"accuracy": correct_answers / total_answers}
+    
+    def cleanStr(self, text:str):
+        return remove_punctuation(text.lower().replace("\n", " ").strip())
+
+    # Special functions that should be implemented by subclasses ================
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
@@ -79,22 +96,36 @@ class MedQA(Benchmark):
         return question
 
     def getCorrectAnswer(self, sample):
-        return sample["answer_idx"]
+        return sample["answer_idx"].lower().strip()
 
-    def isValid(self, pred: str, gold: str):
-        pred = remove_punctuation(
-            pred.lower().replace("\n", "").replace("the answer is", "").strip()
-        )
+    def isValid(self, pred: str, sample):
+        pred = self.cleanStr(pred)
         if len(pred) == 0:
             return False
-        gold = remove_punctuation(gold.lower().replace("\n", "").strip())[0]
-        return pred[0] == gold
-    
+        
+        optionVocabs = [self.cleanStr(f'{option["key"]}: {option["value"]}').split(" ") for option in sample["options"]]
+        optionVocabs = [[word for word in option if word not in STOPWORDS] for option in optionVocabs]
+
+        pred = pred.split(" ")
+        pred = [word for word in pred if word not in STOPWORDS]
+        scores = [0 for _ in range(len(optionVocabs))]
+        for token in pred:
+            for idx in range(len(optionVocabs)):
+                if token in optionVocabs[idx]:
+                    scores[idx] += 1
+        
+        
+        pred = sample["options"][scores.index(max(scores))]["key"].lower()
+
+        gold = self.getCorrectAnswer(sample)
+        return pred == gold
+
     def getPrompt(self):
         prompt = []
         for _ in range(3):
             prompt += self.format_question(
-                self.trainDataset[random.randint(0, len(self.trainDataset))], prompt=True
+                self.trainDataset[random.randint(0, len(self.trainDataset))],
+                prompt=True,
             )
         return prompt
 
@@ -123,7 +154,7 @@ class PubMedQA(MedQA):
         self.prompt = self.getPrompt()
 
     def getCorrectAnswer(self, sample):
-        return sample["answer"][0]
+        return sample["answer"]
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
@@ -137,6 +168,26 @@ class PubMedQA(MedQA):
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
         return question
+    
+    def isValid(self, pred: str, sample):
+        pred = self.cleanStr(pred)
+        if len(pred) == 0:
+            return False
+        
+        optionVocabs = ["yes", "no", "maybe"]
+
+        pred = pred.split(" ")
+        scores = [0 for _ in range(len(optionVocabs))]
+        for token in pred:
+            for idx in range(len(optionVocabs)):
+                if token in optionVocabs[idx]:
+                    scores[idx] += 1
+        
+        
+        pred = optionVocabs[scores.index(max(scores))].lower()
+
+        gold = self.getCorrectAnswer(sample)[0]
+        return pred == gold
 
 
 class MedMCQA(MedQA):
@@ -160,9 +211,10 @@ class MedMCQA(MedQA):
             split="train",
             cache_dir=f"{data_folder}/medmcqa",
         )
-        print(self.trainDataset[0])
 
         self.prompt = self.getPrompt()
+
+        self.mapToLetters = ["a", "b", "c", "d"]
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
@@ -184,5 +236,31 @@ class MedMCQA(MedQA):
         return question
 
     def getCorrectAnswer(self, sample):
-        return chr(ord("a") + sample["cop"] - 1).upper()
+        return self.mapToLetters[sample["cop"]]
+    
+    def isValid(self, pred: str, sample):
+        pred = self.cleanStr(pred)
+        if len(pred) == 0:
+            return False
+        
+        optionVocabs = [
+            f"A: {sample['opa']}",
+            f"B: {sample['opb']}",
+            f"C: {sample['opc']}",
+            f"D: {sample['opd']}",
+        ]
+        optionVocabs = [self.cleanStr(option).split(" ") for option in optionVocabs]
 
+
+        pred = pred.split(" ")
+        pred = [word for word in pred if word not in STOPWORDS]
+        scores = [0 for _ in range(len(optionVocabs))]
+        for token in pred:
+            for idx in range(len(optionVocabs)):
+                if token in optionVocabs[idx]:
+                    scores[idx] += 1
+        
+        pred = self.mapToLetters[scores.index(max(scores))]
+
+        gold = self.getCorrectAnswer(sample)[0]
+        return pred == gold

@@ -16,11 +16,11 @@ These tasks are text only.
 | PubMedQA | Text     | 500      |
 
 Benchmark:
-| Model    | Mistral7B | MedAlpaca     |
-| -------- | --------- | ------------- |
-| MedQA    | 0.359     |               |
-| PubMedQA | 0.398     |               |
-| MedMCQA  |           |               |
+| Model    | Mistral7B | MedAlpaca     | Llama 2       |
+| -------- | --------- | ------------- | ------------- |
+| MedQA    |           |               | 0.316         |
+| PubMedQA |           |               | 0.484         |
+| MedMCQA  |           |               |               |
 
 
 ### Report Summarization
@@ -69,3 +69,14 @@ The batch is a list of inputs.
 The input is a tuple of:
 * a prompt in the form of a text that may or may not refer to images.
 * a dictionary of id: images
+
+
+
+## Inference speed
+
+
+For Llama2 on a V100 with 32G it takes 18min to benchmark MedQA:
+* batch size: 36
+* 125 token/second
+* There is some problems when using float16 (sometimes it gives nan values in logits). The solution is to use bfloat16 (it was trained using that) but the format is poorly supported on v100 and earlier GPUs (it reduces the parforms by 50%).
+* Training on A100 XXX
