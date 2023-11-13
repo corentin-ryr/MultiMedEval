@@ -4,9 +4,6 @@ from tqdm import tqdm
 import math
 from multimedbench.utils import remove_punctuation
 import random
-import csv
-import torch
-from torch.profiler import ProfilerActivity
 from nltk.corpus import stopwords
 import nltk
 nltk.download('stopwords')
@@ -62,16 +59,11 @@ class MedQA(Benchmark):
                     (self.getCorrectAnswer(batch[idx]), answer, isCorrect)
                 )
             
-        # Write answersLog to a csv file
-        try:
-            with open(f"answerLog{self.taskName}.csv", "w", newline="") as f:
-                spamWriter = csv.writer(f)
-                spamWriter.writerows(answersLog)
-        except Exception as e:
-            print(e)
+        # TODO: add others metrics such as AUC, F1...
+        metrics = {"accuracy": correct_answers / total_answers}
 
         # Compute the scores
-        return {"accuracy": correct_answers / total_answers}
+        return [{"type":"json", "name": f"metrics_{self.taskName}", "value": metrics}, {"type":"csv", "name": self.taskName, "value": answersLog}]
     
     def cleanStr(self, text:str):
         return remove_punctuation(text.lower().replace("\n", " ").strip())
