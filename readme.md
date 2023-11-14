@@ -5,6 +5,8 @@ MultiMedBench is a benchmark for medical conversational models.
 
 ## Tasks
 
+![metrics](figures/metrics.png)
+
 ### Question Answering
 
 These tasks are text only.
@@ -18,9 +20,9 @@ These tasks are text only.
 Benchmark:
 | Model    | Mistral7B | MedAlpaca     | Llama 2       |
 | -------- | --------- | ------------- | ------------- |
-| MedQA    | 0.361     | 0.239         | 0.296         |
-| PubMedQA | 0.396     | 0.474         | 0.488         |
-| MedMCQA  |           | 0.301         |          |
+| MedQA    | 0.344     | 0.248         | 0.305         |
+| PubMedQA | 0.708     | 0.628         | 0.652         |
+| MedMCQA  | 0.417     | 0.293         | 0.338         |
 
 
 ### Report Summarization

@@ -6,30 +6,22 @@ from multimedbench.utils import remove_punctuation
 import random
 from nltk.corpus import stopwords
 import nltk
+from abc import abstractmethod
 nltk.download('stopwords')
 STOPWORDS = stopwords.words('english')
 STOPWORDS.remove("a")
 STOPWORDS.remove("d")
 
 
-class MedQA(Benchmark):
-    def __init__(self, data_folder="/home/croyer/data", seed=1111):
-        self.taskName = "MedQA"
+class QA(Benchmark):
+    def __init__(self, data_folder=None, seed=1111) -> None:
+        super().__init__()
+
         self.seed = seed
         random.seed(self.seed)
+        self.taskName = "None"
 
-        # Get the dataset
-        self.dataset = load_dataset(
-            "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=f"{data_folder}/medqa"
-        )
-
-        # Create the prompt base
-        self.trainDataset = load_dataset(
-            "bigbio/med_qa", split="train", cache_dir=f"{data_folder}/medqa"
-        )
-
-        self.prompt = self.getPrompt()
-
+    
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
 
@@ -67,8 +59,43 @@ class MedQA(Benchmark):
     
     def cleanStr(self, text:str):
         return remove_punctuation(text.lower().replace("\n", " ").strip())
+    
+    def getPrompt(self):
+        prompt = []
+        for _ in range(3):
+            prompt += self.format_question(
+                self.trainDataset[random.randint(0, len(self.trainDataset))],
+                prompt=True,
+            )
+        return prompt
+    
+    @abstractmethod
+    def format_question(self, sample, prompt=False):
+        pass
 
-    # Special functions that should be implemented by subclasses ================
+    @abstractmethod
+    def getCorrectAnswer(self, sample):
+        pass 
+
+    @abstractmethod
+    def isValid(self, pred: str, sample):
+        pass
+
+
+class MedQA(QA):
+    def __init__(self, data_folder="/home/croyer/data", seed=1111):
+        super().__init__(data_folder, seed)
+        self.taskName = "MedQA"
+        
+        self.dataset = load_dataset(
+            "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=f"{data_folder}/medqa"
+        )
+
+        self.trainDataset = load_dataset(
+            "bigbio/med_qa", split="train", cache_dir=f"{data_folder}/medqa"
+        )
+
+        self.prompt = self.getPrompt()
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
@@ -112,30 +139,18 @@ class MedQA(Benchmark):
         gold = self.getCorrectAnswer(sample)
         return pred == gold
 
-    def getPrompt(self):
-        prompt = []
-        for _ in range(3):
-            prompt += self.format_question(
-                self.trainDataset[random.randint(0, len(self.trainDataset))],
-                prompt=True,
-            )
-        return prompt
-
-
-class PubMedQA(MedQA):
+class PubMedQA(QA):
     def __init__(self, data_folder="/home/croyer/data", seed=42):
+        super().__init__(data_folder, seed)
         self.taskName = "PubMedQA"
-        self.seed = seed
-        random.seed(self.seed)
 
-        # Get the dataset
         self.dataset = load_dataset(
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="test",
             cache_dir=f"{data_folder}/pubmedqa",
         )
-        # Prepare the prompt base
+
         self.trainDataset = load_dataset(
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
@@ -167,7 +182,7 @@ class PubMedQA(MedQA):
         if len(pred) == 0:
             return False
         
-        optionVocabs = ["yes", "no", "maybe"]
+        optionVocabs = [["yes"], ["no"], ["maybe"]]
 
         pred = pred.split(" ")
         scores = [0 for _ in range(len(optionVocabs))]
@@ -176,20 +191,17 @@ class PubMedQA(MedQA):
                 if token in optionVocabs[idx]:
                     scores[idx] += 1
         
-        
-        pred = optionVocabs[scores.index(max(scores))].lower()
+        pred = optionVocabs[scores.index(max(scores))][0].lower()
 
         gold = self.getCorrectAnswer(sample)[0]
         return pred == gold
 
 
-class MedMCQA(MedQA):
+class MedMCQA(QA):
     def __init__(self, data_folder="/home/croyer/data", seed=1111):
+        super().__init__(data_folder, seed)
         self.taskName = "MedMCQA"
-        self.seed = seed
-        random.seed(self.seed)
 
-        # Get the dataset
         self.dataset = load_dataset(
             "medmcqa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
@@ -197,7 +209,6 @@ class MedMCQA(MedQA):
             cache_dir=f"{data_folder}/medmcqa",
         )
 
-        # Prepare the prompt base
         self.trainDataset = load_dataset(
             "medmcqa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
@@ -207,15 +218,15 @@ class MedMCQA(MedQA):
 
         self.prompt = self.getPrompt()
 
-        self.mapToLetters = ["a", "b", "c", "d"]
+        self.mapToNumber = ["1", "2", "3", "4"]
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
         options = [
-            f"A: {sample['opa']}",
-            f"B: {sample['opb']}",
-            f"C: {sample['opc']}",
-            f"D: {sample['opd']}",
+            f"1: {sample['opa']}",
+            f"2: {sample['opb']}",
+            f"3: {sample['opc']}",
+            f"4: {sample['opd']}",
         ]
         answer = sample["cop"]
 
@@ -229,7 +240,7 @@ class MedMCQA(MedQA):
         return question
 
     def getCorrectAnswer(self, sample):
-        return self.mapToLetters[sample["cop"]]
+        return self.mapToNumber[sample["cop"]]
     
     def isValid(self, pred: str, sample):
         pred = self.cleanStr(pred)
@@ -237,23 +248,24 @@ class MedMCQA(MedQA):
             return False
         
         optionVocabs = [
-            f"A: {sample['opa']}",
-            f"B: {sample['opb']}",
-            f"C: {sample['opc']}",
-            f"D: {sample['opd']}",
+            f"1: {sample['opa']}",
+            f"2: {sample['opb']}",
+            f"3: {sample['opc']}",
+            f"4: {sample['opd']}",
         ]
         optionVocabs = [self.cleanStr(option).split(" ") for option in optionVocabs]
-
+        optionVocabs = [[word for word in option if word not in STOPWORDS] for option in optionVocabs]
 
         pred = pred.split(" ")
         pred = [word for word in pred if word not in STOPWORDS]
+
         scores = [0 for _ in range(len(optionVocabs))]
         for token in pred:
             for idx in range(len(optionVocabs)):
                 if token in optionVocabs[idx]:
                     scores[idx] += 1
         
-        pred = self.mapToLetters[scores.index(max(scores))]
+        pred = self.mapToNumber[scores.index(max(scores))]
 
         gold = self.getCorrectAnswer(sample)[0]
         return pred == gold

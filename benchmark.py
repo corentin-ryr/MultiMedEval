@@ -109,7 +109,7 @@ class batcherLlama:
                 model_inputs,
                 padding="max_length",
                 truncation=True,
-                max_length=512,
+                max_length=1024,
                 return_tensors="pt",
             )
             tokens = {k: v.to("cuda") for k, v in tokens.items()}
@@ -159,13 +159,12 @@ class batcherMedAlpaca(batcherLlama):
 
 
 if __name__ == "__main__":
-    os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-    params = Params(True, seed=42, batch_size=36, run_name="benchmarkMistral")
+    params = Params(True, seed=42, batch_size=50, run_name="benchmarkMedAlpaca")
 
     device = "cuda:0"
-    batcher = batcherMistral(device=device)
+    batcher = batcherMedAlpaca(device=device)
 
     mmb = MMB(params, batcher)
 
-    results = mmb.eval(["MedMCQA"]) #"MedQA", 
+    results = mmb.eval(["MedQA", "PubMedQA", "MedMCQA"])
     print(f"Everything is done, see the {params.run_name} folder for detailed results.")
