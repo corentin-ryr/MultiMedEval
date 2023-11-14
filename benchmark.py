@@ -6,6 +6,7 @@ from transformers import (
     BitsAndBytesConfig,
     LlamaForCausalLM,
     LlamaTokenizer,
+    GenerationConfig
 )
 from multimedbench.engine import MMB
 from multimedbench.utils import Params
@@ -14,27 +15,29 @@ import time
 import os
 from torch.profiler import profile, record_function, ProfilerActivity
 
-nf4_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_use_double_quant=True,
-    bnb_4bit_compute_dtype=torch.bfloat16,
-)
+
 
 
 class batcherMistral:
     def __init__(self, device=None) -> None:
+        self.device = device
+
+        nf4_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.float16,
+        )
+
         self.model: MistralModel = AutoModelForCausalLM.from_pretrained(
             "mistralai/Mistral-7B-Instruct-v0.1",
             quantization_config=nf4_config,
-            device_map="cuda:0",
+            device_map=self.device,
         )
         self.tokenizer = AutoTokenizer.from_pretrained(
             "mistralai/Mistral-7B-Instruct-v0.1",
-            device_map="cuda:0",
             truncation_side="left",
         )
-        print(self.tokenizer.truncation_side)
 
         self.pl = pipeline(
             "text-generation",
@@ -71,12 +74,20 @@ class batcherLlama:
         self.model.eval()
 
     def loadModelAndTokenizer(self):
+        nf4_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+        )
         self.model = LlamaForCausalLM.from_pretrained(
             "meta-llama/Llama-2-7b-chat-hf",
             device_map=self.device,
             quantization_config=nf4_config,
             torch_dtype=torch.bfloat16,
         )
+        self.generation_config = None
+
         self.tokenizer: LlamaTokenizer = LlamaTokenizer.from_pretrained(
             "meta-llama/Llama-2-7b-chat-hf", padding_side="left", truncation_side="left"
         )
@@ -103,14 +114,11 @@ class batcherLlama:
             )
             tokens = {k: v.to("cuda") for k, v in tokens.items()}
 
-            # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA]) as prof:
             startTime = time.time()
             answerTokens = self.model.generate(
-                **tokens, max_new_tokens=100, do_sample=True
+                **tokens, max_new_tokens=100, do_sample=True, generation_config=self.generation_config
             )
             execTime = time.time() - startTime
-            # print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=5))
-            # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=5))
 
             answerTokens = answerTokens[:, tokens["input_ids"].shape[1] :]
             answers = self.tokenizer.batch_decode(
@@ -127,6 +135,12 @@ class batcherLlama:
 
 class batcherMedAlpaca(batcherLlama):
     def loadModelAndTokenizer(self) -> None:
+        nf4_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+        )
         self.model = LlamaForCausalLM.from_pretrained(
             "medalpaca/medalpaca-7b",
             device_map=self.device,
@@ -139,18 +153,19 @@ class batcherMedAlpaca(batcherLlama):
             truncation_side="left",
             padding_side="left",
         )
-
+        self.generation_config = GenerationConfig(eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.pad_token_id, bos_token_id=self.tokenizer.bos_token_id)
+        
         self.tokenizer.chat_template = """{% if messages[0]['role'] == 'system' %}{% set loop_messages = messages[1:] %}{% set system_message = messages[0]['content'] %}{% else %}{% set loop_messages = messages %}{% set system_message = false %}{% endif %}{% for message in loop_messages %}{% if (message['role'] == 'user') != (loop.index0 % 2 == 0) %}{{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}{% endif %}{% if loop.index0 == 0 and system_message != false %}{% set content = '<<SYS>>\n' + system_message + '\n<</SYS>>\n\n' + message['content'] %}{% else %}{% set content = message['content'] %}{% endif %}{% if message['role'] == 'user' %}{{ bos_token + '### Instruction:\n' + content.strip() + '\n\n' + '### Response:\n' }}{% elif message['role'] == 'assistant' %}{{ content.strip() + '\n\n' + eos_token }}{% endif %}{% endfor %}"""
 
 
 if __name__ == "__main__":
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-    params = Params(True, seed=42, batch_size=36, run_name="benchmarkMedAlpaca")
+    params = Params(True, seed=42, batch_size=36, run_name="benchmarkMistral")
 
     device = "cuda:0"
-    batcher = batcherMedAlpaca(device=device)
+    batcher = batcherMistral(device=device)
 
     mmb = MMB(params, batcher)
 
-    results = mmb.eval(["PubMedQA", "MedMCQA"]) #"MedQA", 
+    results = mmb.eval(["MedMCQA"]) #"MedQA", 
     print(f"Everything is done, see the {params.run_name} folder for detailed results.")

@@ -58,7 +58,7 @@ class MedQA(Benchmark):
                 answersLog.append(
                     (self.getCorrectAnswer(batch[idx]), answer, isCorrect)
                 )
-            
+                    
         # TODO: add others metrics such as AUC, F1...
         metrics = {"accuracy": correct_answers / total_answers}
 

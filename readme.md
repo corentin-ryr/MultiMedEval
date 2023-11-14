@@ -18,9 +18,9 @@ These tasks are text only.
 Benchmark:
 | Model    | Mistral7B | MedAlpaca     | Llama 2       |
 | -------- | --------- | ------------- | ------------- |
-| MedQA    |           |               | 0.316         |
-| PubMedQA |           |               | 0.484         |
-| MedMCQA  |           |               |               |
+| MedQA    | 0.361     | 0.239         | 0.296         |
+| PubMedQA | 0.396     | 0.474         | 0.488         |
+| MedMCQA  |           | 0.301         |          |
 
 
 ### Report Summarization
@@ -78,5 +78,10 @@ The input is a tuple of:
 For Llama2 on a V100 with 32G it takes 18min to benchmark MedQA:
 * batch size: 36
 * 125 token/second
-* There is some problems when using float16 (sometimes it gives nan values in logits). The solution is to use bfloat16 (it was trained using that) but the format is poorly supported on v100 and earlier GPUs (it reduces the parforms by 50%).
+* There is some problems when using float16 (sometimes it gives nan values in logits). The solution is to use bfloat16 (it was trained using that) but the format is poorly supported on v100 and earlier GPUs (it reduces the performance by 50%).
 * Training on A100 XXX
+
+
+## Indexing problem
+
+There use to be an indexing problem because we need to check that the generation_config is good.
