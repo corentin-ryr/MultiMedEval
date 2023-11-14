@@ -20,7 +20,7 @@ class MedQA(Benchmark):
 
         # Get the dataset
         self.dataset = load_dataset(
-            "bigbio/med_qa", split="test", cache_dir=f"{data_folder}/medqa"
+            "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=f"{data_folder}/medqa"
         )
 
         # Create the prompt base
@@ -73,13 +73,13 @@ class MedQA(Benchmark):
     def format_question(self, sample, prompt=False):
         question = sample["question"]
         options = sample["options"]
-        answer = sample["answer_idx"]
+        answer = f"{sample['answer_idx']}: {sample['answer']}"
 
         formattedQuestion = f"Question:\n {question}\n"
         formattedQuestion += "Options:\n" + "\n".join(
             [f'{option["key"]}: {option["value"]}' for option in options]
         )
-        formattedAnswer = "\nThe answer is " + (f"{answer}." if prompt else "")
+        formattedAnswer = "The answer is " + (answer if prompt else "")
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
@@ -149,12 +149,13 @@ class PubMedQA(MedQA):
         return sample["answer"]
 
     def format_question(self, sample, prompt=False):
+        context = sample["context"]
         question = sample["question"]
         answer = sample["answer"]
 
-        formattedQuestion = f"Question: {question}\n"
+        formattedQuestion = f"{context}\nQuestion: {question}\n"
         formattedQuestion += "Options: yes, no or maybe"
-        formattedAnswer = f"\nThe answer is {answer[0]}."
+        formattedAnswer = f"The answer is {answer[0]}."
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
@@ -220,7 +221,7 @@ class MedMCQA(MedQA):
 
         formattedQuestion = f"Question: {question}\n"
         formattedQuestion += "Options:\n" + "\n".join(options)
-        formattedAnswer = f"\nThe answer is {chr(ord('a') + answer - 1).upper()}."
+        formattedAnswer = f"The answer is {options[answer]}."
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
