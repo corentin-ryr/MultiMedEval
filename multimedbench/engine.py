@@ -1,7 +1,7 @@
 
 from multimedbench import utils
 
-from multimedbench.medqa import MedQA, PubMedQA, MedMCQA
+from multimedbench.qa import MedQA, PubMedQA, MedMCQA
 from multimedbench.mimic import MIMIC_CXR_classification
 import json
 import os
