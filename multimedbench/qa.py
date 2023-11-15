@@ -36,7 +36,10 @@ class QA(Benchmark):
             total=math.ceil(len(self.dataset) / params.batch_size),
             desc="Running inference",
         ):
-            batchPrompts = [self.getPrompt() + self.format_question(sample)[0] for sample in batch]
+            batchPrompts = []
+            for sample in batch:
+                text, img = self.format_question(sample)
+                batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
 
             answers = batcher(batchPrompts)
 
@@ -62,12 +65,15 @@ class QA(Benchmark):
     
     def getPrompt(self):
         prompt = []
+        images = []
         for _ in range(3):
-            prompt += self.format_question(
+            text, img = self.format_question(
                 self.trainDataset[random.randint(0, len(self.trainDataset))],
                 prompt=True,
             )
-        return prompt
+            prompt += text
+            images += img
+        return (prompt, images)
     
     @abstractmethod
     def format_question(self, sample, prompt=False):
@@ -112,7 +118,7 @@ class MedQA(QA):
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
 
-        return (question, {})
+        return (question, [])
 
     def getCorrectAnswer(self, sample):
         return sample["answer_idx"].lower().strip()
@@ -175,7 +181,7 @@ class PubMedQA(QA):
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
-        return (question, {})
+        return (question, [])
     
     def isValid(self, pred: str, sample):
         pred = self.cleanStr(pred)
@@ -237,7 +243,7 @@ class MedMCQA(QA):
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
-        return (question, {})
+        return (question, [])
 
     def getCorrectAnswer(self, sample):
         return self.mapToNumber[sample["cop"]]

@@ -1,10 +1,8 @@
+from multimedbench.qa import MedQA
+from multimedbench.utils import Params
 
-from multimedbench.vqa import VQA_RAD
+vqa = MedQA()
 
-vqa = VQA_RAD()
+print(vqa.format_question(vqa.dataset[0]))
 
-print(vqa.format_question(vqa.dataset[4]))   
-
-print(vqa.isValid("it is not here", vqa.dataset[4]))
-
-    
+vqa.run(Params(batch_size=2), batcher=lambda x: x)
