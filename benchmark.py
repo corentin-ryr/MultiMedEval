@@ -1,3 +1,4 @@
+from typing import Any
 import torch
 from transformers import (
     AutoModelForCausalLM,
@@ -12,10 +13,6 @@ from multimedbench.engine import MMB
 from multimedbench.utils import Params
 from transformers import pipeline
 import time
-import os
-from torch.profiler import profile, record_function, ProfilerActivity
-
-
 
 
 class batcherMistral:
@@ -46,15 +43,14 @@ class batcherMistral:
             device_map="cuda:0",
         )
 
-    def __call__(self, prompts, instructions: list[dict[str | str]] = None):
+    def __call__(self, prompts):
         answers = []
 
-        messagesBatch = [instructions + [prompt[0]] for prompt, _ in prompts]
         model_inputs = [
             self.tokenizer.apply_chat_template(
                 messages, return_tensors="pt", tokenize=False
             )
-            for messages in messagesBatch
+            for messages in prompts
         ]
 
         answers = self.pl(
@@ -93,15 +89,12 @@ class batcherLlama:
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-    def __call__(self, prompts, instructions: list[dict[str | str]] = None):
-        answers = []
-
-        messagesBatch = [instructions + [prompt[0]] for prompt, _ in prompts]
+    def __call__(self, prompts):
         model_inputs = [
             self.tokenizer.apply_chat_template(
                 messages, return_tensors="pt", tokenize=False
             )
-            for messages in messagesBatch
+            for messages in prompts
         ]
 
         with torch.no_grad():
@@ -131,7 +124,7 @@ class batcherLlama:
         )
 
         return answers
-
+    
 
 class batcherMedAlpaca(batcherLlama):
     def loadModelAndTokenizer(self) -> None:
@@ -158,11 +151,18 @@ class batcherMedAlpaca(batcherLlama):
         self.tokenizer.chat_template = """{% if messages[0]['role'] == 'system' %}{% set loop_messages = messages[1:] %}{% set system_message = messages[0]['content'] %}{% else %}{% set loop_messages = messages %}{% set system_message = false %}{% endif %}{% for message in loop_messages %}{% if (message['role'] == 'user') != (loop.index0 % 2 == 0) %}{{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}{% endif %}{% if loop.index0 == 0 and system_message != false %}{% set content = '<<SYS>>\n' + system_message + '\n<</SYS>>\n\n' + message['content'] %}{% else %}{% set content = message['content'] %}{% endif %}{% if message['role'] == 'user' %}{{ bos_token + '### Instruction:\n' + content.strip() + '\n\n' + '### Response:\n' }}{% elif message['role'] == 'assistant' %}{{ content.strip() + '\n\n' + eos_token }}{% endif %}{% endfor %}"""
 
 
+class batcherRadFM:
+    def __init__(self) -> None:
+        pass
+
+    def __call__(self, prompts) -> Any:
+        pass
+
 if __name__ == "__main__":
-    params = Params(True, seed=42, batch_size=50, run_name="benchmarkMedAlpaca")
+    params = Params(True, seed=42, batch_size=2, run_name="testTemp")
 
     device = "cuda:0"
-    batcher = batcherMedAlpaca(device=device)
+    batcher = batcherLlama(device=device)
 
     mmb = MMB(params, batcher)
 

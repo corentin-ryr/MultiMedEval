@@ -2,16 +2,19 @@
 from multimedbench import utils
 
 from multimedbench.qa import MedQA, PubMedQA, MedMCQA
+from multimedbench.vqa import VQA_RAD, Path_VQA
 from multimedbench.mimic import MIMIC_CXR_classification
 import json
 import os
 
 
 TASKS:dict[str, utils.Benchmark] = {
-     "MedQA": MedQA,
-     "PubMedQA": PubMedQA,
-     "MedMCQA": MedMCQA,
-     "MIMIC-CXR": MIMIC_CXR_classification
+    "MedQA": MedQA,
+    "PubMedQA": PubMedQA,
+    "MedMCQA": MedMCQA,
+    "MIMIC-CXR": MIMIC_CXR_classification,
+    "VQA-RAD": VQA_RAD,
+    "Path-VQA": Path_VQA
 }
 
 
