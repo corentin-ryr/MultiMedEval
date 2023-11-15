@@ -36,9 +36,9 @@ class QA(Benchmark):
             total=math.ceil(len(self.dataset) / params.batch_size),
             desc="Running inference",
         ):
-            batchPrompts = [(self.format_question(sample), {}) for sample in batch]
+            batchPrompts = [self.getPrompt() + self.format_question(sample)[0] for sample in batch]
 
-            answers = batcher(batchPrompts, self.prompt)
+            answers = batcher(batchPrompts)
 
             for idx, answer in enumerate(answers):
                 isCorrect = False
@@ -112,7 +112,7 @@ class MedQA(QA):
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
 
-        return question
+        return (question, {})
 
     def getCorrectAnswer(self, sample):
         return sample["answer_idx"].lower().strip()
@@ -175,7 +175,7 @@ class PubMedQA(QA):
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
-        return question
+        return (question, {})
     
     def isValid(self, pred: str, sample):
         pred = self.cleanStr(pred)
@@ -237,7 +237,7 @@ class MedMCQA(QA):
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
-        return question
+        return (question, {})
 
     def getCorrectAnswer(self, sample):
         return self.mapToNumber[sample["cop"]]

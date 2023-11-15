@@ -34,11 +34,11 @@ Benchmark:
 
 ### Visual Question Answering
 
-| Dataset  | Modality | Size     |
-| -------- | -------- | -------- |
-| VQA-RAD  |  | 451 |
-| Slake-VQA | CT, MRI, and chest X-rays |  2,070 |
-| Path-VQA |  | 6,761 |
+| Dataset   | Modality                  | Size     |
+| --------- | ------------------------- | -------- |
+| VQA-RAD   | CT, MRI, and chest X-rays | 451      |
+| Slake-VQA | CT, MRI, and chest X-rays | 2,070    |
+| Path-VQA  | Pathology                 | 6,761    |
 
 
 ### Report Generation
@@ -62,7 +62,7 @@ Benchmark:
 
 ## Usage
 
-The user must implement two functions: `batcher` and `prepare`.
+The user must implement one functions: `batcher`.
 
 ### Batcher
 
