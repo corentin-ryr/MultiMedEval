@@ -1,1 +1,9 @@
+torch
+torchtext
 datasets
+transformers
+datasets
+bitsandbytes
+scipy
+SentencePiece
+protobuf

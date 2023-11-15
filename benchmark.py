@@ -48,7 +48,7 @@ class batcherMistral:
 
         model_inputs = [
             self.tokenizer.apply_chat_template(
-                messages, return_tensors="pt", tokenize=False
+                messages[0], return_tensors="pt", tokenize=False
             )
             for messages in prompts
         ]
@@ -89,10 +89,13 @@ class batcherLlama:
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
+
+        time.sleep(20)
+
     def __call__(self, prompts):
         model_inputs = [
             self.tokenizer.apply_chat_template(
-                messages, return_tensors="pt", tokenize=False
+                messages[0], return_tensors="pt", tokenize=False
             )
             for messages in prompts
         ]
@@ -107,9 +110,10 @@ class batcherLlama:
             )
             tokens = {k: v.to("cuda") for k, v in tokens.items()}
 
+
             startTime = time.time()
             answerTokens = self.model.generate(
-                **tokens, max_new_tokens=100, do_sample=True, generation_config=self.generation_config
+                **tokens, max_new_tokens=100, do_sample=False, generation_config=self.generation_config
             )
             execTime = time.time() - startTime
 
@@ -159,7 +163,7 @@ class batcherRadFM:
         pass
 
 if __name__ == "__main__":
-    params = Params(True, seed=42, batch_size=2, run_name="testTemp")
+    params = Params(True, seed=42, batch_size=50, run_name="testTemp")
 
     device = "cuda:0"
     batcher = batcherLlama(device=device)

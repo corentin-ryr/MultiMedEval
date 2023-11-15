@@ -77,11 +77,17 @@ The input is a tuple of:
 ## Inference speed
 
 
-For Llama2 on a V100 with 32G it takes 18min to benchmark MedQA:
-* batch size: 36
-* 125 token/second
+For Llama2 on a V100 with 32GB it takes 18min to benchmark MedQA:
+* batch size: 36 (with context length 512)
+* 125 token/second (with float 16 but 60t/s with bfloat)
 * There is some problems when using float16 (sometimes it gives nan values in logits). The solution is to use bfloat16 (it was trained using that) but the format is poorly supported on v100 and earlier GPUs (it reduces the performance by 50%).
-* Training on A100 XXX
+
+For Llama2 on a A100 with 80GB it takes min to benchmark MedQA:
+* batch size of 50 (with context length 1024)
+* 200t/s
+* bfloat16 is supported
+* Traning with greedy search instead of sample is faster: 
+
 
 
 ## Indexing problem
