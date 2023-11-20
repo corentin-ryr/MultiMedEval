@@ -113,7 +113,7 @@ class batcherLlama:
 
             startTime = time.time()
             answerTokens = self.model.generate(
-                **tokens, max_new_tokens=100, do_sample=False, generation_config=self.generation_config
+                **tokens, max_new_tokens=100, generation_config=self.generation_config
             )
             execTime = time.time() - startTime
 
