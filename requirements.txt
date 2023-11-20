@@ -7,3 +7,6 @@ bitsandbytes
 scipy
 SentencePiece
 protobuf
+nltk
+torchtext
+torchmetrics

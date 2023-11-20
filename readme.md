@@ -86,7 +86,6 @@ For Llama2 on a A100 with 80GB it takes min to benchmark MedQA:
 * batch size of 50 (with context length 1024)
 * 200t/s
 * bfloat16 is supported
-* Traning with greedy search instead of sample is faster: 
 
 
 
