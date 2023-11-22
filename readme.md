@@ -18,11 +18,11 @@ These tasks are text only.
 | PubMedQA | Text     | 500      |
 
 Benchmark:
-| Model    | Mistral7B | MedAlpaca     | Llama 2       |
-| -------- | --------- | ------------- | ------------- |
-| MedQA    | 0.344     | 0.248         | 0.305         |
-| PubMedQA | 0.708     | 0.628         | 0.652         |
-| MedMCQA  | 0.417     | 0.293         | 0.338         |
+| Model    | Mistral7B | MedAlpaca     | Llama 2       | RadFM      |
+| -------- | --------- | ------------- | ------------- | ---------- |
+| MedQA    | 0.344     | 0.248         | 0.305         | 0.203      |
+| PubMedQA | 0.708     | 0.628         | 0.652         | 0.576      |
+| MedMCQA  | 0.417     | 0.293         | 0.338         |            |
 
 
 ### Report Summarization
