@@ -10,3 +10,4 @@ protobuf
 nltk
 torchtext
 torchmetrics
+git+ssh://git@github.com/corentin-ryr/MedMD.git
