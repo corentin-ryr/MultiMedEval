@@ -9,6 +9,5 @@ nvidia-smi
 # watch -n0.1 nvidia-smi
 
 # Run the benchmark script
-python benchmark.py
-# python convertToONNX.py
-# python testONNX.py
+# python benchmark.py
+python testMIMIC.py

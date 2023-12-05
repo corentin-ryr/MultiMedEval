@@ -1,7 +1,7 @@
 module load v100-32g
 # request an interactive session, which allows the package installer to see the GPU hardware
-srun --pty -n 1 -c 2 --time=00:10:00 --gres=gpu:1 --mem=16G bash -l runJob.sh
-srun --pty -n 1 -c 2 --time=02:00:00 --mem=16G bash -l runJob.sh
+srun --pty -n 1 -c 2 --time=00:10:00 --gres=gpu:1 --mem=16G bash -l runJob.sh 2>&1 | tee terminal.txt
+srun --pty -n 1 -c 1 --time=00:10:00 --mem=16G bash -l runJob.sh 2>&1 | tee terminal.txt
 
 conda activate multimedbench
 
