@@ -15,14 +15,7 @@ STOPWORDS.remove("d")
 import json
 
 class QA(Benchmark):
-    def __init__(self, data_folder=None, seed=1111) -> None:
-        super().__init__()
 
-        self.seed = seed
-        random.seed(self.seed)
-        self.taskName = "None"
-
-    
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
 
@@ -90,8 +83,8 @@ class QA(Benchmark):
 
 
 class MedQA(QA):
-    def __init__(self, data_folder="/home/croyer/data", seed=1111):
-        super().__init__(data_folder, seed)
+    def __init__(self, seed=1111):
+        super().__init__(seed)
         self.taskName = "MedQA"
 
         params = json.load(open("MedMD_config.json", "r"))
@@ -149,22 +142,24 @@ class MedQA(QA):
         return pred == gold
 
 class PubMedQA(QA):
-    def __init__(self, data_folder="/home/croyer/data", seed=42):
-        super().__init__(data_folder, seed)
+    def __init__(self, seed=42):
+        super().__init__(seed)
         self.taskName = "PubMedQA"
+
+        params = json.load(open("MedMD_config.json", "r"))
 
         self.dataset = load_dataset(
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="test",
-            cache_dir=f"{data_folder}/pubmedqa",
+            cache_dir=params["PubMedQA"]["path"],
         )
 
         self.trainDataset = load_dataset(
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="train",
-            cache_dir=f"{data_folder}/pubmedqa",
+            cache_dir=params["PubMedQA"]["path"],
         )
 
         self.prompt = self.getPrompt()
@@ -207,22 +202,24 @@ class PubMedQA(QA):
 
 
 class MedMCQA(QA):
-    def __init__(self, data_folder="/home/croyer/data", seed=1111):
-        super().__init__(data_folder, seed)
+    def __init__(self, seed=1111):
+        super().__init__(seed)
         self.taskName = "MedMCQA"
+
+        params = json.load(open("MedMD_config.json", "r"))
 
         self.dataset = load_dataset(
             "medmcqa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="validation",
-            cache_dir=f"{data_folder}/medmcqa",
+            cache_dir=params["MedMCQA"]["path"],
         )
 
         self.trainDataset = load_dataset(
             "medmcqa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="train",
-            cache_dir=f"{data_folder}/medmcqa",
+            cache_dir=params["MedMCQA"]["path"],
         )
 
         self.prompt = self.getPrompt()

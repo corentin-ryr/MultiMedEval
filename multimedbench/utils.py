@@ -3,6 +3,7 @@ import string
 from datetime import datetime
 import csv
 import json
+import random
 
 class dotdict(dict):
     """ dot.notation access to dictionary attributes """
@@ -11,8 +12,11 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 class Benchmark():
-    def __init__(self) -> None:
-        pass
+    def __init__(self, seed=1111) -> None:
+
+        self.seed = seed
+        random.seed(self.seed)
+        self.taskName = "None"
 
     def run(self, params, batcher):
         pass
