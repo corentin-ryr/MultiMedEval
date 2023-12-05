@@ -12,6 +12,7 @@ STOPWORDS = stopwords.words('english')
 STOPWORDS.remove("a")
 STOPWORDS.remove("d")
 
+import json
 
 class QA(Benchmark):
     def __init__(self, data_folder=None, seed=1111) -> None:
@@ -92,13 +93,15 @@ class MedQA(QA):
     def __init__(self, data_folder="/home/croyer/data", seed=1111):
         super().__init__(data_folder, seed)
         self.taskName = "MedQA"
+
+        params = json.load(open("MedMD_config.json", "r"))
         
         self.dataset = load_dataset(
-            "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=f"{data_folder}/medqa"
+            "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=params["MedQA"]["path"]
         )
 
         self.trainDataset = load_dataset(
-            "bigbio/med_qa", split="train", cache_dir=f"{data_folder}/medqa"
+            "bigbio/med_qa", split="train", cache_dir=params["MedQA"]["path"]
         )
 
         self.prompt = self.getPrompt()
