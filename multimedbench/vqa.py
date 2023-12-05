@@ -1,7 +1,5 @@
 from datasets import load_dataset
-from multimedbench.qa import QA, STOPWORDS
 from torchmetrics.text import BLEUScore
-from torchmetrics import F1Score
 from multimedbench.utils import Benchmark, batchSampler, Params
 from tqdm import tqdm
 import math
@@ -26,9 +24,6 @@ class VQA(Benchmark):
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
 
-        correct_answers = 0
-        total_answers = 0
-
         answersLog = []
 
         # Run the batcher for all data split in chunks
@@ -47,16 +42,8 @@ class VQA(Benchmark):
             correctAnswers = [[self.getCorrectAnswer(sample)] for sample in batch]
 
             for idx, answer in enumerate(answers):
-                isCorrect = False
-
-                bleuScore = self.bleu(answer, correctAnswers[idx])
-                if bleuScore > 0.5:
-                    correct_answers += 1
-                    isCorrect = True
-                total_answers += 1
-
                 answersLog.append(
-                    (self.getCorrectAnswer(batch[idx]), answer, isCorrect)
+                    (self.getCorrectAnswer(batch[idx]), answer)
                 )
 
                 # Compute the number of tokens recalled in the answer
@@ -164,7 +151,9 @@ class SLAKE(VQA):
 
         params = json.load(open("MedMD_config.json", "r"))
 
-        with open(os.path.join(params["SLAKE"]["path"], "train.json"), "r") as f:
+        self.path = params["SLAKE"]["path"]
+
+        with open(os.path.join(self.path, "train.json"), "r") as f:
             jsonFile = json.load(f)
 
         self.trainDataset = []
@@ -172,7 +161,7 @@ class SLAKE(VQA):
             if sample["q_lang"] == "en":
                 self.trainDataset.append(sample)
 
-        with open(os.path.join(params["SLAKE"]["path"], "test.json"), "r") as f:
+        with open(os.path.join(self.path, "test.json"), "r") as f:
             jsonFile = json.load(f)
 
         self.dataset = []
