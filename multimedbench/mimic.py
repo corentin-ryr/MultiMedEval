@@ -7,6 +7,7 @@ from tqdm import tqdm
 from PIL import Image
 import datasets
 import numpy as np
+from multimedbench.chexbert.label import label
 
 import time
 from multimedbench.utils import (
@@ -77,6 +78,17 @@ class MIMIC_CXR_reportgen(Benchmark):
             answers = batcher(batchPrompts)
 
             for idx, sample in enumerate(batch):
+
+                # Compute the chexbert score
+                df = pd.DataFrame(columns=["Report Impression"], data=[answers[idx]])
+                print(df)
+                labels = label("chexbert.pth", df)
+                print(labels)
+
+                raise Exception
+
+
+                # Compute the F1-radgraph score
                 (mean_reward, _, hypothesis_annotation_lists, reference_annotation_lists) = self.engine.radgraph(
                     refs=[self.getCorrectAnswer(sample)], hyps=[answers[idx]]
                 )

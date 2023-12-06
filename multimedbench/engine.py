@@ -33,7 +33,7 @@ class MMB(object):
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
 
-        self._prepare_radgraph()
+        # self._prepare_radgraph()
 
 
 
