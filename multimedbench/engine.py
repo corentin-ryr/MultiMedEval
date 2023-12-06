@@ -33,7 +33,8 @@ class MMB(object):
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
 
-        # self._prepare_radgraph()
+        self._prepare_radgraph()
+        self._prepare_chexbert()
 
 
 
@@ -88,3 +89,16 @@ class MMB(object):
             raise e
         
         self.radgraph = RadGraph(reward_level="partial")
+
+    def _prepare_chexbert(self):
+        # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
+        with open("MedMD_config.json", "r") as f:
+            output = json.load(f)["CheXBert"]["dlLocation"]
+
+        if not os.path.exists(os.path.join(output, "chexbert.pth")):
+            os.makedirs(output, exist_ok=True)
+            gdown.download("https://stanfordmedicine.app.box.com/shared/static/c3stck6w6dol3h36grdc97xoydzxd7w9", os.path.join(output, "chexbert.pth"), quiet=False)
+        else:
+            print("Chexbert already downloaded")
+
+

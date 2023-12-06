@@ -7,7 +7,7 @@ from tqdm import tqdm
 from PIL import Image
 import datasets
 import numpy as np
-from multimedbench.chexbert.label import label
+from multimedbench.chexbert.label import label, encode
 
 import time
 from multimedbench.utils import (
@@ -21,6 +21,7 @@ import math
 from torchmetrics.text import BLEUScore, ROUGEScore
 
 import csv
+import torch
 
 
 class MIMIC_CXR_reportgen(Benchmark):
@@ -35,6 +36,8 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
         self.f1 = []
+
+        self.chexbertPath = json.load(open("MedMD_config.json", "r"))["CheXBert"]["dlLocation"]
 
         # Get the dataset ====================================================================
         self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-CXR"]["path"]
@@ -68,6 +71,9 @@ class MIMIC_CXR_reportgen(Benchmark):
         print(f"***** Benchmarking : {self.taskName} *****")
         answersLog = []
 
+        refReports = []
+        hypReports = []
+
         # Run the batcher for all data split in chunks
         for batch in tqdm(
             batchSampler(self.dataset, params.batch_size),
@@ -78,38 +84,38 @@ class MIMIC_CXR_reportgen(Benchmark):
             answers = batcher(batchPrompts)
 
             for idx, sample in enumerate(batch):
-
-                # Compute the chexbert score
-                df = pd.DataFrame(columns=["Report Impression"], data=[answers[idx]])
-                print(df)
-                labels = label("chexbert.pth", df)
-                print(labels)
-
-                raise Exception
-
-
                 # Compute the F1-radgraph score
                 (mean_reward, _, hypothesis_annotation_lists, reference_annotation_lists) = self.engine.radgraph(
                     refs=[self.getCorrectAnswer(sample)], hyps=[answers[idx]]
                 )
                 self.f1.append(exact_entity_token_if_rel_exists_reward(hypothesis_annotation_lists[0], reference_annotation_lists[0]))
             
-            refReports = [self.getCorrectAnswer(sample) for sample in batch]
+            refReports += [self.getCorrectAnswer(sample) for sample in batch]
+            hypReports += answers
 
             refReportsNested = [[self.getCorrectAnswer(sample)] for sample in batch]
             self.bleu_1.update(answers, refReportsNested)
             self.bleu_4.update(answers, refReportsNested)
             self.rougeL.update(answers, refReportsNested)
 
-            answersLog += list(zip(refReports, answers))
-        
+            break
 
+        df = pd.DataFrame(columns=["Report Impression"], data=refReports)
+        labelsReference = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+
+        df = pd.DataFrame(columns=["Report Impression"], data=hypReports)
+        labelsHypothesis = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+
+        # Compute the vector similarity between the reference and the geenrated reports
+        similarity = torch.cosine_similarity(labelsReference, labelsHypothesis)
+        
         # TODO: add others metrics such as AUC, F1...
         metrics = {
-            "bleu1": self.bleu_1.compute(),
-            "bleu4": self.bleu_4.compute(),
+            "bleu1": self.bleu_1.compute().item(),
+            "bleu4": self.bleu_4.compute().item(),
             "rougeL": self.rougeL.compute(),
             "f1-radgraph": sum(self.f1) / len(self.f1),
+            "CheXBert vector similarity": similarity.mean().item(),
         }
 
         # Compute the scores
@@ -177,3 +183,4 @@ class MIMIC_CXR_reportgen(Benchmark):
 
     def getCorrectAnswer(self, sample):
         return sample["findings"]
+
