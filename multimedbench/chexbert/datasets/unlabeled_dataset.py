@@ -38,4 +38,4 @@ class UnlabeledDataset(Dataset):
             idx = idx.tolist()
         imp = self.encoded_imp[idx]
         imp = torch.LongTensor(imp)
-        return {"imp": imp, "len": imp.shape[0]}
+        return {"imp": imp, "len": imp.shape[0], "idx": idx}

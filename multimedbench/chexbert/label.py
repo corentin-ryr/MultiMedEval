@@ -6,6 +6,8 @@ import pandas as pd
 import numpy as np
 from  multimedbench.chexbert.utils import generate_attention_masks
 from multimedbench.chexbert.models.bert_labeler import bert_labeler
+from multimedbench.chexbert.models.bert_encoder import bert_encoder
+
 from multimedbench.chexbert.bert_tokenizer import tokenize
 from transformers import BertTokenizer
 from collections import OrderedDict
@@ -22,7 +24,7 @@ def collate_fn_no_labels(sample_list):
 
     @returns batch (dictionary): A dictionary with keys 'imp' and 'len' but now
                                  'imp' is a tensor with padding and batch size as the
-                                 first dimension. 'len' is a list of the length of 
+                                 first dimension. 'len' is a list of the length of
                                  each sequence in batch
     """
     tensor_list = [s['imp'] for s in sample_list]
@@ -30,7 +32,8 @@ def collate_fn_no_labels(sample_list):
                                                   batch_first=True,
                                                   padding_value=PAD_IDX)
     len_list = [s['len'] for s in sample_list]
-    batch = {'imp': batched_imp, 'len': len_list}
+    idx_list = [s['idx'] for s in sample_list]
+    batch = {'imp': batched_imp, 'len': len_list, 'idx': idx_list}
     return batch
 
 def load_unlabeled_data(df, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
@@ -48,7 +51,7 @@ def load_unlabeled_data(df, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
     collate_fn = collate_fn_no_labels
     dset = UnlabeledDataset(df)
     loader = torch.utils.data.DataLoader(dset, batch_size=batch_size, shuffle=shuffle,
-                                         num_workers=num_workers, collate_fn=collate_fn)
+                                         num_workers=0, collate_fn=collate_fn)
     return loader
     
 
@@ -80,6 +83,7 @@ def label(checkpoint_path, df):
     was_training = model.training
     model.eval()
     y_pred = [[] for _ in range(len(CONDITIONS))]
+    rep = {}
 
     print("\nBegin report impression labeling. The progress bar counts the # of batches completed:")
     print("The batch size is %d" % BATCH_SIZE)
@@ -105,6 +109,60 @@ def label(checkpoint_path, df):
 
     y_pred = [t.tolist() for t in y_pred]
     return y_pred
+
+def encode(checkpoint_path, csv_path, filename="data.pt", logits=False): # TODO: CHECK WITH VISH ABOUT filename
+    """Labels a dataset of reports
+    @param checkpoint_path (string): location of saved model checkpoint
+    @param csv_path (string): location of csv with reports
+
+    @returns y_pred (List[List[int]]): Labels for each of the 14 conditions, per report
+    """
+    ld = load_unlabeled_data(csv_path)
+
+    model = bert_encoder(logits)
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.device_count() > 0: #works even if only 1 GPU available
+        print("Using", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model) #to utilize multiple GPU's
+        model = model.to(device)
+        checkpoint = torch.load(checkpoint_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+        new_state_dict = OrderedDict()
+        for k, v in checkpoint['model_state_dict'].items():
+            name = k[7:] # remove `module.`
+            new_state_dict[name] = v
+        model.load_state_dict(new_state_dict)
+
+    was_training = model.training
+    model.eval()
+    y_pred = [[] for _ in range(len(CONDITIONS))]
+    rep = []
+
+    print("\nBegin report impression labeling. The progress bar counts the # of batches completed:")
+    print("The batch size is %d" % BATCH_SIZE)
+    with torch.no_grad():
+        for i, data in enumerate(tqdm(ld)):
+            batch = data['imp'] #(batch_size, max_len)
+            batch = batch.to(device)
+            src_len = data['len']
+            batch_size = batch.shape[0]
+            attn_mask = generate_attention_masks(batch, src_len, device)
+
+            out = model(batch, attn_mask)
+
+
+            if logits:
+                for idx, j in zip(data['idx'], range(len(data['idx']))):
+                    rep[idx] = [torch.softmax(out[k][j], dim=0)[0].item() for k in range(len(out))]
+            else:
+                for idx, j in zip(data['idx'], range(len(out))):
+                    rep.append(out[j].to('cpu'))
+                    #curr_y_pred = out[j].argmax(dim=1) #shape is (batch_size)
+                    #y_pred[j].append(curr_y_pred)
+
+    return torch.stack(rep)
 
 def save_preds(y_pred, csv_path, out_path):
     """Save predictions as out_path/labeled_reports.csv 
