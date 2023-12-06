@@ -83,8 +83,8 @@ class QA(Benchmark):
 
 
 class MedQA(QA):
-    def __init__(self, seed=1111):
-        super().__init__(seed)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.taskName = "MedQA"
 
         params = json.load(open("MedMD_config.json", "r"))
@@ -142,8 +142,8 @@ class MedQA(QA):
         return pred == gold
 
 class PubMedQA(QA):
-    def __init__(self, seed=42):
-        super().__init__(seed)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.taskName = "PubMedQA"
 
         params = json.load(open("MedMD_config.json", "r"))
@@ -202,8 +202,8 @@ class PubMedQA(QA):
 
 
 class MedMCQA(QA):
-    def __init__(self, seed=1111):
-        super().__init__(seed)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.taskName = "MedMCQA"
 
         params = json.load(open("MedMD_config.json", "r"))

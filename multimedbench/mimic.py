@@ -6,8 +6,16 @@ import pandas as pd
 from tqdm import tqdm
 from PIL import Image
 import datasets
+import numpy as np
 
-from multimedbench.utils import Benchmark, batchSampler, Params, remove_punctuation
+import time
+from multimedbench.utils import (
+    Benchmark,
+    batchSampler,
+    Params,
+    remove_punctuation,
+    exact_entity_token_if_rel_exists_reward,
+)
 import math
 from torchmetrics.text import BLEUScore, ROUGEScore
 
@@ -15,9 +23,9 @@ import csv
 
 
 class MIMIC_CXR_reportgen(Benchmark):
-    def __init__(self, seed=1111):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         logging.debug("***** Transfer task : MIMIC_CXR *****\n\n")
-        self.seed = seed
 
         self.taskName = "MIMIC_CXR report generation"
 
@@ -40,51 +48,23 @@ class MIMIC_CXR_reportgen(Benchmark):
             for line in spamreader:
                 findings[line[0]] = line[1]
 
-
         # For each sample in the dataset, open its report and check if it contains the keyword "findings"
         self.dataset = []
-        for i, row in tqdm(split.iterrows()):
+        for _, row in split.iterrows():
             reportFindings = findings["s" + str(row["study_id"]) + ".txt"]
-            if reportFindings == "NO FINDINGS": continue
+            if reportFindings == "NO FINDINGS" or reportFindings == "":
+                continue
 
-            with open(
-                os.path.join(
-                    self.path,
-                    "files",
-                    "p" + str(row["subject_id"])[:2],
-                    "p" + str(row["subject_id"]),
-                    "s" + str(row["study_id"]) + ".txt",
-                ),
-                "r",
-            ) as f:
-                text = f.read()
-            report = self.parse_radiology_report(text)
             self.dataset.append(
-                [
-                    str(row["subject_id"]),
-                    str(row["study_id"]),
-                    str(row["dicom_id"]),
-                    str(reportFindings),
-                    str(report["INDICATION"]) if "INDICATION" in report else "",
-                ]
+                [str(row["subject_id"]), str(row["study_id"]), str(row["dicom_id"]), str(reportFindings)]
             )
 
         self.dataset = datasets.Dataset.from_pandas(
-            pd.DataFrame(
-                columns=[
-                    "subject_id",
-                    "study_id",
-                    "dicom_id",
-                    "findings",
-                    "indication",
-                ],
-                data=self.dataset,
-            )
+            pd.DataFrame(columns=["subject_id", "study_id", "dicom_id", "findings"], data=self.dataset)
         )
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
-
         answersLog = []
 
         # Run the batcher for all data split in chunks
@@ -93,36 +73,31 @@ class MIMIC_CXR_reportgen(Benchmark):
             total=math.ceil(len(self.dataset) / params.batch_size),
             desc="Running inference",
         ):
-            batchPrompts = []
-            for sample in batch:
-                text, img = self.format_question(sample)
-                batchPrompts.append((text, img))
-
+            batchPrompts = [self.format_question(sample) for sample in batch]
             answers = batcher(batchPrompts)
 
-            correctAnswers = [[self.getCorrectAnswer(sample)] for sample in batch]
+            for idx, sample in enumerate(batch):
+                (mean_reward, _, hypothesis_annotation_lists, reference_annotation_lists) = self.engine.radgraph(
+                    refs=[self.getCorrectAnswer(sample)], hyps=[answers[idx]]
+                )
+                self.f1.append(exact_entity_token_if_rel_exists_reward(hypothesis_annotation_lists[0], reference_annotation_lists[0]))
+            
+            refReports = [self.getCorrectAnswer(sample) for sample in batch]
 
-            for idx, answer in enumerate(answers):
-                answersLog.append((self.getCorrectAnswer(batch[idx]), answer))
+            refReportsNested = [[self.getCorrectAnswer(sample)] for sample in batch]
+            self.bleu_1.update(answers, refReportsNested)
+            self.bleu_4.update(answers, refReportsNested)
+            self.rougeL.update(answers, refReportsNested)
 
-                # Compute the number of tokens recalled in the answer
-                # tokens = set(self.cleanStr(answer).split(" "))
-                # correctTokens = set(self.cleanStr(self.getCorrectAnswer(batch[idx])).split(" "))
-                # precision = len(tokens.intersection(correctTokens)) / len(tokens)
-                # recall = len(tokens.intersection(correctTokens)) / len(correctTokens)
-                # self.f1.append(2 * (precision * recall) / (precision + recall + 1e-8))
-                self.f1.append(0)
-
-            self.bleu_1.update(answers, correctAnswers)
-            self.bleu_4.update(answers, correctAnswers)
-            self.rougeL.update(answers, correctAnswers)
+            answersLog += list(zip(refReports, answers))
+        
 
         # TODO: add others metrics such as AUC, F1...
         metrics = {
             "bleu1": self.bleu_1.compute(),
             "bleu4": self.bleu_4.compute(),
             "rougeL": self.rougeL.compute(),
-            "f1": sum(self.f1) / len(self.f1),
+            "f1-radgraph": sum(self.f1) / len(self.f1),
         }
 
         # Compute the scores
@@ -139,13 +114,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         radiology_dict = {}
 
         # Define the keys to look for
-        keys_to_find = [
-            "INDICATION",
-            "COMPARISON",
-            "TECHNIQUE",
-            "FINDINGS",
-            "IMPRESSION",
-        ]
+        keys_to_find = ["INDICATION", "COMPARISON", "TECHNIQUE", "FINDINGS", "IMPRESSION"]
 
         currentField = None
         # Iterate through each line in the report
@@ -169,19 +138,20 @@ class MIMIC_CXR_reportgen(Benchmark):
         return radiology_dict
 
     def format_question(self, sample):
-        imagePath = os.path.join(
-            self.path,
-            "files",
-            "p" + str(sample["subject_id"])[:2],
-            "p" + str(sample["subject_id"]),
-            "s" + str(sample["study_id"]),
-            sample["dicom_id"] + ".jpg",
+        samplePath = os.path.join(
+            self.path, "files", "p" + str(sample["subject_id"])[:2], "p" + str(sample["subject_id"])
         )
 
-        if sample["indication"] == "":
+        imagePath = os.path.join(samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg")
+
+        with open(os.path.join(samplePath, "s" + str(sample["study_id"]) + ".txt"), "r") as f:
+            report = self.parse_radiology_report(f.read())
+            indication = report["INDICATION"] if "INDICATION" in report else ""
+
+        if indication == "":
             question = "Given <img>, what are the findings?"
         else:
-            question = f"Given <img> and the following indications:\n {sample['indication']}\nWhat are the findings?"
+            question = f"Given <img> and the following indications:\n {indication}\nWhat are the findings?"
 
         formattedText = [
             {

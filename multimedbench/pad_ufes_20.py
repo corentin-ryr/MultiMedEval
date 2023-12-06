@@ -10,8 +10,8 @@ import shutil
 
 
 class Pad_UFES_20(Benchmark):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         dataFolder = "/home/croyer/data/pad_ufes_20"
         # Check if the folder countains the zip file

@@ -15,8 +15,8 @@ import PIL
 
 class VQA(Benchmark):
 
-    def __init__(self, seed=1111) -> None:
-        super().__init__(seed)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.bleu = BLEUScore(n_gram=1)
 
         self.f1 = []
@@ -116,8 +116,8 @@ class VQA_RAD(VQA):
 
     
 class Path_VQA(VQA):
-    def __init__(self, seed=1111) -> None:
-        super().__init__(seed)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         self.taskName = "VQA-Path"
 
@@ -144,8 +144,8 @@ class Path_VQA(VQA):
         
     
 class SLAKE(VQA):
-    def __init__(self, seed=1111) -> None:
-        super().__init__(seed)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         self.taskName = "SLAKE"
 
