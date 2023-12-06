@@ -6,6 +6,7 @@ from multimedbench.vqa import VQA_RAD, Path_VQA
 from multimedbench.mimic import MIMIC_CXR_classification
 import json
 import os
+import gdown
 
 
 TASKS:dict[str, utils.Benchmark] = {
@@ -30,6 +31,7 @@ class MMB(object):
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
 
+        self._prepare_radgraph()
 
 
 
@@ -57,5 +59,19 @@ class MMB(object):
 
         return taskResult
     
+        
     def _prepare_radgraph(self):
-        pass
+        # Open the MedMD_config json file and get the download location for radgraph
+        with open("multimedbench/scorers/RadGraph/MedMD_config.json", "r") as f:
+            output = json.load(f)["radgraph"]["dlLocation"]
+
+        gdown.download("https://drive.google.com/uc?id=1koePS_rgP5_zNUeqnQgdQ89nQEolTEbR", output, quiet=False)
+
+        # Unzip the archive and delete the archive
+        utils.unzip(output, output)
+        os.remove(output)
+
+
+
+        from scorers.RadGraph.RadGraph import RadGraph
+        self.radgraph = RadGraph(reward_level="partial")
