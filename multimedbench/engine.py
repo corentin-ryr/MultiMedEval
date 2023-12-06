@@ -1,26 +1,28 @@
 
-from multimedbench import utils
+from multimedbench.utils import Params, fileWriterFactory, Benchmark
 
 from multimedbench.qa import MedQA, PubMedQA, MedMCQA
 from multimedbench.vqa import VQA_RAD, Path_VQA
-from multimedbench.mimic import MIMIC_CXR_classification
+from multimedbench.mimic import MIMIC_CXR_reportgen
 import json
 import os
 import gdown
+import sys
 
 
-TASKS:dict[str, utils.Benchmark] = {
+
+TASKS:dict[str, Benchmark] = {
     "MedQA": MedQA,
     "PubMedQA": PubMedQA,
     "MedMCQA": MedMCQA,
-    "MIMIC-CXR": MIMIC_CXR_classification,
+    "MIMIC-CXR": MIMIC_CXR_reportgen,
     "VQA-RAD": VQA_RAD,
     "Path-VQA": Path_VQA
 }
 
 
 class MMB(object):
-    def __init__(self, params:utils.Params, batcher, prepare=None):
+    def __init__(self, params:Params, batcher, prepare=None):
         self.params = params
         print(f"\n\nRunning MultiMedBenchmark with {self.params}")
 
@@ -47,14 +49,14 @@ class MMB(object):
                 # Write to files
                 for result in currentResults:
                     if result["type"] == "json": print(result["value"])
-                    utils.fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
+                    fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
 
 
             return self.results
 
         assert name in TASKS, str(name) + ' not in ' + str(self.list_tasks)
 
-        self.evaluation:utils.Benchmark = TASKS[name](seed=self.params.seed)
+        self.evaluation:Benchmark = TASKS[name](seed=self.params.seed, engine=self)
         taskResult = self.evaluation.run(self.params, self.batcher)
 
         return taskResult
@@ -62,16 +64,27 @@ class MMB(object):
         
     def _prepare_radgraph(self):
         # Open the MedMD_config json file and get the download location for radgraph
-        with open("multimedbench/scorers/RadGraph/MedMD_config.json", "r") as f:
-            output = json.load(f)["radgraph"]["dlLocation"]
+        with open("MedMD_config.json", "r") as f:
+            output = json.load(f)["RadGraph"]["dlLocation"]
 
-        gdown.download("https://drive.google.com/uc?id=1koePS_rgP5_zNUeqnQgdQ89nQEolTEbR", output, quiet=False)
+        if not os.path.exists(os.path.join(output, "scorers")):
+            gdown.download("https://drive.google.com/uc?id=1koePS_rgP5_zNUeqnQgdQ89nQEolTEbR", output, quiet=False)
 
-        # Unzip the archive and delete the archive
-        utils.unzip(output, output)
-        os.remove(output)
+            # Unzip the archive and delete the archive
+            import zipfile
+            with zipfile.ZipFile(os.path.join(output, "scorers.zip"), 'r') as zip_ref:
+                zip_ref.extractall(os.path.join(output, "scorers"))
+            os.remove(os.path.join(output, "scorers.zip"))
+        else:
+            print("RadGraph already downloaded")
 
+        # Add the RadGraph to the path
+        sys.path.append(output)
 
-
-        from scorers.RadGraph.RadGraph import RadGraph
+        try:
+            from scorers.RadGraph.RadGraph import RadGraph # It is normal that the import is not found by the IDE because it will be downloaded and installed at runtime
+        except Exception as e:
+            print("There was an error during the download and install of RadGraph")
+            raise e
+        
         self.radgraph = RadGraph(reward_level="partial")
