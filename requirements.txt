@@ -18,3 +18,4 @@ h5py
 tensorboardX==2.5
 gdown
 scikit-learn
+statsmodels
