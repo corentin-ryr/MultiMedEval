@@ -56,3 +56,6 @@ class MMB(object):
         taskResult = self.evaluation.run(self.params, self.batcher)
 
         return taskResult
+    
+    def _prepare_radgraph(self):
+        pass
