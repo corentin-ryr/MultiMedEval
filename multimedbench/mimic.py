@@ -27,7 +27,7 @@ from nltk.tokenize import word_tokenize
 import nltk
 
 nltk.download("punkt")
-nltk.download('wordnet')
+nltk.download("wordnet")
 
 
 class MIMIC_CXR_reportgen(Benchmark):
@@ -41,7 +41,6 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.bleu_2 = BLEUScore(n_gram=2)
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
-
 
         self.chexbertPath = json.load(open("MedMD_config.json", "r"))["CheXBert"]["dlLocation"]
 
@@ -84,13 +83,9 @@ class MIMIC_CXR_reportgen(Benchmark):
             total=math.ceil(len(self.dataset) / params.batch_size),
             desc="Generating reports",
         ):
-            refReportsBatch = [self.getCorrectAnswer(sample) for sample in batch]
-            hypReportsBatch = batcher([self.format_question(sample) for sample in batch])
-
-            refReports += refReportsBatch
-            hypReports += refReportsBatch #hypReportsBatch
-            break
-
+            refReports += [self.getCorrectAnswer(sample) for sample in batch]
+            hypReports += batcher([self.format_question(sample) for sample in batch])
+            # break
 
         refReportsNested = [[report] for report in refReports]
         self.bleu_1.update(hypReports, refReportsNested)
@@ -101,7 +96,6 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         chexbert_similarity = self.compute_chexbert(hypReports, refReports)
 
-        # Convert radgraph f1 scores to tensor
         f1_radgraph = self.compute_radgraph(hypReports, refReports)
 
         bleu_scores = torch.tensor(
@@ -209,9 +203,9 @@ class MIMIC_CXR_reportgen(Benchmark):
 
             # Compute the meteor score
             meteor_scores.append(meteor_score([ref_tokens], hyp_tokens))
-                
+
         return meteor_scores
-    
+
     def compute_composite(self, bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph):
         with open("multimedbench/composite_metric_model_dill.pkl", "rb") as f:
             composite_metric_v0_model = dill.load(f)
@@ -224,7 +218,7 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         norm_input_data = normalizer.transform(input_data)
         return composite_metric_v0_model.predict(norm_input_data)
-    
+
     def compute_bertscore(self, hypReports, refReports):
         scorer = BERTScorer(
             model_type="distilroberta-base",
@@ -237,14 +231,12 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         P, R, f1_bertscore = scorer.score(hypReports, refReports)
         return f1_bertscore
-    
+
     def compute_radgraph(self, hypReports, refReports):
         f1_radgraph = []
         for hyp, ref in zip(hypReports, refReports):
             # Compute the F1-radgraph score
-            (_, _, hyp_annotation_lists, ref_annotation_lists) = self.engine.radgraph(
-                refs=[ref], hyps=[hyp]
-            )
+            (_, _, hyp_annotation_lists, ref_annotation_lists) = self.engine.radgraph(refs=[ref], hyps=[hyp])
             f1_radgraph.append(
                 exact_entity_token_if_rel_exists_reward(hyp_annotation_lists[0], ref_annotation_lists[0])
             )

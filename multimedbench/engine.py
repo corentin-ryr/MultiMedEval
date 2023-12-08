@@ -9,6 +9,7 @@ import os
 import gdown
 import sys
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 TASKS:dict[str, Benchmark] = {
@@ -51,7 +52,6 @@ class MMB(object):
                 for result in currentResults:
                     if result["type"] == "json": print(result["value"])
                     fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
-
 
             return self.results
 
