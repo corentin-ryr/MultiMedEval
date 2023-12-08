@@ -155,20 +155,13 @@ class batcherMedAlpaca(batcherLlama):
         self.tokenizer.chat_template = """{% if messages[0]['role'] == 'system' %}{% set loop_messages = messages[1:] %}{% set system_message = messages[0]['content'] %}{% else %}{% set loop_messages = messages %}{% set system_message = false %}{% endif %}{% for message in loop_messages %}{% if (message['role'] == 'user') != (loop.index0 % 2 == 0) %}{{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}{% endif %}{% if loop.index0 == 0 and system_message != false %}{% set content = '<<SYS>>\n' + system_message + '\n<</SYS>>\n\n' + message['content'] %}{% else %}{% set content = message['content'] %}{% endif %}{% if message['role'] == 'user' %}{{ bos_token + '### Instruction:\n' + content.strip() + '\n\n' + '### Response:\n' }}{% elif message['role'] == 'assistant' %}{{ content.strip() + '\n\n' + eos_token }}{% endif %}{% endfor %}"""
 
 
-class batcherRadFM:
-    def __init__(self) -> None:
-        pass
-
-    def __call__(self, prompts) -> Any:
-        pass
-
 if __name__ == "__main__":
-    params = Params(True, seed=42, batch_size=50, run_name="testTemp")
+    params = Params(True, seed=42, batch_size=50, run_name="benchmarkRadFM")
 
     device = "cuda:0"
-    batcher = batcherLlama(device=device)
+    batcher = batcherMistral(device=device)
 
     mmb = MMB(params, batcher)
 
-    results = mmb.eval(["MedQA", "PubMedQA", "MedMCQA"])
+    results = mmb.eval(["MedQA", "PubMedQA", "MedMCQA", "MIMIC-CXR", "VQA-RAD", "Path-VQA"])
     print(f"Everything is done, see the {params.run_name} folder for detailed results.")
