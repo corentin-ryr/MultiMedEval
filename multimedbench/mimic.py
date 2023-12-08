@@ -6,10 +6,9 @@ import pandas as pd
 from tqdm import tqdm
 from PIL import Image
 import datasets
-import numpy as np
-from multimedbench.chexbert.label import label, encode
+from multimedbench.chexbert.label import encode
+from bert_score import BERTScorer
 
-import time
 from multimedbench.utils import (
     Benchmark,
     batchSampler,
@@ -22,6 +21,13 @@ from torchmetrics.text import BLEUScore, ROUGEScore
 
 import csv
 import torch
+import dill
+from nltk.translate.meteor_score import meteor_score
+from nltk.tokenize import word_tokenize
+import nltk
+
+nltk.download("punkt")
+nltk.download('wordnet')
 
 
 class MIMIC_CXR_reportgen(Benchmark):
@@ -32,10 +38,10 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.taskName = "MIMIC_CXR report generation"
 
         self.bleu_1 = BLEUScore(n_gram=1)
+        self.bleu_2 = BLEUScore(n_gram=2)
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
-        self.f1 = []
 
         self.chexbertPath = json.load(open("MedMD_config.json", "r"))["CheXBert"]["dlLocation"]
 
@@ -69,8 +75,6 @@ class MIMIC_CXR_reportgen(Benchmark):
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
-        answersLog = []
-
         refReports = []
         hypReports = []
 
@@ -78,47 +82,49 @@ class MIMIC_CXR_reportgen(Benchmark):
         for batch in tqdm(
             batchSampler(self.dataset, params.batch_size),
             total=math.ceil(len(self.dataset) / params.batch_size),
-            desc="Running inference",
+            desc="Generating reports",
         ):
-            batchPrompts = [self.format_question(sample) for sample in batch]
-            answers = batcher(batchPrompts)
+            refReportsBatch = [self.getCorrectAnswer(sample) for sample in batch]
+            hypReportsBatch = batcher([self.format_question(sample) for sample in batch])
 
-            for idx, sample in enumerate(batch):
-                # Compute the F1-radgraph score
-                (mean_reward, _, hypothesis_annotation_lists, reference_annotation_lists) = self.engine.radgraph(
-                    refs=[self.getCorrectAnswer(sample)], hyps=[answers[idx]]
-                )
-                self.f1.append(exact_entity_token_if_rel_exists_reward(hypothesis_annotation_lists[0], reference_annotation_lists[0]))
-            
-            refReports += [self.getCorrectAnswer(sample) for sample in batch]
-            hypReports += answers
-
-            refReportsNested = [[self.getCorrectAnswer(sample)] for sample in batch]
-            self.bleu_1.update(answers, refReportsNested)
-            self.bleu_4.update(answers, refReportsNested)
-            self.rougeL.update(answers, refReportsNested)
-
+            refReports += refReportsBatch
+            hypReports += refReportsBatch #hypReportsBatch
             break
 
-        df = pd.DataFrame(columns=["Report Impression"], data=refReports)
-        labelsReference = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
 
-        df = pd.DataFrame(columns=["Report Impression"], data=hypReports)
-        labelsHypothesis = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+        refReportsNested = [[report] for report in refReports]
+        self.bleu_1.update(hypReports, refReportsNested)
+        self.bleu_4.update(hypReports, refReportsNested)
+        self.rougeL.update(hypReports, refReportsNested)
 
-        # Compute the vector similarity between the reference and the geenrated reports
-        similarity = torch.cosine_similarity(labelsReference, labelsHypothesis)
-        
-        # TODO: add others metrics such as AUC, F1...
+        f1_bertscore = self.compute_bertscore(hypReports, refReports)
+
+        chexbert_similarity = self.compute_chexbert(hypReports, refReports)
+
+        # Convert radgraph f1 scores to tensor
+        f1_radgraph = self.compute_radgraph(hypReports, refReports)
+
+        bleu_scores = torch.tensor(
+            [self.bleu_1([candidate], [[reference]]).item() for reference, candidate in zip(refReports, hypReports)]
+        )
+
+        radcliq_v0_scores = self.compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
+
+        meteor_scores = self.compute_meteor(hypReports, refReports)
+
         metrics = {
             "bleu1": self.bleu_1.compute().item(),
             "bleu4": self.bleu_4.compute().item(),
             "rougeL": self.rougeL.compute(),
-            "f1-radgraph": sum(self.f1) / len(self.f1),
-            "CheXBert vector similarity": similarity.mean().item(),
+            "f1-radgraph": f1_radgraph.mean().item(),
+            "CheXBert vector similarity": chexbert_similarity.mean().item(),
+            "f1-bertscore": f1_bertscore.mean().item(),
+            "radcliq": sum(radcliq_v0_scores) / len(radcliq_v0_scores),
+            "meteor": sum(meteor_scores) / len(meteor_scores),
         }
 
-        # Compute the scores
+        answersLog = zip(refReports, hypReports)
+
         return [
             {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
             {"type": "csv", "name": self.taskName, "value": answersLog},
@@ -184,3 +190,62 @@ class MIMIC_CXR_reportgen(Benchmark):
     def getCorrectAnswer(self, sample):
         return sample["findings"]
 
+    def compute_chexbert(self, hypReports, refReports):
+        df = pd.DataFrame(columns=["Report Impression"], data=refReports)
+        labelsReference = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+
+        df = pd.DataFrame(columns=["Report Impression"], data=hypReports)
+        labelsHypothesis = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+
+        # Compute the vector similarity between the reference and the geenrated reports
+        return torch.cosine_similarity(labelsReference, labelsHypothesis)
+
+    def compute_meteor(self, hypReports, refReports):
+        meteor_scores = []
+        for ref, hyp in zip(refReports, hypReports):
+            # Tokenize the reference and hypothesis
+            ref_tokens = word_tokenize(ref)
+            hyp_tokens = word_tokenize(hyp)
+
+            # Compute the meteor score
+            meteor_scores.append(meteor_score([ref_tokens], hyp_tokens))
+                
+        return meteor_scores
+    
+    def compute_composite(self, bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph):
+        with open("multimedbench/composite_metric_model_dill.pkl", "rb") as f:
+            composite_metric_v0_model = dill.load(f)
+
+        with open("multimedbench/normalizer_dill.pkl", "rb") as f:
+            normalizer = dill.load(f)
+
+        # The column need to be in the order [bleu, bertscore, chexbert, radgraph]
+        input_data = torch.stack([bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph], dim=1)
+
+        norm_input_data = normalizer.transform(input_data)
+        return composite_metric_v0_model.predict(norm_input_data)
+    
+    def compute_bertscore(self, hypReports, refReports):
+        scorer = BERTScorer(
+            model_type="distilroberta-base",
+            batch_size=256,
+            lang="en",
+            rescale_with_baseline=True,
+            idf=True,
+            idf_sents=hypReports,
+        )
+
+        P, R, f1_bertscore = scorer.score(hypReports, refReports)
+        return f1_bertscore
+    
+    def compute_radgraph(self, hypReports, refReports):
+        f1_radgraph = []
+        for hyp, ref in zip(hypReports, refReports):
+            # Compute the F1-radgraph score
+            (_, _, hyp_annotation_lists, ref_annotation_lists) = self.engine.radgraph(
+                refs=[ref], hyps=[hyp]
+            )
+            f1_radgraph.append(
+                exact_entity_token_if_rel_exists_reward(hyp_annotation_lists[0], ref_annotation_lists[0])
+            )
+        return torch.tensor(f1_radgraph)

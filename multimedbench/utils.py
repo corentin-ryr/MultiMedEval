@@ -4,6 +4,7 @@ from datetime import datetime
 import csv
 import json
 import random
+import numpy as np
 
 
 class dotdict(dict):
@@ -136,3 +137,36 @@ def exact_entity_token_if_rel_exists_reward(
     )
 
     return f1_score
+
+
+class CompositeMetric:
+    """The RadCliQ-v1 composite metric.
+
+    Attributes:
+        scaler: Input normalizer.
+        coefs: Coefficients including the intercept.
+    """
+    def __init__(self, scaler, coefs):
+        """Initializes the composite metric with a normalizer and coefficients.
+
+        Args:
+            scaler: Input normalizer.
+            coefs: Coefficients including the intercept.
+        """
+        self.scaler = scaler
+        self.coefs = coefs
+
+    def predict(self, x):
+        """Generates composite metric score for input.
+
+        Args:
+            x: Input data.
+
+        Returns:
+            Composite metric score.
+        """
+        norm_x = self.scaler.transform(x)
+        norm_x = np.concatenate(
+            (norm_x, np.ones((norm_x.shape[0], 1))), axis=1)
+        pred = norm_x @ self.coefs
+        return pred

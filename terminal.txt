@@ -1,3 +1,5 @@
+srun: job 7122290 queued and waiting for resources
+srun: job 7122290 has been allocated resources
 srun: error: ioctl(TIOCGWINSZ): Inappropriate ioctl for device
 srun: error: Not using a pseudo-terminal, disregarding --pty option
 
@@ -5,18 +7,18 @@ Filesystems usage for user croyer ( uid 646291381 ):
 [0m-------------------------------------------------------------------------------------
 Directory                 Used   Limit   Used,%         Files     Limit
 [0m-------------------------------------------------------------------------------------
-/home/croyer             896MB[0m[1m    15GB[0m     5.8%[0m         21312[0m[1m    100000[0m
-/data/croyer            [1m[33m 199GB[0m[1m   200GB[0m[1m[33m    99.1%[0m        300047[0m[1m          [0m
+/home/croyer             1.1GB[0m[1m    15GB[0m     6.9%[0m         24869[0m[1m    100000[0m
+/data/croyer            [1m[33m 199GB[0m[1m   200GB[0m[1m[33m    99.3%[0m        300194[0m[1m          [0m
 /scratch/croyer           55KB[0m[1m    20TB[0m     0.0%[0m            34[0m[1m          [0m
 [0m
-/shares/menze.dqbm.uzh    72TB[0m[1m        [0m         [0m       9425753[0m[1m          [0m
+/shares/menze.dqbm.uzh    73TB[0m[1m        [0m         [0m       9425876[0m[1m          [0m
 [0m-------------------------------------------------------------------------------------
 
 !! Please note: the scratch filesystem is intended only for temporary storage.
    Files in /scratch/croyer that have not been accessed in more than 30 days
    may be automatically deleted.
 
-Wed Dec  6 18:54:27 2023       
+Fri Dec  8 12:46:43 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.147.05   Driver Version: 525.147.05   CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -25,7 +27,7 @@ Wed Dec  6 18:54:27 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  Tesla T4            On   | 00000000:00:07.0 Off |                    0 |
-| N/A   31C    P8     9W /  70W |      2MiB / 15360MiB |      0%      Default |
+| N/A   26C    P8     9W /  70W |      2MiB / 15360MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -38,32 +40,49 @@ Wed Dec  6 18:54:27 2023
 +-----------------------------------------------------------------------------+
 [nltk_data] Downloading package stopwords to /home/croyer/nltk_data...
 [nltk_data]   Package stopwords is already up-to-date!
+[nltk_data] Downloading package punkt to /home/croyer/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package wordnet to /home/croyer/nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
 
 
-Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-06 18:54:27.303736')
+Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-08 12:46:43.991658')
 RadGraph already downloaded
 Chexbert already downloaded
 ***** Benchmarking : MIMIC_CXR report generation *****
-Running inference:   0%|          | 0/55 [00:00<?, ?it/s]/shares/menze.dqbm.uzh/corentin/RadGraph/scorers/RadGraph/dygie/data/dataset_readers/dygie.py:192: UserWarning: Document 0 has a sentence with a single token or no tokens. This may break the modeling code.
-  warnings.warn(msg)
+Generating reports:   0%|          | 0/55 [00:00<?, ?it/s]Generating reports:   0%|          | 0/55 [00:00<?, ?it/s]
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+huggingface/tokenizers: The current process just got forked, after parallelism has already been used. Disabling parallelism to avoid deadlocks...
+To disable this warning, you can either:
+	- Avoid using `tokenizers` before the fork if possible
+	- Explicitly set the environment variable TOKENIZERS_PARALLELISM=(true | false)
+
+Tokenizing report impressions. All reports are cut off at 512 tokens.
+  0%|          | 0/64 [00:00<?, ?it/s]100%|██████████| 64/64 [00:00<00:00, 676.93it/s]
+Using 1 GPUs!
+
+Begin report impression labeling. The progress bar counts the # of batches completed:
+The batch size is 18
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:00<00:00,  6.83it/s] 50%|█████     | 2/4 [00:00<00:00,  7.89it/s] 75%|███████▌  | 3/4 [00:00<00:00,  7.42it/s]100%|██████████| 4/4 [00:00<00:00,  8.26it/s]
+
+Tokenizing report impressions. All reports are cut off at 512 tokens.
+  0%|          | 0/64 [00:00<?, ?it/s]100%|██████████| 64/64 [00:00<00:00, 688.72it/s]
+Using 1 GPUs!
+
+Begin report impression labeling. The progress bar counts the # of batches completed:
+The batch size is 18
+  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:00<00:00,  6.58it/s] 50%|█████     | 2/4 [00:00<00:00,  7.78it/s] 75%|███████▌  | 3/4 [00:00<00:00,  7.34it/s]100%|██████████| 4/4 [00:00<00:00,  8.18it/s]
 /shares/menze.dqbm.uzh/corentin/RadGraph/scorers/RadGraph/allennlp/nn/util.py:1467: UserWarning: The torch.cuda.*DtypeTensor constructors are no longer recommended. It's best to use methods such as torch.tensor(data, dtype=*, device='cuda') to create tensors. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:83.)
   return torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
-Running inference:   0%|          | 0/55 [00:03<?, ?it/s]
-
-Tokenizing report impressions. All reports are cut off at 512 tokens.
-  0%|          | 0/64 [00:00<?, ?it/s]100%|██████████| 64/64 [00:00<00:00, 722.46it/s]
-Using 1 GPUs!
-
-Begin report impression labeling. The progress bar counts the # of batches completed:
-The batch size is 18
-  0%|          | 0/4 [00:00<?, ?it/s] 25%|██▌       | 1/4 [00:00<00:00,  4.90it/s] 50%|█████     | 2/4 [00:00<00:00,  6.68it/s] 75%|███████▌  | 3/4 [00:00<00:00,  6.89it/s]100%|██████████| 4/4 [00:00<00:00,  7.51it/s]
-
-Tokenizing report impressions. All reports are cut off at 512 tokens.
-  0%|          | 0/64 [00:00<?, ?it/s]100%|██████████| 64/64 [00:00<00:00, 10449.03it/s]
-Using 1 GPUs!
-
-Begin report impression labeling. The progress bar counts the # of batches completed:
-The batch size is 18
-  0%|          | 0/4 [00:00<?, ?it/s]100%|██████████| 4/4 [00:00<00:00, 105.19it/s]
-torch.Size([64])
-{'type': 'json', 'name': 'metrics_MIMIC_CXR report generation', 'value': {'bleu1': 0.0, 'bleu4': 0.0, 'rougeL': {'rougeL_fmeasure': tensor(0.), 'rougeL_precision': tensor(0.), 'rougeL_recall': tensor(0.)}, 'f1-radgraph': 0.0, 'CheXBert vector similarity': 0.12085098773241043}}
+{'type': 'json', 'name': 'metrics_MIMIC_CXR report generation', 'value': {'bleu1': 1.0, 'bleu4': 1.0, 'rougeL': {'rougeL_fmeasure': tensor(1.), 'rougeL_precision': tensor(1.), 'rougeL_recall': tensor(1.)}, 'f1-radgraph': 1.0, 'CheXBert vector similarity': 1.0, 'f1-bertscore': 0.9999998807907104, 'radcliq': -0.24213302824961133, 'meteor': 0.999996857114167}}
