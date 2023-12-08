@@ -19,3 +19,4 @@ tensorboardX==2.5
 gdown
 scikit-learn
 statsmodels
+bert_score
