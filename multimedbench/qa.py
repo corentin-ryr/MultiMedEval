@@ -106,8 +106,9 @@ class MedQA(QA):
 
         formattedQuestion = f"Question:\n {question}\n"
         formattedQuestion += "Options:\n" + "\n".join(
-            [f'{option["key"]}: {option["value"]}' for option in options]
-        )
+            [f'{option["key"]}: {option["value"]}.' for option in options]
+        ) + "\n"
+        formattedQuestion += "What is the correct answer?\n"
         formattedAnswer = "The answer is " + (answer if prompt else "")
 
         question = [{"role": "user", "content": formattedQuestion}]
@@ -173,7 +174,9 @@ class PubMedQA(QA):
         answer = sample["answer"]
 
         formattedQuestion = f"{context}\nQuestion: {question}\n"
-        formattedQuestion += "Options: yes, no or maybe"
+        formattedQuestion += "Options: yes, no or maybe.\n"
+        formattedQuestion += "What is the correct answer?\n"
+
         formattedAnswer = f"The answer is {answer[0]}."
 
         question = [{"role": "user", "content": formattedQuestion}]
@@ -229,15 +232,17 @@ class MedMCQA(QA):
     def format_question(self, sample, prompt=False):
         question = sample["question"]
         options = [
-            f"1: {sample['opa']}",
-            f"2: {sample['opb']}",
-            f"3: {sample['opc']}",
-            f"4: {sample['opd']}",
+            f"1: {sample['opa']}.",
+            f"2: {sample['opb']}.",
+            f"3: {sample['opc']}.",
+            f"4: {sample['opd']}.",
         ]
         answer = sample["cop"]
 
         formattedQuestion = f"Question: {question}\n"
-        formattedQuestion += "Options:\n" + "\n".join(options)
+        formattedQuestion += "Options:\n" + "\n".join(options) + "\n"
+        formattedQuestion += "What is the correct answer?\n"
+
         formattedAnswer = f"The answer is {options[answer]}."
 
         question = [{"role": "user", "content": formattedQuestion}]
@@ -254,10 +259,10 @@ class MedMCQA(QA):
             return False
         
         optionVocabs = [
-            f"1: {sample['opa']}",
-            f"2: {sample['opb']}",
-            f"3: {sample['opc']}",
-            f"4: {sample['opd']}",
+            f"1: {sample['opa']}.",
+            f"2: {sample['opb']}.",
+            f"3: {sample['opc']}.",
+            f"4: {sample['opd']}.",
         ]
         optionVocabs = [self.cleanStr(option).split(" ") for option in optionVocabs]
         optionVocabs = [[word for word in option if word not in STOPWORDS] for option in optionVocabs]
