@@ -14,5 +14,6 @@ setup(
         'console_scripts': [
             'my_script=my_package.my_module:main'
         ]
-    }
+    },
+    include_package_data=True
 )
