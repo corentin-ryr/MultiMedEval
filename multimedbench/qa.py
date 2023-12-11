@@ -109,7 +109,7 @@ class MedQA(QA):
             [f'{option["key"]}: {option["value"]}.' for option in options]
         ) + "\n"
         formattedQuestion += "What is the correct answer?\n"
-        formattedAnswer = "The answer is " + (answer if prompt else "")
+        formattedAnswer = "The answer is " + (answer if prompt else "") + "."
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
