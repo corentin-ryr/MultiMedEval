@@ -1,2 +1,2 @@
-import multimedbench.chexbert.datasets
-import multimedbench.chexbert.models
+from multimedbench.chexbert import datasets
+from multimedbench.chexbert import models
