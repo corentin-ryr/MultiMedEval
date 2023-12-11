@@ -79,6 +79,9 @@ class MIMIC_entity_extraction:
         return hyp_annotation_lists[0]["entities"]
 
     def run(self):
+
+        entitiesAndSentences = []
+
         for batch in tqdm(
             batchSampler(self.dataset, 4),
             total=math.ceil(len(self.dataset) / 4),
@@ -87,14 +90,27 @@ class MIMIC_entity_extraction:
             refReports = [sample["findings"] for sample in batch]
 
             for report in refReports:
-                report = "The lungs show signs of pneumonia."
                 entities = self.create_reports_graph(report, report)
 
-                print(entities)
+
+                entitiesAndSentences.append([report, entities])
 
                 # self.dependency_parser(report)
 
-                raise Exception
+        # Write the output to a file
+        with open("entitiesAndSentences.json", "w") as f:
+            json.dump(entitiesAndSentences, f)
+
+
+    def visualization(self):
+        # Vizualize the dependency graph over the sentence from the report
+        
+
+
+
+        pass
+
+
 
     def dependency_parser(self, report):
         import spacy
