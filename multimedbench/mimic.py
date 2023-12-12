@@ -15,11 +15,11 @@ from multimedbench.utils import (
     Params,
     remove_punctuation,
     exact_entity_token_if_rel_exists_reward,
+    section_text
 )
 import math
 from torchmetrics.text import BLEUScore, ROUGEScore
 
-import csv
 import torch
 import dill
 from nltk.translate.meteor_score import meteor_score
@@ -51,25 +51,31 @@ class MIMIC_CXR_reportgen(Benchmark):
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
         split = split[split.split == "test"]
 
-        findings = {}
-        with open(os.path.join(self.path, "mimic_findings.csv"), "r") as f:
-            spamreader = csv.reader(f, delimiter=",")
-            for line in spamreader:
-                findings[line[0]] = line[1]
-
         # For each sample in the dataset, open its report and check if it contains the keyword "findings"
         self.dataset = []
         for _, row in split.iterrows():
-            reportFindings = findings["s" + str(row["study_id"]) + ".txt"]
-            if reportFindings == "NO FINDINGS" or reportFindings == "":
+            samplePath = os.path.join(
+                self.path, "files", "p" + str(row["subject_id"])[:2], "p" + str(row["subject_id"])
+            )
+            with open(os.path.join(samplePath, "s" + str(row["study_id"]) + ".txt"), "r") as f:
+                report, categories, _ = section_text(f.read())
+
+            if "findings" not in categories:
                 continue
+            
+            reportFindings = report[categories.index("findings")]
+
+            if "indication" in categories:
+                reportIndication = report[categories.index("indication")]
+            else:
+                reportIndication = ""
 
             self.dataset.append(
-                [str(row["subject_id"]), str(row["study_id"]), str(row["dicom_id"]), str(reportFindings)]
+                [str(row["subject_id"]), str(row["study_id"]), str(row["dicom_id"]), str(reportFindings), str(reportIndication)]
             )
 
         self.dataset = datasets.Dataset.from_pandas(
-            pd.DataFrame(columns=["subject_id", "study_id", "dicom_id", "findings"], data=self.dataset)
+            pd.DataFrame(columns=["subject_id", "study_id", "dicom_id", "findings", "indications"], data=self.dataset)
         )
 
     def run(self, params: Params, batcher):
@@ -162,9 +168,12 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         imagePath = os.path.join(samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg")
 
-        with open(os.path.join(samplePath, "s" + str(sample["study_id"]) + ".txt"), "r") as f:
-            report = self.parse_radiology_report(f.read())
-            indication = report["INDICATION"] if "INDICATION" in report else ""
+        # with open(os.path.join(samplePath, "s" + str(sample["study_id"]) + ".txt"), "r") as f:
+        #     report = self.parse_radiology_report(f.read())
+        #     indication = report["INDICATION"] if "INDICATION" in report else ""
+        
+        report = sample["findings"]
+        indication = sample["indications"]
 
         if indication == "":
             question = "Given <img>, what are the findings?"
