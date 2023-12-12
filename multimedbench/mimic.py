@@ -172,12 +172,12 @@ class MIMIC_CXR_reportgen(Benchmark):
         #     report = self.parse_radiology_report(f.read())
         #     indication = report["INDICATION"] if "INDICATION" in report else ""
         
-        indication = sample["indications"]
+        indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
 
         if indication == "":
-            question = "Given <img>, can you provide a radiology report for this medical image?"
+            question = "<img> Can you provide a radiology report for this medical image?"
         else:
-            question = f"Given <img> and the following indications:\n {indication}\nCan you provide a radiology report for this medical image?"
+            question = f"<img> {indication}\nCan you provide a radiology report for this medical image?"
 
         formattedText = [
             {
