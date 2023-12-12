@@ -5,6 +5,8 @@ import csv
 import json
 import random
 import numpy as np
+import re
+
 
 
 class dotdict(dict):
@@ -173,7 +175,6 @@ class CompositeMetric:
 
 
 
-import re
 
 
 def section_text(text):
