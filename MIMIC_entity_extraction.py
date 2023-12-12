@@ -7,7 +7,12 @@ import csv
 import datasets
 from tqdm import tqdm
 import math
-from multimedbench.utils import batchSampler
+from multimedbench.utils import batchSampler, remove_punctuation
+
+import networkx as nx
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
 
 
 class MIMIC_entity_extraction:
@@ -102,16 +107,6 @@ class MIMIC_entity_extraction:
             json.dump(entitiesAndSentences, f)
 
 
-    def visualization(self):
-        # Vizualize the dependency graph over the sentence from the report
-        
-
-
-
-        pass
-
-
-
     def dependency_parser(self, report):
         import spacy
         from spacy import displacy
@@ -141,6 +136,78 @@ class MIMIC_entity_extraction:
         with open("dependency.svg", "w") as f:
             f.write(svg)
 
+def plot_sentence(sentence, relations):
+    fig, ax = plt.subplots()
 
-extractor = MIMIC_entity_extraction()
-extractor.run()
+    # Set the size of the plot
+    fig.set_size_inches(15, 4)
+
+    sentence = [remove_punctuation(word) for word in sentence.split()]
+
+    print(sentence)
+
+    # Plot the sentence
+    for i, word in enumerate(sentence):
+        ax.text(i * 0.01, 0.5, word, va='center', ha='center', fontsize=9, color='black')
+    
+
+    # Highlight the specified words
+    for relation in relations:
+        # Find the position of each word in the sentence
+        word1 = sentence.index(relation[0])
+        word2 = sentence.index(relation[1])
+
+        a = patches.FancyArrowPatch((word1 * 0.01, 0.45), (word2 * 0.01, 0.45),
+                             connectionstyle="arc3,rad=.5")
+        plt.gca().add_patch(a)
+
+    # Remove x and y ticks
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+    plt.show()
+
+
+entitiesAndSentences = json.load(open("entitiesAndSentences.json", "r"))
+
+# entities = entitiesAndSentences[0][1]
+
+locatedAtRelations = []
+locatedAtAndObservationRelations = []
+modifyAndObservationRelations = []
+for entities in entitiesAndSentences:
+    entities = entities[1]
+    relations = []
+    for entity in entities:
+        currentEntity = entities[entity]
+
+        if currentEntity["relations"] == []:
+            continue
+
+        for relation in currentEntity["relations"]:
+            otherEntity = entities[relation[1]]
+            currentRelation = (currentEntity["tokens"], otherEntity["tokens"])
+            relations.append(currentRelation)
+
+            # Keep the entities with a located at relation
+            if relation[0] == "located_at":
+                locatedAtRelations.append(currentRelation)
+
+                if currentEntity["label"] == "OBS-DP":
+                    locatedAtAndObservationRelations.append(currentRelation)
+            
+            if relation[0] == "modify" and currentEntity["label"] == "OBS-DP":
+                modifyAndObservationRelations.append(currentRelation)
+
+# print(locatedAtRelations)
+json.dump(modifyAndObservationRelations, open("locatedAtRelations.json", "w"))
+
+
+# plot_sentence(entitiesAndSentences[0][0], relations)
+
+# extractor = MIMIC_entity_extraction()
+# extractor.run()
+
+
+
+
