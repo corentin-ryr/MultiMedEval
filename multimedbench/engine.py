@@ -2,7 +2,7 @@
 from multimedbench.utils import Params, fileWriterFactory, Benchmark
 
 from multimedbench.qa import MedQA, PubMedQA, MedMCQA
-from multimedbench.vqa import VQA_RAD, Path_VQA
+from multimedbench.vqa import VQA_RAD, Path_VQA, SLAKE
 from multimedbench.mimic import MIMIC_CXR_reportgen
 import json
 import os
@@ -18,7 +18,8 @@ TASKS:dict[str, Benchmark] = {
     "MedMCQA": MedMCQA,
     "MIMIC-CXR": MIMIC_CXR_reportgen,
     "VQA-RAD": VQA_RAD,
-    "Path-VQA": Path_VQA
+    "Path-VQA": Path_VQA,
+    "SLAKE": SLAKE
 }
 
 

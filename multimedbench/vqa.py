@@ -102,8 +102,8 @@ class VQA_RAD(VQA):
 
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"On this picture <img>, {sample['question']}"
-        formattedAnswer = f"The answer is {sample['answer']}"
+        formattedQuestion = f"<img>, {sample['question']}"
+        formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
@@ -129,8 +129,8 @@ class Path_VQA(VQA):
 
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"On this picture <img>, {sample['question']}"
-        formattedAnswer = f"The answer is {sample['answer']}"
+        formattedQuestion = f"<img>, {sample['question']}"
+        formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
@@ -173,8 +173,8 @@ class SLAKE(VQA):
     
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"On this picture <img>, {sample['question']}"
-        formattedAnswer = f"The answer is {sample['answer']}"
+        formattedQuestion = f"<img>, {sample['question']}"
+        formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
