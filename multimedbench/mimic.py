@@ -175,9 +175,9 @@ class MIMIC_CXR_reportgen(Benchmark):
         indication = sample["indications"]
 
         if indication == "":
-            question = "Given <img>, what are the findings?"
+            question = "Given <img>, can you provide a radiology report for this medical image?"
         else:
-            question = f"Given <img> and the following indications:\n {indication}\nWhat are the findings?"
+            question = f"Given <img> and the following indications:\n {indication}\nCan you provide a radiology report for this medical image?"
 
         formattedText = [
             {
