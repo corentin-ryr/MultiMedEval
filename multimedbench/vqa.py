@@ -89,7 +89,7 @@ class VQA(Benchmark):
 
 class VQA_RAD(VQA):
     def __init__(self, seed=1111, **kwargs) -> None:
-        super().__init__(seed, **kwargs)
+        super().__init__(**kwargs)
         self.taskName = "VQA-Rad"
 
         params = json.load(open("MedMD_config.json", "r"))
