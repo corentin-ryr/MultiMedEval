@@ -172,7 +172,6 @@ class MIMIC_CXR_reportgen(Benchmark):
         #     report = self.parse_radiology_report(f.read())
         #     indication = report["INDICATION"] if "INDICATION" in report else ""
         
-        report = sample["findings"]
         indication = sample["indications"]
 
         if indication == "":
@@ -185,7 +184,7 @@ class MIMIC_CXR_reportgen(Benchmark):
                 "role": "user",
                 "content": question,
             },
-            {"role": "assistant", "content": f"Findings: {sample['findings']}"},
+            # {"role": "assistant", "content": f"Findings: {sample['findings']}"},
         ]
 
         return (formattedText, [Image.open(imagePath)])
