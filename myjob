@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=16G
+#SBATCH --time=00:20:00
+#SBATCH --output=medBenchTest.out
+
+
+runJob.sh 2>&1 | tee terminal.txt
