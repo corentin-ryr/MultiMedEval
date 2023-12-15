@@ -4,6 +4,7 @@ from multimedbench.utils import Params, fileWriterFactory, Benchmark
 from multimedbench.qa import MedQA, PubMedQA, MedMCQA
 from multimedbench.vqa import VQA_RAD, Path_VQA, SLAKE
 from multimedbench.mimic import MIMIC_CXR_reportgen
+from multimedbench.imageClassification import MIMIC_CXR_ImageClassification, VinDr_Mammo, Pad_UFES_20
 import json
 import os
 import gdown
@@ -16,10 +17,13 @@ TASKS:dict[str, Benchmark] = {
     "MedQA": MedQA,
     "PubMedQA": PubMedQA,
     "MedMCQA": MedMCQA,
-    "MIMIC-CXR": MIMIC_CXR_reportgen,
+    "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen,
     "VQA-RAD": VQA_RAD,
     "Path-VQA": Path_VQA,
-    "SLAKE": SLAKE
+    "SLAKE": SLAKE,
+    "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification,
+    "VinDr-Mammo": VinDr_Mammo,
+    "Pad-UFES-20": Pad_UFES_20
 }
 
 

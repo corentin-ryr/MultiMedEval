@@ -167,10 +167,6 @@ class MIMIC_CXR_reportgen(Benchmark):
         )
 
         imagePath = os.path.join(samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg")
-
-        # with open(os.path.join(samplePath, "s" + str(sample["study_id"]) + ".txt"), "r") as f:
-        #     report = self.parse_radiology_report(f.read())
-        #     indication = report["INDICATION"] if "INDICATION" in report else ""
         
         indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
 
