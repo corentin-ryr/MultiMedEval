@@ -211,10 +211,12 @@ class MIMIC_CXR_reportgen(Benchmark):
         return meteor_scores
 
     def compute_composite(self, bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph):
-        with open("multimedbench/composite_metric_model_dill.pkl", "rb") as f:
+        # Get the current path to the module
+        module_path = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(module_path, "composite_metric_model_dill.pkl"), "rb") as f:
             composite_metric_v0_model = dill.load(f)
 
-        with open("multimedbench/normalizer_dill.pkl", "rb") as f:
+        with open(os.path.join(module_path, "normalizer_dill.pkl"), "rb") as f:
             normalizer = dill.load(f)
 
         # The column need to be in the order [bleu, bertscore, chexbert, radgraph]
