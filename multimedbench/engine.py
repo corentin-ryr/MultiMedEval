@@ -60,7 +60,7 @@ class MMB(object):
 
             return self.results
 
-        assert name in TASKS, str(name) + ' not in ' + str(self.list_tasks)
+        assert name in TASKS, str(name) + ' not in ' + str(TASKS.keys())
 
         self.evaluation:Benchmark = TASKS[name](seed=self.params.seed, engine=self)
         taskResult = self.evaluation.run(self.params, self.batcher)
