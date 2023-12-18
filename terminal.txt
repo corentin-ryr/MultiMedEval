@@ -1,5 +1,5 @@
-srun: job 7509552 queued and waiting for resources
-srun: job 7509552 has been allocated resources
+srun: job 7535675 queued and waiting for resources
+srun: job 7535675 has been allocated resources
 srun: error: ioctl(TIOCGWINSZ): Inappropriate ioctl for device
 srun: error: Not using a pseudo-terminal, disregarding --pty option
 
@@ -7,18 +7,18 @@ Filesystems usage for user croyer ( uid 646291381 ):
 [0m-------------------------------------------------------------------------------------
 Directory                 Used   Limit   Used,%         Files     Limit
 [0m-------------------------------------------------------------------------------------
-/home/croyer             1.1GB[0m[1m    15GB[0m     6.7%[0m         29871[0m[1m    100000[0m
-/data/croyer            [1m[33m 190GB[0m[1m   200GB[0m[1m[33m    94.6%[0m        380265[0m[1m          [0m
+/home/croyer             1.1GB[0m[1m    15GB[0m     6.8%[0m         29752[0m[1m    100000[0m
+/data/croyer            [1m[33m 191GB[0m[1m   200GB[0m[1m[33m    95.4%[0m        382117[0m[1m          [0m
 /scratch/croyer          749GB[0m[1m    20TB[0m     3.7%[0m       1040663[0m[1m          [0m
 [0m
-/shares/menze.dqbm.uzh    74TB[0m[1m        [0m         [0m       9428787[0m[1m          [0m
+/shares/menze.dqbm.uzh    74TB[0m[1m        [0m         [0m       9429024[0m[1m          [0m
 [0m-------------------------------------------------------------------------------------
 
 !! Please note: the scratch filesystem is intended only for temporary storage.
    Files in /scratch/croyer that have not been accessed in more than 30 days
    may be automatically deleted.
 
-Fri Dec 15 17:57:03 2023       
+Mon Dec 18 11:15:49 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.147.05   Driver Version: 525.147.05   CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -27,7 +27,7 @@ Fri Dec 15 17:57:03 2023
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
 |   0  Tesla T4            On   | 00000000:00:07.0 Off |                    0 |
-| N/A   28C    P8     9W /  70W |      2MiB / 15360MiB |      0%      Default |
+| N/A   30C    P8     8W /  70W |      2MiB / 15360MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -46,28 +46,20 @@ Fri Dec 15 17:57:03 2023
 [nltk_data]   Package wordnet is already up-to-date!
 
 
-Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-15 17:57:04.300254')
+Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-18 11:15:49.848979')
 RadGraph already downloaded
 Chexbert already downloaded
-Index(['patient_id', 'lesion_id', 'smoke', 'drink', 'background_father',
-       'background_mother', 'age', 'pesticide', 'gender',
-       'skin_cancer_history', 'cancer_history', 'has_piped_water',
-       'has_sewage_system', 'fitspatrick', 'region', 'diameter_1',
-       'diameter_2', 'diagnostic', 'itch', 'grew', 'hurt', 'changed', 'bleed',
-       'elevation', 'img_id', 'biopsed'],
-      dtype='object')
-2298
-***** Benchmarking : Pad UFES 20 Image Classification *****
-Running inference:   0%|          | 0/36 [00:00<?, ?it/s]{'patient_id': 'PAT_1516', 'lesion_id': 1765, 'smoke': None, 'drink': None, 'background_father': None, 'background_mother': None, 'age': 8, 'pesticide': None, 'gender': None, 'skin_cancer_history': None, 'cancer_history': None, 'has_piped_water': None, 'has_sewage_system': None, 'fitspatrick': None, 'region': 'ARM', 'diameter_1': None, 'diameter_2': None, 'diagnostic': 'NEV', 'itch': 'False', 'grew': 'False', 'hurt': 'False', 'changed': 'False', 'bleed': 'False', 'elevation': 'False', 'img_id': 'PAT_1516_1765_530.png', 'biopsed': False}
-Running inference:   0%|          | 0/36 [00:00<?, ?it/s]
+{'id': '26175531', 'question_id': '26175531', 'document_id': '26175531', 'question': 'Is Aspiration Thrombectomy Beneficial in Patients Undergoing Primary Percutaneous Coronary Intervention?', 'type': 'yesno', 'choices': ['yes', 'no', 'maybe'], 'context': 'It is unclear whether intravenous glycoprotein IIb/IIIa inhibitors or ischemic time might modify any clinical benefits observed with aspiration thrombectomy before primary percutaneous coronary intervention (PCI) in patients with ST-segment-elevation myocardial infarction. Electronic databases were searched for trials that randomized ST-segment-elevation myocardial infarction patients to aspiration thrombectomy before PCI versus conventional PCI. Summary estimates were constructed using a DerSimonian-Laird model. Seventeen trials with 20\u2009960 patients were available for analysis. When compared with conventional PCI, aspiration thrombectomy was not associated with a significant reduction in the risk of mortality 2.8% versus 3.2% (risk ratio [RR], 0.89; 95% confidence interval [CI], 0.76-1.04; P=0.13), reinfarction 1.3% versus 1.4% (RR, 0.93; 95% CI, 0.73-1.17; P=0.52), the combined outcome of mortality or reinfarction 4.1% versus 4.6% (RR, 0.90; 95% CI, 0.79-1.02; P=0.11), or stent thrombosis 0.9% versus 1.2% (RR, 0.82; 95% CI, 0.62-1.08; P=0.15). Aspiration thrombectomy was associated with a nonsignificant increase in the risk of stroke 0.6% versus 0.4% (RR, 1.45; 95% CI, 0.96-2.21; P=0.08). Meta-regression analysis did not identify a difference for the log RR of mortality, reinfarction, and the combined outcome of mortality or reinfarction with intravenous glycoprotein IIb/IIIa inhibitors (P=0.17, 0.70, and 0.50, respectively) or with ischemic time (P=0.29, 0.66, and 0.58, respectively).', 'answer': ['no']}
 Traceback (most recent call last):
-  File "/home/croyer/MultiMedBench/testImageClassification.py", line 15, in <module>
-    print(engine.eval("Pad-UFES-20")[0])
-  File "/home/croyer/MultiMedBench/multimedbench/engine.py", line 66, in eval
-    taskResult = self.evaluation.run(self.params, self.batcher)
-  File "/home/croyer/MultiMedBench/multimedbench/imageClassification.py", line 36, in run
-    text, img = self.format_question(sample)
-  File "/home/croyer/MultiMedBench/multimedbench/imageClassification.py", line 253, in format_question
-    image = Image.open(os.path.join(self.path, "images", sample["image_id"] + ".jpg"))
-KeyError: 'image_id'
-srun: error: u20-computegpu-3: task 0: Exited with exit code 1
+  File "/home/croyer/MultiMedBench/testMedQA.py", line 12, in <module>
+    print(engine.eval("PubMedQA")[0])
+  File "/home/croyer/MultiMedBench/multimedbench/engine.py", line 65, in eval
+    self.evaluation:Benchmark = TASKS[name](seed=self.params.seed, engine=self)
+  File "/home/croyer/MultiMedBench/multimedbench/qa.py", line 169, in __init__
+    self.prompt = self.getPrompt()
+  File "/home/croyer/MultiMedBench/multimedbench/qa.py", line 69, in getPrompt
+    text, img = self.format_question(
+  File "/home/croyer/MultiMedBench/multimedbench/qa.py", line 176, in format_question
+    raise Exception
+Exception
+srun: error: u20-computegpu-6: task 0: Exited with exit code 1
