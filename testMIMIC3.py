@@ -12,4 +12,4 @@ def batcher(prompts):
 
 engine = MMB(params=params, batcher=batcher)
 
-print(engine.eval("CBIS-DDSM")[0])
+print(engine.eval("MIMIC-III")[0])

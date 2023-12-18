@@ -18,7 +18,8 @@ nvidia-smi
 # python testMIMIC.py
 # python testImageClassification.py
 # python MIMIC_entity_extraction.py
-python testMedQA.py
+# python testMedQA.py
+python testMIMIC3.py
 
 
 
