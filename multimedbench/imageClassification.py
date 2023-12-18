@@ -16,6 +16,8 @@ import numpy as np
 import urllib.request
 import zipfile
 import shutil
+from torchmetrics import BLEUScore
+from datasets import load_dataset
 
 
 class ImageClassification(Benchmark):
@@ -234,27 +236,55 @@ class Pad_UFES_20(ImageClassification):
 
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
+        # Bleu score to evaluate the answer
+        self.bleu = BLEUScore()
+
+        self.options = ["BCC", "SCC", "ACK", "SEK", "BOD", "MEL", "NEV"]
+        self.mapAcronymToName = {
+            "BCC": "Basal Cell Carcinoma (BCC)",
+            "SCC": "Squamous Cell Carcinoma (SCC)",
+            "ACK": "Actinic Keratosis (ACK)",
+            "SEK": "Seborrheic Keratosis (SEK)",
+            "BOD": "Bowen’s disease (BOD)",
+            "MEL": "Melanoma (MEL)",
+            "NEV": "Nevus (NEV)",
+        }
+
     def format_question(self, sample):
-        question = f"Given <img> and the following condition of the patient:"
-
-        options = "Options:\n" + "\n".join(
-            [
-                "Basal Cell Carcinoma (BCC)",
-                "Squamous Cell Carcinoma (SCC)",
-                "Actinic Keratosis (ACK)",
-                "Seborrheic Keratosis (SEK)",
-                "Bowen’s disease (BOD)",
-                "Melanoma (MEL)",
-                "Nevus (NEV)",
-            ]
-        )
-        print(sample)
-
-        image = Image.open(os.path.join(self.path, "images", sample["image_id"] + ".jpg"))
+        patientInfo = {
+            "smokes": sample["smoke"],
+            "drink": sample["drink"],
+            "age": sample["age"],
+            "backgroundFather": sample["background_father"],
+            "backgroundMother": sample["background_mother"],
+            "pesticide": sample["pesticide"],
+            "gender": sample["gender"],
+            "skin cancer history": sample["skin_cancer_history"],
+            "cancer history": sample["cancer_history"],
+            "has piped water": sample["has_piped_water"],
+            "has sewage system": sample["has_sewage_system"],
+        }
+        # Create a sentence out of the patient information don't include Nones
+        patientInfo = ", ".join([f"{key} {value}" for key, value in patientInfo.items() if value is not None])
+        question = f"Given <img> and the patient's information: {patientInfo}, what is the most likely diagnosis?"
+        options = "Options:\n" + "\n".join([self.mapAcronymToName[option] for option in self.options])
 
         formattedText = [{"role": "user", "content": f"{question}\n{options}"}]
 
+        print(formattedText)
+
+        image = Image.open(os.path.join(self.path, "images", sample["img_id"]))
         return (formattedText, [image])
+
+    def getPredictedAnswer(self, answer: str) -> int:
+        # Find the best bleu score between the answer and the options
+        scores = [self.bleu(answer, option) for option in self.options]
+
+        return scores.index(max(scores))
+
+    def getCorrectAnswer(self, sample) -> int:
+        correctName = sample["diagnostic"]
+        return self.options.index(correctName)
 
     def _generateDataset(self):
         dataFolder = self.path
@@ -291,3 +321,31 @@ class Pad_UFES_20(ImageClassification):
                 os.remove(os.path.join(dataFolder, "images", file, image))
 
             os.rmdir(os.path.join(dataFolder, "images", file))
+
+
+class CBIS_DDSM(ImageClassification):
+    def __init__(self, engine, **kwargs) -> None:
+        super().__init__(engine, **kwargs)
+
+        self.taskName = "CBIS-DDSM Image Classification"
+        self.num_classes = 0
+
+        # Get the dataset from Kaggle
+        self.path = json.load(open("MedMD_config.json", "r"))["CBIS-DDSM"]["path"]
+
+        # Check if the folder contains the zip file
+        dataset = load_dataset("Reverb/CBIS-DDSM", cache_dir=self.path)
+
+    
+    def _generateDataset(self):
+        # Download the file from Kaggle
+        print("Downloading the dataset...")
+        url = "https://www.kaggle.com/datasets/awsaf49/cbis-ddsm-breast-cancer-image-dataset/download?datasetVersionNumber=1"
+        with tqdm(unit="B", unit_scale=True, unit_divisor=1024, miniters=1, desc=url.split("/")[-1]) as t:
+            os.makedirs(self.path, exist_ok=True)
+            urllib.request.urlretrieve(
+                url, os.path.join(self.path, "cbis-ddsm.zip"), reporthook=lambda x, y, z: t.update(y)
+            )
+
+
+

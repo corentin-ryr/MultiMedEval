@@ -6,6 +6,7 @@ import json
 import random
 import numpy as np
 import re
+from abc import abstractmethod, ABC
 
 
 
@@ -17,13 +18,15 @@ class dotdict(dict):
     __delattr__ = dict.__delitem__
 
 
-class Benchmark:
+
+class Benchmark(ABC):
     def __init__(self, engine, seed=1111) -> None:
         self.seed = seed
         random.seed(self.seed)
         self.taskName = "None"
         self.engine = engine
 
+    @abstractmethod
     def run(self, params, batcher):
         pass
 
