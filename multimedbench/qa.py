@@ -7,15 +7,16 @@ import random
 from nltk.corpus import stopwords
 import nltk
 from abc import abstractmethod
-nltk.download('stopwords')
-STOPWORDS = stopwords.words('english')
+
+nltk.download("stopwords")
+STOPWORDS = stopwords.words("english")
 STOPWORDS.remove("a")
 STOPWORDS.remove("d")
 
 import json
 
-class QA(Benchmark):
 
+class QA(Benchmark):
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
 
@@ -44,19 +45,20 @@ class QA(Benchmark):
                     isCorrect = True
                 total_answers += 1
 
-                answersLog.append(
-                    (self.getCorrectAnswer(batch[idx]), answer, isCorrect)
-                )
-                    
+                answersLog.append((self.getCorrectAnswer(batch[idx]), answer, isCorrect))
+
         # TODO: add others metrics such as AUC, F1...
         metrics = {"accuracy": correct_answers / total_answers}
 
         # Compute the scores
-        return [{"type":"json", "name": f"metrics_{self.taskName}", "value": metrics}, {"type":"csv", "name": self.taskName, "value": answersLog}]
-    
-    def cleanStr(self, text:str):
+        return [
+            {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
+            {"type": "csv", "name": self.taskName, "value": answersLog},
+        ]
+
+    def cleanStr(self, text: str):
         return remove_punctuation(text.lower().replace("\n", " ").strip())
-    
+
     def getPrompt(self):
         prompt = []
         images = []
@@ -68,14 +70,14 @@ class QA(Benchmark):
             prompt += text
             images += img
         return (prompt, images)
-    
+
     @abstractmethod
     def format_question(self, sample, prompt=False):
         pass
 
     @abstractmethod
     def getCorrectAnswer(self, sample):
-        pass 
+        pass
 
     @abstractmethod
     def isValid(self, pred: str, sample):
@@ -88,14 +90,12 @@ class MedQA(QA):
         self.taskName = "MedQA"
 
         params = json.load(open("MedMD_config.json", "r"))
-        
+
         self.dataset = load_dataset(
             "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=params["MedQA"]["path"]
         )
 
-        self.trainDataset = load_dataset(
-            "bigbio/med_qa", split="train", cache_dir=params["MedQA"]["path"]
-        )
+        self.trainDataset = load_dataset("bigbio/med_qa", split="train", cache_dir=params["MedQA"]["path"])
 
         self.prompt = self.getPrompt()
 
@@ -104,10 +104,10 @@ class MedQA(QA):
         options = sample["options"]
         answer = f"{sample['answer_idx']}: {sample['answer']}"
 
-        formattedQuestion = f"Question:\n {question}\n"
-        formattedQuestion += "Options:\n" + "\n".join(
-            [f'{option["key"]}: {option["value"]}.' for option in options]
-        ) + "\n"
+        formattedQuestion = f"{question}\n"
+        formattedQuestion += (
+            "Options:\n" + "\n".join([f'{option["key"]}: {option["value"]}.' for option in options]) + "\n"
+        )
         formattedQuestion += "What is the correct answer?\n"
         formattedAnswer = "The answer is " + (answer if prompt else "") + "."
 
@@ -124,7 +124,7 @@ class MedQA(QA):
         pred = self.cleanStr(pred)
         if len(pred) == 0:
             return False
-        
+
         optionVocabs = [self.cleanStr(f'{option["key"]}: {option["value"]}').split(" ") for option in sample["options"]]
         optionVocabs = [[word for word in option if word not in STOPWORDS] for option in optionVocabs]
 
@@ -135,12 +135,12 @@ class MedQA(QA):
             for idx in range(len(optionVocabs)):
                 if token in optionVocabs[idx]:
                     scores[idx] += 1
-        
-        
+
         pred = sample["options"][scores.index(max(scores))]["key"].lower()
 
         gold = self.getCorrectAnswer(sample)
         return pred == gold
+
 
 class PubMedQA(QA):
     def __init__(self, **kwargs):
@@ -174,21 +174,20 @@ class PubMedQA(QA):
         answer = sample["answer"]
 
         formattedQuestion = f"{context}\nQuestion: {question}\n"
-        formattedQuestion += "Options: yes, no or maybe.\n"
-        formattedQuestion += "What is the correct answer?\n"
+        formattedQuestion += "Answer with yes, no or maybe.\n"
 
-        formattedAnswer = f"The answer is {answer[0]}."
+        formattedAnswer = answer[0]
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
         return (question, [])
-    
+
     def isValid(self, pred: str, sample):
         pred = self.cleanStr(pred)
         if len(pred) == 0:
             return False
-        
+
         optionVocabs = [["yes"], ["no"], ["maybe"]]
 
         pred = pred.split(" ")
@@ -197,7 +196,10 @@ class PubMedQA(QA):
             for idx in range(len(optionVocabs)):
                 if token in optionVocabs[idx]:
                     scores[idx] += 1
-        
+
+        if max(scores) == 0:
+            return False
+
         pred = optionVocabs[scores.index(max(scores))][0].lower()
 
         gold = self.getCorrectAnswer(sample)[0]
@@ -239,7 +241,7 @@ class MedMCQA(QA):
         ]
         answer = sample["cop"]
 
-        formattedQuestion = f"Question: {question}\n"
+        formattedQuestion = f"{question}\n"
         formattedQuestion += "Options:\n" + "\n".join(options) + "\n"
         formattedQuestion += "What is the correct answer?\n"
 
@@ -252,12 +254,12 @@ class MedMCQA(QA):
 
     def getCorrectAnswer(self, sample):
         return self.mapToNumber[sample["cop"]]
-    
+
     def isValid(self, pred: str, sample):
         pred = self.cleanStr(pred)
         if len(pred) == 0:
             return False
-        
+
         optionVocabs = [
             f"1: {sample['opa']}.",
             f"2: {sample['opb']}.",
@@ -275,8 +277,9 @@ class MedMCQA(QA):
             for idx in range(len(optionVocabs)):
                 if token in optionVocabs[idx]:
                     scores[idx] += 1
-        
+
         pred = self.mapToNumber[scores.index(max(scores))]
 
         gold = self.getCorrectAnswer(sample)[0]
         return pred == gold
+
