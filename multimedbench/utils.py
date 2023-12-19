@@ -20,11 +20,12 @@ class dotdict(dict):
 
 
 class Benchmark(ABC):
-    def __init__(self, engine, seed=1111) -> None:
+    def __init__(self, engine, seed=1111, fewshot=False) -> None:
         self.seed = seed
         random.seed(self.seed)
         self.taskName = "None"
         self.engine = engine
+        self.fewshot = fewshot
 
     @abstractmethod
     def run(self, params, batcher):

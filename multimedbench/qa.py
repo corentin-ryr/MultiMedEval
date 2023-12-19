@@ -34,7 +34,10 @@ class QA(Benchmark):
             batchPrompts = []
             for sample in batch:
                 text, img = self.format_question(sample)
-                batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                if self.fewshot:
+                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                else:
+                    batchPrompts.append((text, img))
 
             answers = batcher(batchPrompts)
 
