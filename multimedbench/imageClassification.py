@@ -36,7 +36,11 @@ class ImageClassification(Benchmark):
             batchPrompts = []
             for sample in batch:
                 text, img = self.format_question(sample)
-                batchPrompts.append((text, img))
+                if self.fewshot:
+                    raise NotImplementedError("Few shot not implemented because no prompt is given")
+                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                else:
+                    batchPrompts.append((text, img))
 
             answers = batcher(batchPrompts)
 

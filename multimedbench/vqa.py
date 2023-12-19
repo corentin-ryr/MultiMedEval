@@ -35,7 +35,10 @@ class VQA(Benchmark):
             batchPrompts = []
             for sample in batch:
                 text, img = self.format_question(sample)
-                batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                if self.fewshot:
+                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                else:
+                    batchPrompts.append((text, img))
 
             answers = batcher(batchPrompts)
 
@@ -102,7 +105,7 @@ class VQA_RAD(VQA):
 
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"<img>, {sample['question']}"
+        formattedQuestion = f"<img> {sample['question']}"
         formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
@@ -129,7 +132,7 @@ class Path_VQA(VQA):
 
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"<img>, {sample['question']}"
+        formattedQuestion = f"<img> {sample['question']}"
         formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
@@ -173,7 +176,7 @@ class SLAKE(VQA):
     
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"<img>, {sample['question']}"
+        formattedQuestion = f"<img> {sample['question']}"
         formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
