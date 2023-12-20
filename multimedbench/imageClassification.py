@@ -382,7 +382,7 @@ class CBIS_DDSM_Mass(ImageClassification):
         print(sample["ROI mask file path"])
 
         path = Path(sample["cropped image file path"])
-        path = Path(self.path) / "jpeg" / Path(*path.parts[1:])
+        path = Path(self.path) / Path(*path.parts[1:])
         print(path)
 
         formattedText = [
