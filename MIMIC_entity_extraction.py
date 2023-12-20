@@ -9,7 +9,6 @@ from tqdm import tqdm
 import math
 from multimedbench.utils import batchSampler, remove_punctuation
 
-import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -168,6 +167,10 @@ def plot_sentence(sentence, relations):
     plt.show()
 
 
+
+# extractor = MIMIC_entity_extraction()
+# extractor.run()
+
 entitiesAndSentences = json.load(open("entitiesAndSentences.json", "r"))
 
 # entities = entitiesAndSentences[0][1]
@@ -196,7 +199,7 @@ for entities in entitiesAndSentences:
                 if currentEntity["label"] == "OBS-DP":
                     locatedAtAndObservationRelations.append(currentRelation)
             
-            if relation[0] == "modify" and currentEntity["label"] == "OBS-DP":
+            if relation[0] == "modify" and currentEntity["label"].startswith("OBS") and otherEntity["label"].startswith("OBS"):
                 modifyAndObservationRelations.append(currentRelation)
 
 # print(locatedAtRelations)
@@ -205,8 +208,7 @@ json.dump(modifyAndObservationRelations, open("locatedAtRelations.json", "w"))
 
 # plot_sentence(entitiesAndSentences[0][0], relations)
 
-# extractor = MIMIC_entity_extraction()
-# extractor.run()
+
 
 
 

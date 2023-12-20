@@ -1,3 +1,5 @@
+srun: job 7569670 queued and waiting for resources
+srun: job 7569670 has been allocated resources
 srun: error: ioctl(TIOCGWINSZ): Inappropriate ioctl for device
 srun: error: Not using a pseudo-terminal, disregarding --pty option
 
@@ -5,70 +7,15 @@ Filesystems usage for user croyer ( uid 646291381 ):
 [0m-------------------------------------------------------------------------------------
 Directory                 Used   Limit   Used,%         Files     Limit
 [0m-------------------------------------------------------------------------------------
-/home/croyer             1.1GB[0m[1m    15GB[0m     6.8%[0m         29888[0m[1m    100000[0m
-/data/croyer            [1m[33m 191GB[0m[1m   200GB[0m[1m[33m    95.4%[0m        383255[0m[1m          [0m
+/home/croyer             1.1GB[0m[1m    15GB[0m     6.9%[0m         29904[0m[1m    100000[0m
+/data/croyer            [1m[33m 168GB[0m[1m   200GB[0m[1m[33m    83.8%[0m        384229[0m[1m          [0m
 /scratch/croyer          749GB[0m[1m    20TB[0m     3.7%[0m       1040663[0m[1m          [0m
 [0m
-/shares/menze.dqbm.uzh    75TB[0m[1m        [0m         [0m       9446328[0m[1m          [0m
+/shares/menze.dqbm.uzh    75TB[0m[1m        [0m         [0m       9446339[0m[1m          [0m
 [0m-------------------------------------------------------------------------------------
 
 !! Please note: the scratch filesystem is intended only for temporary storage.
    Files in /scratch/croyer that have not been accessed in more than 30 days
    may be automatically deleted.
 
-Wed Dec 20 12:37:02 2023       
-+-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.147.05   Driver Version: 525.147.05   CUDA Version: 12.0     |
-|-------------------------------+----------------------+----------------------+
-| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-|                               |                      |               MIG M. |
-|===============================+======================+======================|
-|   0  Tesla V100-SXM2...  On   | 00000000:B2:00.0 Off |                    0 |
-| N/A   30C    P0    41W / 300W |      0MiB / 16384MiB |      0%      Default |
-|                               |                      |                  N/A |
-+-------------------------------+----------------------+----------------------+
-                                                                               
-+-----------------------------------------------------------------------------+
-| Processes:                                                                  |
-|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
-|        ID   ID                                                   Usage      |
-|=============================================================================|
-|  No running processes found                                                 |
-+-----------------------------------------------------------------------------+
-Warning: Your Kaggle API key is readable by other users on this system! To fix this, you can run 'chmod 600 /home/croyer/.kaggle/kaggle.json'
-[nltk_data] Downloading package punkt to /home/croyer/nltk_data...
-[nltk_data]   Package punkt is already up-to-date!
-[nltk_data] Downloading package wordnet to /home/croyer/nltk_data...
-[nltk_data]   Package wordnet is already up-to-date!
-
-
-Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-20 12:37:02.311950')
-RadGraph already downloaded
-Chexbert already downloaded
-(10237, 38)
-['cropped images' 'full mammogram images' nan 'ROI mask images']
-2857 3567 3247 566
-10237
-  0%|          | 0/326 [00:00<?, ?it/s]100%|██████████| 326/326 [00:00<00:00, 5397.73it/s]
-Dataset({
-    features: ['patient_id', 'breast density', 'left or right breast', 'image view', 'abnormality id', 'abnormality type', 'calc type', 'calc distribution', 'assessment', 'pathology', 'subtlety', 'image file path', 'cropped image file path', 'ROI mask file path'],
-    num_rows: 326
-})
-***** Benchmarking : CBIS-DDSM Image Classification *****
-Running inference:   0%|          | 0/6 [00:00<?, ?it/s]CBIS-DDSM/jpeg/1.3.6.1.4.1.9590.100.1.2.374115997511889073021386151921807063992/1-043.jpg
-CBIS-DDSM/jpeg/1.3.6.1.4.1.9590.100.1.2.419081637812053404913157930753972718515/1-245.jpg
-Calc-Test_P_00038_LEFT_CC_1/1.3.6.1.4.1.9590.100.1.2.161465562211359959230647609981488894942/1.3.6.1.4.1.9590.100.1.2.419081637812053404913157930753972718515/000000.dcm
-/shares/menze.dqbm.uzh/corentin/CBIS-DDSM/jpeg/jpeg/1.3.6.1.4.1.9590.100.1.2.419081637812053404913157930753972718515/1-245.jpg
-Running inference:   0%|          | 0/6 [00:00<?, ?it/s]
-Traceback (most recent call last):
-  File "/home/croyer/MultiMedBench/testImageClassification.py", line 15, in <module>
-    print(engine.eval("CBIS-DDSM")[0])
-  File "/home/croyer/MultiMedBench/multimedbench/engine.py", line 66, in eval
-    taskResult = self.evaluation.run(self.params, self.batcher)
-  File "/home/croyer/MultiMedBench/multimedbench/imageClassification.py", line 39, in run
-    text, img = self.format_question(sample)
-  File "/home/croyer/MultiMedBench/multimedbench/imageClassification.py", line 402, in format_question
-    raise Exception
-Exception
-srun: error: u20-computeibmgpu-vesta6: task 0: Exited with exit code 1
+No devices were found

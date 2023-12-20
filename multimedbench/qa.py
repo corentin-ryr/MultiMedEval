@@ -147,7 +147,7 @@ class MedQA(QA):
 
         options = [self.cleanStr(f'{option["key"]}: {option["value"]}') for option in sample["options"]]
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer.compute([option], [pred]) for option in options]
+        scores = [self.bleuScorer([self.cleanStr(option)], [pred]) for option in options]
 
         pred = sample["options"][scores.index(max(scores))]["key"].lower()
 
@@ -293,7 +293,7 @@ class MedMCQA(QA):
 
         options = [f"1: {sample['opa']}.", f"2: {sample['opb']}.", f"3: {sample['opc']}.", f"4: {sample['opd']}."]
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer.compute([option], [pred]) for option in options]
+        scores = [self.bleuScorer([self.cleanStr(option)], [pred]) for option in options]
 
         pred = self.mapToNumber[scores.index(max(scores))]
 
