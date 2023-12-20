@@ -56,7 +56,9 @@ class VQA(Benchmark):
                 recall = len(tokens.intersection(correctTokens)) / len(correctTokens)
                 self.f1.append(2 * (precision * recall) / (precision + recall + 1e-8))
 
-            self.bleu.update(answers, correctAnswers)
+
+            cleanedAnswers = [self.cleanStr(answer) for answer in answers]
+            self.bleu.update(cleanedAnswers, correctAnswers)
 
                     
         # TODO: add others metrics such as AUC, F1...
@@ -105,7 +107,7 @@ class VQA_RAD(VQA):
 
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"<img> {sample['question']}"
+        formattedQuestion = f"<img>{sample['question']}"
         formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
@@ -132,7 +134,7 @@ class Path_VQA(VQA):
 
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"<img> {sample['question']}"
+        formattedQuestion = f"<img>{sample['question']}"
         formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
@@ -176,7 +178,7 @@ class SLAKE(VQA):
     
     def format_question(self, sample, prompt=False):
 
-        formattedQuestion = f"<img> {sample['question']}"
+        formattedQuestion = f"<img>{sample['question']}"
         formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]

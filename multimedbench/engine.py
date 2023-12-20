@@ -1,10 +1,9 @@
-
 from multimedbench.utils import Params, fileWriterFactory, Benchmark
 
 from multimedbench.qa import MedQA, PubMedQA, MedMCQA
 from multimedbench.vqa import VQA_RAD, Path_VQA, SLAKE
 from multimedbench.mimic import MIMIC_CXR_reportgen
-from multimedbench.imageClassification import MIMIC_CXR_ImageClassification, VinDr_Mammo, Pad_UFES_20, CBIS_DDSM
+from multimedbench.imageClassification import MIMIC_CXR_ImageClassification, VinDr_Mammo, Pad_UFES_20, CBIS_DDSM_Mass
 from multimedbench.mimic_iii import MIMIC_III
 import json
 import os
@@ -14,7 +13,7 @@ import sys
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-TASKS:dict[str, Benchmark] = {
+TASKS: dict[str, Benchmark] = {
     "MedQA": MedQA,
     "PubMedQA": PubMedQA,
     "MedMCQA": MedMCQA,
@@ -25,19 +24,18 @@ TASKS:dict[str, Benchmark] = {
     "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification,
     "VinDr-Mammo": VinDr_Mammo,
     "Pad-UFES-20": Pad_UFES_20,
-    # "CBIS-DDSM": CBIS_DDSM,
-    "MIMIC-III": MIMIC_III
+    "CBIS-DDSM": CBIS_DDSM_Mass,
+    "MIMIC-III": MIMIC_III,
 }
 
 
 class MMB(object):
-    def __init__(self, params:Params, batcher, prepare=None):
+    def __init__(self, params: Params, batcher, fewshot: bool = False):
         self.params = params
         print(f"\n\nRunning MultiMedBenchmark with {self.params}")
 
-        # batcher and prepare
+        self.fewshot = fewshot
         self.batcher = batcher
-        self.prepare = prepare if prepare else lambda x, y: None
 
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
@@ -45,11 +43,9 @@ class MMB(object):
         self._prepare_radgraph()
         self._prepare_chexbert()
 
-
-
-    def eval(self, name:str|list[str]):
+    def eval(self, name: str | list[str]):
         # evaluate on evaluation [name], either takes string or list of strings
-        if (isinstance(name, list)):
+        if isinstance(name, list):
             self.results = {}
             for x in name:
                 currentResults = self.eval(x)
@@ -58,19 +54,19 @@ class MMB(object):
 
                 # Write to files
                 for result in currentResults:
-                    if result["type"] == "json": print(result["value"])
+                    if result["type"] == "json":
+                        print(result["value"])
                     fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
 
             return self.results
 
-        assert name in TASKS, str(name) + ' not in ' + str(TASKS.keys())
+        assert name in TASKS, str(name) + " not in " + str(TASKS.keys())
 
-        self.evaluation:Benchmark = TASKS[name](seed=self.params.seed, engine=self)
+        self.evaluation: Benchmark = TASKS[name](seed=self.params.seed, engine=self, fewshot=self.fewshot)
         taskResult = self.evaluation.run(self.params, self.batcher)
 
         return taskResult
-    
-        
+
     def _prepare_radgraph(self):
         # Open the MedMD_config json file and get the download location for radgraph
         with open("MedMD_config.json", "r") as f:
@@ -81,7 +77,8 @@ class MMB(object):
 
             # Unzip the archive and delete the archive
             import zipfile
-            with zipfile.ZipFile(os.path.join(output, "scorers.zip"), 'r') as zip_ref:
+
+            with zipfile.ZipFile(os.path.join(output, "scorers.zip"), "r") as zip_ref:
                 zip_ref.extractall(os.path.join(output, "scorers"))
             os.remove(os.path.join(output, "scorers.zip"))
         else:
@@ -91,11 +88,13 @@ class MMB(object):
         sys.path.append(output)
 
         try:
-            from scorers.RadGraph.RadGraph import RadGraph # It is normal that the import is not found by the IDE because it will be downloaded and installed at runtime
+            from scorers.RadGraph.RadGraph import (
+                RadGraph,
+            )  # It is normal that the import is not found by the IDE because it will be downloaded and installed at runtime
         except Exception as e:
             print("There was an error during the download and install of RadGraph")
             raise e
-        
+
         self.radgraph = RadGraph(reward_level="partial")
 
     def _prepare_chexbert(self):
@@ -105,8 +104,10 @@ class MMB(object):
 
         if not os.path.exists(os.path.join(output, "chexbert.pth")):
             os.makedirs(output, exist_ok=True)
-            gdown.download("https://stanfordmedicine.app.box.com/shared/static/c3stck6w6dol3h36grdc97xoydzxd7w9", os.path.join(output, "chexbert.pth"), quiet=False)
+            gdown.download(
+                "https://stanfordmedicine.app.box.com/shared/static/c3stck6w6dol3h36grdc97xoydzxd7w9",
+                os.path.join(output, "chexbert.pth"),
+                quiet=False,
+            )
         else:
             print("Chexbert already downloaded")
-
-
