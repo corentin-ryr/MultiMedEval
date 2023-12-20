@@ -17,7 +17,8 @@ import urllib.request
 import zipfile
 import shutil
 from torchmetrics import BLEUScore
-from datasets import load_dataset
+from kaggle.api.kaggle_api_extended import KaggleApi
+from pathlib import Path
 
 
 class ImageClassification(Benchmark):
@@ -327,29 +328,104 @@ class Pad_UFES_20(ImageClassification):
             os.rmdir(os.path.join(dataFolder, "images", file))
 
 
-class CBIS_DDSM(ImageClassification):
+class CBIS_DDSM_Mass(ImageClassification):
     def __init__(self, engine, **kwargs) -> None:
         super().__init__(engine, **kwargs)
 
         self.taskName = "CBIS-DDSM Image Classification"
-        self.num_classes = 0
+        self.num_classes = 3
 
         # Get the dataset from Kaggle
         self.path = json.load(open("MedMD_config.json", "r"))["CBIS-DDSM"]["path"]
 
-        # Check if the folder contains the zip file
-        dataset = load_dataset("Reverb/CBIS-DDSM", cache_dir=self.path)
+        # Download the file at address https://huggingface.co/datasets/Reverb/CBIS-DDSM/resolve/main/CBIS-DDSM.7z?download=true
+        self._generateDataset()
 
-    
+        # Open the calc_case_description_test_set.csv file with pandas
+        self.dataset = pd.read_csv(os.path.join(self.path, "csv", "calc_case_description_test_set.csv"))
+        df_dicom = pd.read_csv(os.path.join(self.path, "csv", "dicom_info.csv"))
+        print(df_dicom.shape)
+        # Print unique values of SeriesDescription
+        print(df_dicom.SeriesDescription.unique())
+
+        cropped_images = df_dicom[df_dicom.SeriesDescription == "cropped images"].image_path
+        full_mammo = df_dicom[df_dicom.SeriesDescription == "full mammogram images"].image_path
+        roi_img = df_dicom[df_dicom.SeriesDescription == "ROI mask images"].image_path
+        nan_img = df_dicom[df_dicom.SeriesDescription.isna()].image_path
+
+        self.full_mammo_dict = dict()
+        self.cropped_images_dict = dict()
+        self.roi_img_dict = dict()
+        self.nan_dict = dict()
+
+        for dicom in full_mammo:
+            key = dicom.split("/")[2]
+            self.full_mammo_dict[key] = dicom
+        for dicom in cropped_images:
+            key = dicom.split("/")[2]
+            self.cropped_images_dict[key] = dicom
+        for dicom in roi_img:
+            key = dicom.split("/")[2]
+            self.roi_img_dict[key] = dicom
+        for dicom in nan_img:
+            key = dicom.split("/")[2]
+            self.nan_dict[key] = dicom
+
+        self._fix_image_path(self.dataset)
+
+        self.dataset = datasets.Dataset.from_pandas(self.dataset)
+        print(self.dataset)
+
+    def format_question(self, sample):
+        print(sample["image file path"])
+        print(sample["cropped image file path"])
+        print(sample["ROI mask file path"])
+
+        path = Path(sample["cropped image file path"])
+        path = Path(self.path) / "jpeg" / Path(*path.parts[1:])
+        print(path)
+
+        formattedText = [
+            {
+                "role": "user",
+                "content": f"<img> Is the mass benign, malignant or benign without callback?",
+            }
+        ]
+
+        
+
+        raise Exception
+
+        image = Image.open(os.path.join(self.path, "images", path))
+
+        return (formattedText, [image])
+
     def _generateDataset(self):
-        # Download the file from Kaggle
-        print("Downloading the dataset...")
-        url = "https://www.kaggle.com/datasets/awsaf49/cbis-ddsm-breast-cancer-image-dataset/download?datasetVersionNumber=1"
-        with tqdm(unit="B", unit_scale=True, unit_divisor=1024, miniters=1, desc=url.split("/")[-1]) as t:
-            os.makedirs(self.path, exist_ok=True)
-            urllib.request.urlretrieve(
-                url, os.path.join(self.path, "cbis-ddsm.zip"), reporthook=lambda x, y, z: t.update(y)
-            )
+        if os.path.exists(os.path.join(self.path, "csv")):
+            return
 
+        api = KaggleApi()
+        api.authenticate()
 
+        os.makedirs(self.path, exist_ok=True)
 
+        api.dataset_download_files("awsaf49/cbis-ddsm-breast-cancer-image-dataset", path=self.path, unzip=True)
+
+    def _fix_image_path(self, data:pd.DataFrame):
+        """correct dicom paths to correct image paths"""
+        for idx in tqdm(range(len(data))):
+            sample = data.iloc[idx]
+
+            img_name = sample["image file path"].split("/")[2]
+            if img_name in self.full_mammo_dict:
+                imagePath = self.full_mammo_dict[img_name]
+            else:
+                imagePath = self.nan_dict[img_name]
+            data.iloc[idx, data.columns.get_loc("image file path")] = imagePath
+
+            img_name = sample["cropped image file path"].split("/")[2]
+            if img_name in self.cropped_images_dict:
+                imagePath = self.cropped_images_dict[img_name]
+            else:
+                imagePath = self.nan_dict[img_name]
+            data.iloc[idx, data.columns.get_loc("cropped image file path")] = imagePath

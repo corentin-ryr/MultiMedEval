@@ -4,14 +4,15 @@ from tqdm import tqdm
 import math
 from multimedbench.utils import remove_punctuation
 import random
-from nltk.corpus import stopwords
-import nltk
+# from nltk.corpus import stopwords
+# import nltk
 from abc import abstractmethod
+from torchmetrics import BLEUScore
 
-nltk.download("stopwords")
-STOPWORDS = stopwords.words("english")
-STOPWORDS.remove("a")
-STOPWORDS.remove("d")
+# nltk.download("stopwords")
+# STOPWORDS = stopwords.words("english")
+# STOPWORDS.remove("a")
+# STOPWORDS.remove("d")
 
 import json
 
@@ -48,7 +49,7 @@ class QA(Benchmark):
                     isCorrect = True
                 total_answers += 1
 
-                answersLog.append((self.getCorrectAnswer(batch[idx]), answer, isCorrect))
+                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, isCorrect))
 
         # TODO: add others metrics such as AUC, F1...
         metrics = {"accuracy": correct_answers / total_answers}
@@ -79,7 +80,7 @@ class QA(Benchmark):
         pass
 
     @abstractmethod
-    def getCorrectAnswer(self, sample):
+    def getCorrectAnswer(self, sample, fullText=False):
         pass
 
     @abstractmethod
@@ -102,6 +103,8 @@ class MedQA(QA):
 
         self.prompt = self.getPrompt()
 
+        self.bleuScorer = BLEUScore()
+
     def format_question(self, sample, prompt=False):
         question = sample["question"]
         options = sample["options"]
@@ -120,24 +123,31 @@ class MedQA(QA):
 
         return (question, [])
 
-    def getCorrectAnswer(self, sample):
-        return sample["answer_idx"].lower().strip()
+    def getCorrectAnswer(self, sample, fullText=False):
+        if fullText:
+            return f"{sample['answer_idx']}: {sample['answer'].lower().strip()}"
+        else:
+            return sample["answer_idx"].lower().strip()
 
     def isValid(self, pred: str, sample):
         pred = self.cleanStr(pred)
         if len(pred) == 0:
             return False
 
-        optionVocabs = [self.cleanStr(f'{option["key"]}: {option["value"]}').split(" ") for option in sample["options"]]
-        optionVocabs = [[word for word in option if word not in STOPWORDS] for option in optionVocabs]
+        # optionVocabs = [self.cleanStr(f'{option["key"]}: {option["value"]}').split(" ") for option in sample["options"]]
+        # optionVocabs = [[word for word in option if word not in STOPWORDS] for option in optionVocabs]
 
-        pred = pred.split(" ")
-        pred = [word for word in pred if word not in STOPWORDS]
-        scores = [0 for _ in range(len(optionVocabs))]
-        for token in pred:
-            for idx in range(len(optionVocabs)):
-                if token in optionVocabs[idx]:
-                    scores[idx] += 1
+        # pred = pred.split(" ")
+        # pred = [word for word in pred if word not in STOPWORDS]
+        # scores = [0 for _ in range(len(optionVocabs))]
+        # for token in pred:
+        #     for idx in range(len(optionVocabs)):
+        #         if token in optionVocabs[idx]:
+        #             scores[idx] += 1
+
+        options = [self.cleanStr(f'{option["key"]}: {option["value"]}') for option in sample["options"]]
+        # Compute the BLEU score for each option
+        scores = [self.bleuScorer.compute([option], [pred]) for option in options]
 
         pred = sample["options"][scores.index(max(scores))]["key"].lower()
 
@@ -168,7 +178,7 @@ class PubMedQA(QA):
 
         self.prompt = self.getPrompt()
 
-    def getCorrectAnswer(self, sample):
+    def getCorrectAnswer(self, sample, fullText=False):
         return sample["answer"]
 
     def format_question(self, sample, prompt=False):
@@ -218,14 +228,12 @@ class MedMCQA(QA):
 
         self.dataset = load_dataset(
             "medmcqa",
-            name="pubmed_qa_labeled_fold1_bigbio_qa",
-            split="validation",
+            split="test",
             cache_dir=params["MedMCQA"]["path"],
         )
 
         self.trainDataset = load_dataset(
             "medmcqa",
-            name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="train",
             cache_dir=params["MedMCQA"]["path"],
         )
@@ -233,6 +241,8 @@ class MedMCQA(QA):
         self.prompt = self.getPrompt()
 
         self.mapToNumber = ["1", "2", "3", "4"]
+
+        self.bleuScorer = BLEUScore()
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
@@ -255,34 +265,37 @@ class MedMCQA(QA):
             question.append({"role": "assistant", "content": formattedAnswer})
         return (question, [])
 
-    def getCorrectAnswer(self, sample):
-        return self.mapToNumber[sample["cop"]]
+    def getCorrectAnswer(self, sample, fullText=False):
+        number = self.mapToNumber[sample["cop"]]
+        text = sample["co" + sample["cop"]]
+        if fullText:
+            return f"{number}: {text}"
+        else:
+            return number
 
     def isValid(self, pred: str, sample):
         pred = self.cleanStr(pred)
         if len(pred) == 0:
             return False
 
-        optionVocabs = [
-            f"1: {sample['opa']}.",
-            f"2: {sample['opb']}.",
-            f"3: {sample['opc']}.",
-            f"4: {sample['opd']}.",
-        ]
-        optionVocabs = [self.cleanStr(option).split(" ") for option in optionVocabs]
-        optionVocabs = [[word for word in option if word not in STOPWORDS] for option in optionVocabs]
+        # optionVocabs = [f"1: {sample['opa']}.", f"2: {sample['opb']}.", f"3: {sample['opc']}.", f"4: {sample['opd']}."]
+        # optionVocabs = [self.cleanStr(option).split(" ") for option in optionVocabs]
+        # optionVocabs = [[word for word in option if word not in STOPWORDS] for option in optionVocabs]
 
-        pred = pred.split(" ")
-        pred = [word for word in pred if word not in STOPWORDS]
+        # pred = pred.split(" ")
+        # pred = [word for word in pred if word not in STOPWORDS]
 
-        scores = [0 for _ in range(len(optionVocabs))]
-        for token in pred:
-            for idx in range(len(optionVocabs)):
-                if token in optionVocabs[idx]:
-                    scores[idx] += 1
+        # scores = [0 for _ in range(len(optionVocabs))]
+        # for token in pred:
+        #     for idx in range(len(optionVocabs)):
+        #         if token in optionVocabs[idx]:
+        #             scores[idx] += 1
+
+        options = [f"1: {sample['opa']}.", f"2: {sample['opb']}.", f"3: {sample['opc']}.", f"4: {sample['opd']}."]
+        # Compute the BLEU score for each option
+        scores = [self.bleuScorer.compute([option], [pred]) for option in options]
 
         pred = self.mapToNumber[scores.index(max(scores))]
 
         gold = self.getCorrectAnswer(sample)[0]
         return pred == gold
-

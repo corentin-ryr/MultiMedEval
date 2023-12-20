@@ -21,3 +21,5 @@ scikit-learn
 statsmodels
 bert_score
 pydicom
+py7zr
+kaggle
