@@ -19,6 +19,7 @@ import shutil
 from torchmetrics import BLEUScore
 from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
+from multimedbench.utils import remove_punctuation
 
 
 class ImageClassification(Benchmark):
@@ -94,6 +95,9 @@ class ImageClassification(Benchmark):
             int: The index of the answer
         """
         pass
+
+    def cleanStr(self, text: str):
+        return remove_punctuation(text.lower().replace("\n", " ").replace("_", " ").strip())
 
 
 class MIMIC_CXR_ImageClassification(ImageClassification):
@@ -376,29 +380,36 @@ class CBIS_DDSM_Mass(ImageClassification):
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
         print(self.dataset)
 
+        self.options = ["BENIGN", "MALIGNANT", "BENIGN_WITHOUT_CALLBACK"]
+        self.bleu = BLEUScore(n_gram=1)
+
     def format_question(self, sample):
-        print(sample["image file path"])
-        print(sample["cropped image file path"])
-        print(sample["ROI mask file path"])
 
         path = Path(sample["cropped image file path"])
         path = Path(self.path) / Path(*path.parts[1:])
-        print(path)
 
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img> Is the mass benign, malignant or benign without callback?",
+                "content": f"<img>Is the mass benign, malignant or benign without callback?",
             }
         ]
-
-        
-
-        raise Exception
 
         image = Image.open(os.path.join(self.path, "images", path))
 
         return (formattedText, [image])
+    
+    def getPredictedAnswer(self, answer: str) -> int:
+        answer = self.cleanStr(answer)
+        # Find the best bleu score between the answer and the options
+        scores = [self.bleu(answer, option) for option in self.options]
+        # Return the index of the best score
+        return scores.index(max(scores))
+    
+    def getCorrectAnswer(self, sample) -> int:
+        print(sample["pathology"])
+        return self.options.index(sample["pathology"])
+
 
     def _generateDataset(self):
         if os.path.exists(os.path.join(self.path, "csv")):
