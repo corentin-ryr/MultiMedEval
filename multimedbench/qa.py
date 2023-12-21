@@ -218,7 +218,7 @@ class MedMCQA(QA):
 
         self.dataset = load_dataset(
             "medmcqa",
-            split="test",
+            split="validation",
             cache_dir=params["MedMCQA"]["path"],
         )
 
@@ -254,7 +254,9 @@ class MedMCQA(QA):
         return (question, [])
 
     def getCorrectAnswer(self, sample, fullText=False):
+        print(sample)
         number = sample["cop"]
+        print(number)
         if fullText:
             return self._getOptions(sample)[number]
         else:

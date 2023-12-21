@@ -9,4 +9,4 @@ def batcher(prompts):
 
 engine = MMB(params=params, batcher=batcher)
 
-print(engine.eval("PubMedQA")[0])
+print(engine.eval("MedMCQA")[0])
