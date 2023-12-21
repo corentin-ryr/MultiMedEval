@@ -267,7 +267,7 @@ class MedMCQA(QA):
 
     def getCorrectAnswer(self, sample, fullText=False):
         number = self.mapToNumber[sample["cop"]]
-        text = sample["co" + sample["cop"]]
+        text = sample["co" + str(sample["cop"])]
         if fullText:
             return f"{number}: {text}"
         else:

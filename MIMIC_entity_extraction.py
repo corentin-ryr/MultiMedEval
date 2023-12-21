@@ -199,11 +199,11 @@ for entities in entitiesAndSentences:
                 if currentEntity["label"] == "OBS-DP":
                     locatedAtAndObservationRelations.append(currentRelation)
             
-            if relation[0] == "modify" and currentEntity["label"].startswith("OBS") and otherEntity["label"].startswith("OBS"):
+            if currentEntity["label"].startswith("OBS") and otherEntity["label"].startswith("OBS"):
                 modifyAndObservationRelations.append(currentRelation)
 
 # print(locatedAtRelations)
-json.dump(modifyAndObservationRelations, open("locatedAtRelations.json", "w"))
+json.dump(modifyAndObservationRelations, open("modifyRelations.json", "w"))
 
 
 # plot_sentence(entitiesAndSentences[0][0], relations)
