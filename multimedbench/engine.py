@@ -40,8 +40,8 @@ class MMB(object):
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
 
-        self._prepare_radgraph()
-        self._prepare_chexbert()
+        # self._prepare_radgraph()
+        # self._prepare_chexbert()
 
     def eval(self, name: str | list[str]):
         # evaluate on evaluation [name], either takes string or list of strings

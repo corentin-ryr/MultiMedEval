@@ -254,9 +254,7 @@ class MedMCQA(QA):
         return (question, [])
 
     def getCorrectAnswer(self, sample, fullText=False):
-        print(sample)
         number = sample["cop"]
-        print(number)
         if fullText:
             return self._getOptions(sample)[number]
         else:
@@ -279,7 +277,7 @@ class MedMCQA(QA):
         # Compute the BLEU score for each option
         scores = [self.bleuScorer([self.cleanStr(option)], [pred]) for option in options]
 
-        pred = scores.index(max(scores)) + 1  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
+        pred = str(scores.index(max(scores)) + 1)  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
 
-        gold = self.getCorrectAnswer(sample)[0]
+        gold = self.getCorrectAnswer(sample)
         return pred == gold
