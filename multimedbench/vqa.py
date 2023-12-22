@@ -101,7 +101,7 @@ class VQA_RAD(VQA):
         self.prompt = self.getPrompt()
 
     def format_question(self, sample, prompt=False):
-        formattedQuestion = f"<img> {sample['question']}"
+        formattedQuestion = f"<img>{sample['question']}"
         formattedAnswer = f"{sample['answer']}"
 
         question = [{"role": "user", "content": formattedQuestion}]
