@@ -262,10 +262,10 @@ class MedMCQA(QA):
 
     def _getOptions(self, sample):
         return [
-            f"1: {sample['opa']}.",
-            f"2: {sample['opb']}.",
-            f"3: {sample['opc']}.",
-            f"4: {sample['opd']}.",
+            f"a: {sample['opa']}.",
+            f"b: {sample['opb']}.",
+            f"c: {sample['opc']}.",
+            f"d: {sample['opd']}.",
         ]
 
     def isValid(self, pred: str, sample):
@@ -273,7 +273,7 @@ class MedMCQA(QA):
         if len(pred) == 0:
             return False
 
-        options = [f"1: {sample['opa']}.", f"2: {sample['opb']}.", f"3: {sample['opc']}.", f"4: {sample['opd']}."]
+        options = [f"a: {sample['opa']}.", f"b: {sample['opb']}.", f"c: {sample['opc']}.", f"d: {sample['opd']}."]
         # Compute the BLEU score for each option
         scores = [self.bleuScorer([self.cleanStr(option)], [pred]) for option in options]
 
