@@ -7,9 +7,9 @@ params = Params(True, 42, 64)
 
 
 def batcher(prompts):
-    return ["yes it is a good report" for _ in range(len(prompts))]
+    return ["malignant" for _ in range(len(prompts))]
 
 
 engine = MMB(params=params, batcher=batcher)
 
-print(engine.eval("CBIS-DDSM")[0])
+engine.eval(["MIMIC-CXR-ImageClassification"]) #"CBIS-DDSM", "Pad-UFES-20", "VinDr-Mammo", 

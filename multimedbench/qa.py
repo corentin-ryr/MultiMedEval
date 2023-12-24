@@ -176,8 +176,8 @@ class PubMedQA(QA):
         question = sample["question"]
         answer = sample["answer"]
 
-        formattedQuestion = f"{context}\nQuestion: {question}\n"
-        formattedQuestion += "Answer with yes, no or maybe."
+        formattedQuestion = "Answer the following question with yes, no or maybe."
+        formattedQuestion += f"{context}\nQuestion: {question}\n"
 
         formattedAnswer = answer[0]
 
@@ -234,12 +234,7 @@ class MedMCQA(QA):
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
-        options = [
-            f"1: {sample['opa']}.",
-            f"2: {sample['opb']}.",
-            f"3: {sample['opc']}.",
-            f"4: {sample['opd']}.",
-        ]
+        options = self._getOptions(sample)
         answer = sample["cop"]
 
         formattedQuestion = f"{question}\n"
@@ -273,9 +268,8 @@ class MedMCQA(QA):
         if len(pred) == 0:
             return False
 
-        options = [f"a: {sample['opa']}.", f"b: {sample['opb']}.", f"c: {sample['opc']}.", f"d: {sample['opd']}."]
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer([self.cleanStr(option)], [pred]) for option in options]
+        scores = [self.bleuScorer([self.cleanStr(option)], [pred]) for option in self._getOptions(sample)]
 
         pred = str(scores.index(max(scores)) + 1)  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
 

@@ -49,66 +49,118 @@ def load_unlabeled_data(df, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS,
     @returns loader (dataloader): dataloader object for the reports
     """
     collate_fn = collate_fn_no_labels
-    dset = UnlabeledDataset(df)
+    dset = UnlabeledDataset(df, verbose=False)
     loader = torch.utils.data.DataLoader(dset, batch_size=batch_size, shuffle=shuffle,
                                          num_workers=0, collate_fn=collate_fn)
     return loader
     
+class label:
+    def __init__(self, checkpoint_path, verbose=False) -> None:
+        model = bert_labeler()
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.device_count() > 0: #works even if only 1 GPU available
+            if verbose: print("Using", torch.cuda.device_count(), "GPUs!")
+            model = nn.DataParallel(model) #to utilize multiple GPU's
+            model = model.to(device)
+            checkpoint = torch.load(checkpoint_path)
+            model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+            new_state_dict = OrderedDict()
+            for k, v in checkpoint['model_state_dict'].items():
+                name = k[7:] # remove `module.`
+                new_state_dict[name] = v
+            model.load_state_dict(new_state_dict)
+            
+        model.eval()
+        self.model = model
+        self.verbose = verbose
+        self.device = device
 
-def label(checkpoint_path, df):
-    """Labels a dataset of reports
-    @param checkpoint_path (string): location of saved model checkpoint 
-    @param df (string): dataframe with the reports
+    def __call__(self, df):
+        ld = load_unlabeled_data(df)
 
-    @returns y_pred (List[List[int]]): Labels for each of the 14 conditions, per report  
-    """
-    ld = load_unlabeled_data(df)
+        y_pred = [[] for _ in range(len(CONDITIONS))]
+        rep = {}
+
+        if self.verbose:
+            print("\nBegin report impression labeling. The progress bar counts the # of batches completed:")
+            print("The batch size is %d" % BATCH_SIZE)
+        with torch.no_grad():
+            for i, data in enumerate(tqdm(ld, disable=not self.verbose)):
+                batch = data['imp'] #(batch_size, max_len)
+                batch = batch.to(self.device)
+                src_len = data['len']
+                batch_size = batch.shape[0]
+                attn_mask = generate_attention_masks(batch, src_len, self.device)
+
+                out = self.model(batch, attn_mask)
+
+                for j in range(len(out)):
+                    curr_y_pred = out[j].argmax(dim=1) #shape is (batch_size)
+                    y_pred[j].append(curr_y_pred)
+
+            for j in range(len(y_pred)):
+                y_pred[j] = torch.cat(y_pred[j], dim=0)
+                
+        y_pred = [t.tolist() for t in y_pred]
+        return y_pred
+
+# def label(checkpoint_path, df, verbose=True):
+#     """Labels a dataset of reports
+#     @param checkpoint_path (string): location of saved model checkpoint 
+#     @param df (string): dataframe with the reports
+
+#     @returns y_pred (List[List[int]]): Labels for each of the 14 conditions, per report  
+#     """
+#     ld = load_unlabeled_data(df)
     
-    model = bert_labeler()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    if torch.cuda.device_count() > 0: #works even if only 1 GPU available
-        print("Using", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model) #to utilize multiple GPU's
-        model = model.to(device)
-        checkpoint = torch.load(checkpoint_path)
-        model.load_state_dict(checkpoint['model_state_dict'])
-    else:
-        checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
-        new_state_dict = OrderedDict()
-        for k, v in checkpoint['model_state_dict'].items():
-            name = k[7:] # remove `module.`
-            new_state_dict[name] = v
-        model.load_state_dict(new_state_dict)
+#     model = bert_labeler()
+#     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+#     if torch.cuda.device_count() > 0: #works even if only 1 GPU available
+#         if verbose: print("Using", torch.cuda.device_count(), "GPUs!")
+#         model = nn.DataParallel(model) #to utilize multiple GPU's
+#         model = model.to(device)
+#         checkpoint = torch.load(checkpoint_path)
+#         model.load_state_dict(checkpoint['model_state_dict'])
+#     else:
+#         checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+#         new_state_dict = OrderedDict()
+#         for k, v in checkpoint['model_state_dict'].items():
+#             name = k[7:] # remove `module.`
+#             new_state_dict[name] = v
+#         model.load_state_dict(new_state_dict)
         
-    was_training = model.training
-    model.eval()
-    y_pred = [[] for _ in range(len(CONDITIONS))]
-    rep = {}
+#     was_training = model.training
+#     model.eval()
+#     y_pred = [[] for _ in range(len(CONDITIONS))]
+#     rep = {}
 
-    print("\nBegin report impression labeling. The progress bar counts the # of batches completed:")
-    print("The batch size is %d" % BATCH_SIZE)
-    with torch.no_grad():
-        for i, data in enumerate(tqdm(ld)):
-            batch = data['imp'] #(batch_size, max_len)
-            batch = batch.to(device)
-            src_len = data['len']
-            batch_size = batch.shape[0]
-            attn_mask = generate_attention_masks(batch, src_len, device)
+#     if verbose:
+#         print("\nBegin report impression labeling. The progress bar counts the # of batches completed:")
+#         print("The batch size is %d" % BATCH_SIZE)
+#     with torch.no_grad():
+#         for i, data in enumerate(tqdm(ld, disable=not verbose)):
+#             batch = data['imp'] #(batch_size, max_len)
+#             batch = batch.to(device)
+#             src_len = data['len']
+#             batch_size = batch.shape[0]
+#             attn_mask = generate_attention_masks(batch, src_len, device)
 
-            out = model(batch, attn_mask)
+#             out = model(batch, attn_mask)
 
-            for j in range(len(out)):
-                curr_y_pred = out[j].argmax(dim=1) #shape is (batch_size)
-                y_pred[j].append(curr_y_pred)
+#             for j in range(len(out)):
+#                 curr_y_pred = out[j].argmax(dim=1) #shape is (batch_size)
+#                 y_pred[j].append(curr_y_pred)
 
-        for j in range(len(y_pred)):
-            y_pred[j] = torch.cat(y_pred[j], dim=0)
+#         for j in range(len(y_pred)):
+#             y_pred[j] = torch.cat(y_pred[j], dim=0)
              
-    if was_training:
-        model.train()
+#     if was_training:
+#         model.train()
 
-    y_pred = [t.tolist() for t in y_pred]
-    return y_pred
+#     y_pred = [t.tolist() for t in y_pred]
+#     return y_pred
 
 def encode(checkpoint_path, csv_path, filename="data.pt", logits=False): # TODO: CHECK WITH VISH ABOUT filename
     """Labels a dataset of reports
@@ -185,20 +237,3 @@ def save_preds(y_pred, csv_path, out_path):
     df.replace(2, 0, inplace=True)      #negative class is 0 
     
     df.to_csv(os.path.join(out_path, 'labeled_reports.csv'), index=False)
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Label a csv file containing radiology reports')
-    parser.add_argument('-d', '--data', type=str, nargs='?', required=True,
-                        help='path to csv containing reports. The reports should be \
-                              under the \"Report Impression\" column')
-    parser.add_argument('-o', '--output_dir', type=str, nargs='?', required=True,
-                        help='path to intended output folder')
-    parser.add_argument('-c', '--checkpoint', type=str, nargs='?', required=True,
-                        help='path to the pytorch checkpoint')
-    args = parser.parse_args()
-    csv_path = args.data
-    out_path = args.output_dir
-    checkpoint_path = args.checkpoint
-
-    y_pred = label(checkpoint_path, csv_path)
-    save_preds(y_pred, csv_path, out_path)

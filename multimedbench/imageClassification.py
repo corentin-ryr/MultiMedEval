@@ -16,18 +16,24 @@ import numpy as np
 import urllib.request
 import zipfile
 import shutil
-from torchmetrics import BLEUScore
+from torchmetrics.text import BLEUScore
 from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
 from multimedbench.utils import remove_punctuation
+import random
 
 
 class ImageClassification(Benchmark):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.bleu = BLEUScore(n_gram=1)
+
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
 
         predictions = []
         groundTruth = []
+        answersLog = []
 
         # Run the batcher for all data split in chunks
         for batch in tqdm(
@@ -49,26 +55,24 @@ class ImageClassification(Benchmark):
             correctAnswers = [self.getCorrectAnswer(sample) for sample in batch]
 
             for idx, answer in enumerate(answers):
-                predictions.append(self.getPredictedAnswer(answer))
-                groundTruth.append(correctAnswers[idx])
+                pred = self.getPredictedAnswer(answer)
+                gt = correctAnswers[idx]
 
-                print(f"{predictions=}")
-                print(f"{groundTruth=}")
+                predictions.append(pred)
+                groundTruth.append(gt)
 
-                raise Exception
+                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt == pred))
 
         # Convert pred and gt to tensor
         predictions = torch.tensor(predictions)
-        predictions = torch.nn.functional.one_hot(predictions, num_classes=self.num_classes)
+        predictions = torch.nn.functional.one_hot(predictions, num_classes=self.num_classes).to(torch.float32)
         groundTruth = torch.tensor(groundTruth)
 
-        f1Scorer = F1Score(num_classes=self.num_classes, average="macro")
-        f1Macro = f1Scorer(predictions, groundTruth)
+        f1Scorer = F1Score(task="multiclass", num_classes=self.num_classes, average="macro")
+        f1Macro = f1Scorer(predictions, groundTruth).item()
 
-        aurocScorer = AUROC(num_classes=self.num_classes, average="macro")
-        auroc = aurocScorer(predictions, groundTruth)
-
-        answersLog = zip(predictions, groundTruth)
+        aurocScorer = AUROC(task="multiclass", num_classes=self.num_classes, average="macro")
+        auroc = aurocScorer(predictions, groundTruth).item()
 
         metrics = {"AUC-macro": auroc, "F1-macro": f1Macro}
 
@@ -78,7 +82,7 @@ class ImageClassification(Benchmark):
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
 
-    def getCorrectAnswer(self, sample) -> int:
+    def getCorrectAnswer(self, sample, fullText=False) -> int:
         pass
 
     def format_question(self, sample):
@@ -101,11 +105,11 @@ class ImageClassification(Benchmark):
 
 
 class MIMIC_CXR_ImageClassification(ImageClassification):
-    def __init__(self, engine, **kwargs) -> None:
-        super().__init__(engine, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
         self.taskName = "MIMIC Image Classification"
-        self.num_classes = 2
+        self.num_classes = 5
         self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-CXR"]["path"]
 
         self.chexbertPath = os.path.join(
@@ -133,6 +137,8 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
             "Pleural Effusion",
         ]
 
+        self.labeler = label(self.chexbertPath, verbose=False)
+
     def format_question(self, sample):
         samplePath = os.path.join(
             self.path, "files", "p" + str(sample["subject_id"])[:2], "p" + str(sample["subject_id"])
@@ -150,7 +156,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
     def getPredictedAnswer(self, answer: str) -> int:
         df = pd.DataFrame(columns=["Report Impression"], data=[answer])
-        labels = [element[0] == 1 for element in label(self.chexbertPath, df)]
+        labels = [element[0] == 1 for element in self.labeler(df)]
         labels = [labels[self.labelNames.index(condition)] for condition in self.conditions]
 
         if any(labels):
@@ -158,12 +164,15 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         else:
             return 0
 
-    def getCorrectAnswer(self, sample) -> int:
+    def getCorrectAnswer(self, sample, fullText=False) -> int:
         # Features: [Atelectasis, cardiomegaly, consolidation, edema, and pleural effusion]
         # If any of the features is 1, then it is positive
         # If all the features are 0, -1 or NaN, then it is negative
 
         labels = [int(sample[condition]) == 1 for condition in self.conditions if sample[condition] is not None]
+
+        if fullText:
+            return ", ".join([self.conditions[idx] for idx, label in enumerate(labels) if label])
 
         if any(labels):
             return 1
@@ -172,17 +181,20 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
 
 class VinDr_Mammo(ImageClassification):
-    def __init__(self, engine, **kwargs) -> None:
-        super().__init__(engine, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
         self.taskName = "VinDr Mammo Image Classification"
         self.path = json.load(open("MedMD_config.json", "r"))["VinDr-Mammo"]["path"]
 
-        self.num_classes = 6
+        self.num_classes = 5
 
         # Open the finding_annotation.csv file
         annotations = pd.read_csv(os.path.join(self.path, "finding_annotations.csv"))
         annotations = annotations[annotations["split"] == "test"]
+
+        # Only keep rows where "finding_birads" is not None
+        annotations = annotations[annotations["finding_birads"].notna()]
 
         self.dataset = datasets.Dataset.from_pandas(annotations)
 
@@ -215,21 +227,22 @@ class VinDr_Mammo(ImageClassification):
         if len(findings) > 0:
             return findings[0]
         else:
-            return 0
+            return random.randint(0, 4)  # 5 classes so 0 to 4
 
-    def getCorrectAnswer(self, sample) -> int:
+    def getCorrectAnswer(self, sample, fullText=False) -> int:
+        # print(sample)
         findings = sample["finding_birads"]
         findings = int(findings[-1])
 
-        return findings
+        return findings - 1  # 5 classes so 0 to 4
 
 
 class Pad_UFES_20(ImageClassification):
-    def __init__(self, engine, **kwargs) -> None:
-        super().__init__(engine, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
         self.taskName = "Pad UFES 20 Image Classification"
-        self.num_classes = 6
+        self.num_classes = 7
 
         self.path = json.load(open("MedMD_config.json", "r"))["Pad-UFES-20"]["path"]
 
@@ -238,15 +251,10 @@ class Pad_UFES_20(ImageClassification):
             self._generateDataset()
 
         self.dataset = pd.read_csv(os.path.join(self.path, "metadata.csv"))
-        print(self.dataset.columns)
 
         images = os.listdir(os.path.join(self.path, "images"))
-        print(len(images))
 
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
-
-        # Bleu score to evaluate the answer
-        self.bleu = BLEUScore()
 
         self.options = ["BCC", "SCC", "ACK", "SEK", "BOD", "MEL", "NEV"]
         self.mapAcronymToName = {
@@ -280,19 +288,20 @@ class Pad_UFES_20(ImageClassification):
 
         formattedText = [{"role": "user", "content": f"{question}\n{options}"}]
 
-        print(formattedText)
-
         image = Image.open(os.path.join(self.path, "images", sample["img_id"]))
         return (formattedText, [image])
 
     def getPredictedAnswer(self, answer: str) -> int:
         # Find the best bleu score between the answer and the options
         scores = [self.bleu(answer, option) for option in self.options]
-
         return scores.index(max(scores))
 
-    def getCorrectAnswer(self, sample) -> int:
+    def getCorrectAnswer(self, sample, fullText=False) -> int:
         correctName = sample["diagnostic"]
+
+        if fullText:
+            return self.mapAcronymToName[correctName]
+
         return self.options.index(correctName)
 
     def _generateDataset(self):
@@ -333,8 +342,8 @@ class Pad_UFES_20(ImageClassification):
 
 
 class CBIS_DDSM_Mass(ImageClassification):
-    def __init__(self, engine, **kwargs) -> None:
-        super().__init__(engine, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
 
         self.taskName = "CBIS-DDSM Image Classification"
         self.num_classes = 3
@@ -348,9 +357,6 @@ class CBIS_DDSM_Mass(ImageClassification):
         # Open the calc_case_description_test_set.csv file with pandas
         self.dataset = pd.read_csv(os.path.join(self.path, "csv", "calc_case_description_test_set.csv"))
         df_dicom = pd.read_csv(os.path.join(self.path, "csv", "dicom_info.csv"))
-        print(df_dicom.shape)
-        # Print unique values of SeriesDescription
-        print(df_dicom.SeriesDescription.unique())
 
         cropped_images = df_dicom[df_dicom.SeriesDescription == "cropped images"].image_path
         full_mammo = df_dicom[df_dicom.SeriesDescription == "full mammogram images"].image_path
@@ -378,13 +384,9 @@ class CBIS_DDSM_Mass(ImageClassification):
         self._fix_image_path(self.dataset)
 
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
-        print(self.dataset)
-
         self.options = ["BENIGN", "MALIGNANT", "BENIGN_WITHOUT_CALLBACK"]
-        self.bleu = BLEUScore(n_gram=1)
 
     def format_question(self, sample):
-
         path = Path(sample["cropped image file path"])
         path = Path(self.path) / Path(*path.parts[1:])
 
@@ -396,20 +398,19 @@ class CBIS_DDSM_Mass(ImageClassification):
         ]
 
         image = Image.open(os.path.join(self.path, "images", path))
-
         return (formattedText, [image])
-    
+
     def getPredictedAnswer(self, answer: str) -> int:
         answer = self.cleanStr(answer)
         # Find the best bleu score between the answer and the options
-        scores = [self.bleu(answer, option) for option in self.options]
-        # Return the index of the best score
+        scores = [self.bleu([answer], [[self.cleanStr(option)]]) for option in self.options]
         return scores.index(max(scores))
-    
-    def getCorrectAnswer(self, sample) -> int:
-        print(sample["pathology"])
-        return self.options.index(sample["pathology"])
 
+    def getCorrectAnswer(self, sample, fullText=False) -> int:
+        if fullText:
+            return sample["pathology"]
+
+        return self.options.index(sample["pathology"])
 
     def _generateDataset(self):
         if os.path.exists(os.path.join(self.path, "csv")):
@@ -422,7 +423,7 @@ class CBIS_DDSM_Mass(ImageClassification):
 
         api.dataset_download_files("awsaf49/cbis-ddsm-breast-cancer-image-dataset", path=self.path, unzip=True)
 
-    def _fix_image_path(self, data:pd.DataFrame):
+    def _fix_image_path(self, data: pd.DataFrame):
         """correct dicom paths to correct image paths"""
         for idx in tqdm(range(len(data))):
             sample = data.iloc[idx]
