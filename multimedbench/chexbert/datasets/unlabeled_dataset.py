@@ -9,14 +9,14 @@ from torch.utils.data import Dataset, DataLoader
 class UnlabeledDataset(Dataset):
     """The dataset to contain report impressions without any labels."""
 
-    def __init__(self, df):
+    def __init__(self, df, verbose=True):
         """Initialize the dataset object
         @param df (string): dataframe containing rhe reports. It
                                   should have a column named "Report Impression"
         """
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         impressions = bert_tokenizer.get_impressions_from_pandas(df)
-        self.encoded_imp = bert_tokenizer.tokenize(impressions, tokenizer)
+        self.encoded_imp = bert_tokenizer.tokenize(impressions, tokenizer, verbose=verbose)
 
     def __len__(self):
         """Compute the length of the dataset

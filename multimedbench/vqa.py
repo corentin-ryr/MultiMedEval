@@ -89,7 +89,7 @@ class VQA(Benchmark):
 
 
 class VQA_RAD(VQA):
-    def __init__(self, seed=1111, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.taskName = "VQA-Rad"
 

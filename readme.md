@@ -20,16 +20,16 @@ These tasks are text only.
 Benchmark:
 | Model    | Mistral7B | MedAlpaca     | Llama 2       | RadFM      |
 | -------- | --------- | ------------- | ------------- | ---------- |
-| MedQA    | 0.344     | 0.248         | 0.305         | 0.203      |
-| PubMedQA | 0.708     | 0.628         | 0.652         | 0.576      |
-| MedMCQA  | 0.417     | 0.293         | 0.338         |            |
+| MedQA    |           |               |               | 0.214      |
+| PubMedQA |           |               |               |            |
+| MedMCQA  |           |               |               |            |
 
 
 ### Report Summarization
 
-| Dataset  | Modality | Size     |
-| -------- | -------- | -------- |
-| MIMIC-III | CT & MRI |  13,057 |
+| Dataset   | Modality | Size     |
+| --------- | -------- | -------- |
+| MIMIC-III | CT & MRI | 13,057   |
 
 
 ### Visual Question Answering
@@ -39,6 +39,16 @@ Benchmark:
 | VQA-RAD   | CT, MRI, and chest X-rays | 451      |
 | Slake-VQA | CT, MRI, and chest X-rays | 2,070    |
 | Path-VQA  | Pathology                 | 6,761    |
+
+Benchmark:
+| Model     | Metric | RadFM      |
+| --------- | ------ | ---------- |
+| VQA-RAD   | BLEU   | 0.535      |
+|           | F1     | 0.548      |
+| Slake-VQA | BLEU   | 0.742      |
+|           | F1     | 0.750      |
+| Path-VQA  | BLEU   | 0.240      |
+|           | F1     | 0.243      |
 
 
 ### Report Generation
