@@ -168,12 +168,9 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         imagePath = os.path.join(samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg")
         
-        indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
+        # indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
 
-        if indication == "":
-            question = "<img> Can you provide a radiology report for this medical image?"
-        else:
-            question = f"<img> {indication}\nCan you provide a radiology report for this medical image?"
+        question ="What can you find from the scans <img>?"
 
         formattedText = [
             {

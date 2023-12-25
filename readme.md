@@ -21,8 +21,8 @@ Benchmark:
 | Model    | Mistral7B | MedAlpaca     | Llama 2       | RadFM      |
 | -------- | --------- | ------------- | ------------- | ---------- |
 | MedQA    |           |               |               | 0.214      |
-| PubMedQA |           |               |               |            |
-| MedMCQA  |           |               |               |            |
+| PubMedQA |           |               |               | 0.58       |
+| MedMCQA  |           |               |               | X          |
 
 
 ### Report Summarization
@@ -56,6 +56,18 @@ Benchmark:
 | Dataset  | Modality | Size     |
 | -------- | -------- | -------- |
 | MIMIC-CXR | Chest X-ray | 4,834 |
+
+Benchmark:
+| Model     | Metric | RadFM      |
+| --------- | ------ | ---------- |
+| MIMIC-CXR | BLEU-1 | 0.024      |
+|           | BLEU-4 | 0.003      |
+|           | F1-RadGraph | 0.062 |
+
+
+
+
+{'bleu1': 0.024421775713562965, 'bleu4': 0.0035396283492445946, 'rougeL': {'rougeL_fmeasure': tensor(0.0950), 'rougeL_precision': tensor(0.2321), 'rougeL_recall': tensor(0.0714)}, 'f1-radgraph': 0.06279461085796356, 'CheXBert vector similarity': 0.21255505084991455, 'f1-bertscore': 0.06411987543106079, 'radcliq': 4.900036858132729, 'meteor': 0.08014929367567357}
 
 
 ### Medical Image Classification
