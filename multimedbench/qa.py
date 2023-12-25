@@ -237,9 +237,8 @@ class MedMCQA(QA):
         options = self._getOptions(sample)
         answer = sample["cop"]
 
-        formattedQuestion = f"{question}\n"
+        formattedQuestion = f"Answer the following question with the correct answer. {question}\n"
         formattedQuestion += "Options:\n" + "\n".join(options) + "\n"
-        formattedQuestion += "What is the correct answer?"
 
         formattedAnswer = f"The answer is {options[answer]}."
 
