@@ -51,7 +51,7 @@ def batchSampler(samples, n):
 
 def remove_punctuation(input_string: str):
     # Make a translator object to replace punctuation with none
-    translator = str.maketrans("", "", string.punctuation)
+    translator = str.maketrans(string.punctuation, ' '*len(string.punctuation))
     # Use the translator
     return input_string.translate(translator)
 

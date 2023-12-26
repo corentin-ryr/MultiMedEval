@@ -8,7 +8,7 @@ import random
 # from nltk.corpus import stopwords
 # import nltk
 from abc import abstractmethod
-from torchmetrics import BLEUScore
+from torchmetrics.text import BLEUScore
 
 # nltk.download("stopwords")
 # STOPWORDS = stopwords.words("english")
@@ -49,6 +49,12 @@ class QA(Benchmark):
                     correct_answers += 1
                     isCorrect = True
                 total_answers += 1
+
+                # print(f"Question: {batch[idx]}")
+                # print(f"Prompt: {batchPrompts[idx]}")
+                # print(f"Answer: {answer}")
+                # print(f"Correct: {isCorrect}")
+                # raise Exception
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, isCorrect))
 
@@ -230,15 +236,16 @@ class MedMCQA(QA):
 
         self.prompt = self.getPrompt()
 
-        self.bleuScorer = BLEUScore()
+        self.bleuScorer = BLEUScore(n_gram=1)
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
         options = self._getOptions(sample)
         answer = sample["cop"]
 
-        formattedQuestion = f"Answer the following question with the correct answer. {question}\n"
-        formattedQuestion += "Options:\n" + "\n".join(options) + "\n"
+        formattedQuestion = f"{question}\n"
+        formattedQuestion += "\n".join(options) + "\n"
+        formattedQuestion += "What is the correct answer?"
 
         formattedAnswer = f"The answer is {options[answer]}."
 
@@ -268,7 +275,7 @@ class MedMCQA(QA):
             return False
 
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer([self.cleanStr(option)], [pred]) for option in self._getOptions(sample)]
+        scores = [self.bleuScorer([self.cleanStr(option)], [[pred]]) for option in self._getOptions(sample)]
 
         pred = str(scores.index(max(scores)) + 1)  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
 

@@ -112,16 +112,19 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         meteor_scores = self.compute_meteor(hypReports, refReports)
 
+        rougeScores = self.rougeL.compute()
+        rougeScores = {key: value.item() for key, value in rougeScores.items()}
+
         metrics = {
             "bleu1": self.bleu_1.compute().item(),
             "bleu4": self.bleu_4.compute().item(),
-            "rougeL": self.rougeL.compute(),
             "f1-radgraph": f1_radgraph.mean().item(),
             "CheXBert vector similarity": chexbert_similarity.mean().item(),
             "f1-bertscore": f1_bertscore.mean().item(),
             "radcliq": sum(radcliq_v0_scores) / len(radcliq_v0_scores),
             "meteor": sum(meteor_scores) / len(meteor_scores),
         }
+        metrics.update(rougeScores)
 
         answersLog = zip(refReports, hypReports)
 
