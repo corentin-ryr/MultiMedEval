@@ -245,7 +245,7 @@ class MedMCQA(QA):
 
         formattedQuestion = f"{question}\n"
         formattedQuestion += "\n".join(options) + "\n"
-        formattedQuestion += "What is the correct answer?"
+        formattedQuestion += "What is the answer to the question?"
 
         formattedAnswer = f"The answer is {options[answer]}."
 
