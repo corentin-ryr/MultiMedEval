@@ -22,7 +22,7 @@ Benchmark:
 | -------- | --------- | ------------- | ------------- | ---------- |
 | MedQA    |           |               |               | 0.214      |
 | PubMedQA |           |               |               | 0.58       |
-| MedMCQA  |           |               |               | X          |
+| MedMCQA  |           |               |               | 0.289      |
 
 
 ### Report Summarization
