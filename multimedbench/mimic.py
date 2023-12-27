@@ -173,7 +173,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         
         # indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
 
-        question ="What can you find from the scans <img>?"
+        question ="<img>Please caption this scan with findings."
 
         formattedText = [
             {
