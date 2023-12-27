@@ -50,11 +50,11 @@ class QA(Benchmark):
                     isCorrect = True
                 total_answers += 1
 
-                # print(f"Question: {batch[idx]}")
-                # print(f"Prompt: {batchPrompts[idx]}")
-                # print(f"Answer: {answer}")
-                # print(f"Correct: {isCorrect}")
-                # raise Exception
+                print(f"Question: {batch[idx]}")
+                print(f"Prompt: {batchPrompts[idx]}")
+                print(f"Answer: {answer}")
+                print(f"Correct: {isCorrect}")
+                raise Exception
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, isCorrect))
 
@@ -182,8 +182,8 @@ class PubMedQA(QA):
         question = sample["question"]
         answer = sample["answer"]
 
-        formattedQuestion = "Answer the following question with yes, no or maybe."
-        formattedQuestion += f"{context}\nQuestion: {question}\n"
+        formattedQuestion = "Answer the following question with yes, no or maybe. "
+        formattedQuestion += question
 
         formattedAnswer = answer[0]
 
