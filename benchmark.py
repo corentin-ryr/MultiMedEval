@@ -167,10 +167,10 @@ class batcherPMCLlama(batcherLlama):
 
 
 if __name__ == "__main__":
-    params = Params(True, seed=42, batch_size=16, run_name="benchmarkPMCLlama")
+    params = Params(True, seed=42, batch_size=16, run_name="benchmarkMistral")
 
     device = "cuda:0"
-    batcher = batcherPMCLlama(device=device)
+    batcher = batcherMistral(device=device)
 
     mmb = MMB(params, batcher)
 

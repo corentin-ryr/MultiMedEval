@@ -5,18 +5,18 @@ Filesystems usage for user croyer ( uid 646291381 ):
 [0m-------------------------------------------------------------------------------------
 Directory                 Used   Limit   Used,%         Files     Limit
 [0m-------------------------------------------------------------------------------------
-/home/croyer             1.1GB[0m[1m    15GB[0m     6.7%[0m         29930[0m[1m    100000[0m
-/data/croyer            [1m[33m 168GB[0m[1m   200GB[0m[1m[33m    83.8%[0m        387390[0m[1m          [0m
+/home/croyer             1.1GB[0m[1m    15GB[0m     6.7%[0m         29972[0m[1m    100000[0m
+/data/croyer            [1m[33m 182GB[0m[1m   200GB[0m[1m[33m    90.6%[0m        387410[0m[1m          [0m
 /scratch/croyer          749GB[0m[1m    20TB[0m     3.7%[0m       1040663[0m[1m          [0m
 [0m
-/shares/menze.dqbm.uzh    76TB[0m[1m        [0m         [0m       9471779[0m[1m          [0m
+/shares/menze.dqbm.uzh    76TB[0m[1m        [0m         [0m       9471797[0m[1m          [0m
 [0m-------------------------------------------------------------------------------------
 
 !! Please note: the scratch filesystem is intended only for temporary storage.
    Files in /scratch/croyer that have not been accessed in more than 30 days
    may be automatically deleted.
 
-Tue Dec 26 13:28:31 2023       
+Wed Dec 27 14:30:56 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.147.05   Driver Version: 525.147.05   CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -24,8 +24,8 @@ Tue Dec 26 13:28:31 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  Tesla V100-SXM2...  On   | 00000000:3B:00.0 Off |                    0 |
-| N/A   31C    P0    42W / 300W |      0MiB / 16384MiB |      0%      Default |
+|   0  Tesla V100-SXM2...  On   | 00000000:15:00.0 Off |                    0 |
+| N/A   29C    P0    41W / 300W |      0MiB / 32768MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -43,23 +43,21 @@ Tue Dec 26 13:28:31 2023
 Warning: Your Kaggle API key is readable by other users on this system! To fix this, you can run 'chmod 600 /home/croyer/.kaggle/kaggle.json'
 
 
-Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-26 13:28:32.384778')
+Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-27 14:30:56.659245')
 RadGraph already downloaded
 Chexbert already downloaded
-***** Benchmarking : MedMCQA *****
-Running inference:   0%|          | 0/66 [00:00<?, ?it/s]['a  impulse through myelinated fibers is slower than non myelinated fibers ', 'b  membrane currents are generated at nodes of ranvier ', 'c  saltatory conduction of impulses is seen ', 'd  local anesthesia is effective only when the nerve is not covered by myelin sheath ']
-[tensor(0.0909), tensor(0.1111), tensor(0.1429), tensor(0.0667)]
-Question: {'id': '45258d3d-b974-44dd-a161-c3fccbdadd88', 'question': 'Which of the following is not true for myelinated nerve fibers:', 'opa': 'Impulse through myelinated fibers is slower than non-myelinated fibers', 'opb': 'Membrane currents are generated at nodes of Ranvier', 'opc': 'Saltatory conduction of impulses is seen', 'opd': 'Local anesthesia is effective only when the nerve is not covered by myelin sheath', 'cop': 0, 'choice_type': 'multi', 'exp': None, 'subject_name': 'Physiology', 'topic_name': None}
-Prompt: ([{'role': 'user', 'content': 'Which of the following is not true for myelinated nerve fibers:\na: Impulse through myelinated fibers is slower than non-myelinated fibers.\nb: Membrane currents are generated at nodes of Ranvier.\nc: Saltatory conduction of impulses is seen.\nd: Local anesthesia is effective only when the nerve is not covered by myelin sheath.\nWhat is the correct answer?'}], [])
+***** Benchmarking : PubMedQA *****
+Running inference:   0%|          | 0/8 [00:00<?, ?it/s]Question: {'id': '12377809', 'question_id': '12377809', 'document_id': '12377809', 'question': 'Is anorectal endosonography valuable in dyschesia?', 'type': 'yesno', 'choices': ['yes', 'no', 'maybe'], 'context': 'Dyschesia can be provoked by inappropriate defecation movements. The aim of this prospective study was to demonstrate dysfunction of the anal sphincter and/or the musculus (m.) puborectalis in patients with dyschesia using anorectal endosonography. Twenty consecutive patients with a medical history of dyschesia and a control group of 20 healthy subjects underwent linear anorectal endosonography (Toshiba models IUV 5060 and PVL-625 RT). In both groups, the dimensions of the anal sphincter and the m. puborectalis were measured at rest, and during voluntary squeezing and straining. Statistical analysis was performed within and between the two groups. The anal sphincter became paradoxically shorter and/or thicker during straining (versus the resting state) in 85% of patients but in only 35% of control subjects. Changes in sphincter length were statistically significantly different (p<0.01, chi(2) test) in patients compared with control subjects. The m. puborectalis became paradoxically shorter and/or thicker during straining in 80% of patients but in only 30% of controls. Both the changes in length and thickness of the m. puborectalis were significantly different (p<0.01, chi(2) test) in patients versus control subjects.', 'answer': ['yes']}
+Prompt: ([{'role': 'user', 'content': 'Answer the following question with yes, no or maybe. Is anorectal endosonography valuable in dyschesia?'}], [])
 Answer: answer b is correct
 Correct: False
-Running inference:   0%|          | 0/66 [00:00<?, ?it/s]
+Running inference:   0%|          | 0/8 [00:00<?, ?it/s]
 Traceback (most recent call last):
-  File "/home/croyer/MultiMedBench/testMedQA.py", line 12, in <module>
-    print(engine.eval("MedMCQA")[0])
+  File "/home/croyer/MultiMedBench/testMedQA.py", line 14, in <module>
+    print(engine.eval("PubMedQA")[0])
   File "/home/croyer/MultiMedBench/multimedbench/engine.py", line 66, in eval
     taskResult = self.evaluation.run(self.params, self.batcher)
   File "/home/croyer/MultiMedBench/multimedbench/qa.py", line 57, in run
     raise Exception
 Exception
-srun: error: u20-computeibmgpu-vesta6: task 0: Exited with exit code 1
+srun: error: u20-computeibmgpu-vesta8: task 0: Exited with exit code 1
