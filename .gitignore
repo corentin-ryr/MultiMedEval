@@ -8,3 +8,4 @@ benchmarkLlama
 benchmarkMedAlpaca
 benchmarkMistral
 kaggle.json
+*.out

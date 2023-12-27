@@ -7,7 +7,7 @@ from transformers import (
     BitsAndBytesConfig,
     LlamaForCausalLM,
     LlamaTokenizer,
-    GenerationConfig
+    GenerationConfig,
 )
 from multimedbench.engine import MMB
 from multimedbench.utils import Params
@@ -25,6 +25,7 @@ class batcherMistral:
             bnb_4bit_use_double_quant=True,
             bnb_4bit_compute_dtype=torch.float16,
         )
+        nf4_config = BitsAndBytesConfig(load_in_8bit=True)
 
         self.model: MistralModel = AutoModelForCausalLM.from_pretrained(
             "mistralai/Mistral-7B-Instruct-v0.1",
@@ -34,32 +35,35 @@ class batcherMistral:
         self.tokenizer = AutoTokenizer.from_pretrained(
             "mistralai/Mistral-7B-Instruct-v0.1",
             truncation_side="left",
+            padding_side="left",
         )
+        self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.pl = pipeline(
-            "text-generation",
-            model=self.model,
-            tokenizer=self.tokenizer,
-            device_map="cuda:0",
-        )
+        # self.pl = pipeline(
+        #     "text-generation",
+        #     model=self.model,
+        #     tokenizer=self.tokenizer,
+        #     device_map=self.device,
+        # )
 
     def __call__(self, prompts):
         answers = []
 
         model_inputs = [
-            self.tokenizer.apply_chat_template(
-                messages[0], return_tensors="pt", tokenize=False
-            )
-            for messages in prompts
+            self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts
         ]
-
-        answers = self.pl(
-            model_inputs, max_new_tokens=100, pad_token_id=self.tokenizer.eos_token_id
+        model_inputs = self.tokenizer(
+            model_inputs, padding="max_length", truncation=True, max_length=1024, return_tensors="pt"
         )
-        answers = [
-            answer[0]["generated_text"][len(prompt) :]
-            for answer, prompt in zip(answers, model_inputs)
-        ]
+        model_inputs = {k: v.to("cuda") for k, v in model_inputs.items()}
+
+        generated_ids = self.model.generate(**model_inputs, max_new_tokens=200, do_sample=True, pad_token_id=self.tokenizer.pad_token_id)
+
+        # Remove the first 1024 tokens (prompt)
+        generated_ids = generated_ids[:, model_inputs["input_ids"].shape[1] :]
+
+        answers = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+
         return answers
 
 
@@ -89,15 +93,11 @@ class batcherLlama:
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-
         time.sleep(20)
 
     def __call__(self, prompts):
         model_inputs = [
-            self.tokenizer.apply_chat_template(
-                messages[0], return_tensors="pt", tokenize=False
-            )
-            for messages in prompts
+            self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts
         ]
 
         with torch.no_grad():
@@ -110,17 +110,12 @@ class batcherLlama:
             )
             tokens = {k: v.to("cuda") for k, v in tokens.items()}
 
-
             startTime = time.time()
-            answerTokens = self.model.generate(
-                **tokens, max_new_tokens=100, generation_config=self.generation_config
-            )
+            answerTokens = self.model.generate(**tokens, max_new_tokens=100, generation_config=self.generation_config)
             execTime = time.time() - startTime
 
             answerTokens = answerTokens[:, tokens["input_ids"].shape[1] :]
-            answers = self.tokenizer.batch_decode(
-                answerTokens, skip_special_tokens=True
-            )
+            answers = self.tokenizer.batch_decode(answerTokens, skip_special_tokens=True)
 
         numberTokens = torch.count_nonzero(answerTokens > 2)
         print(
@@ -128,7 +123,7 @@ class batcherLlama:
         )
 
         return answers
-    
+
 
 class batcherMedAlpaca(batcherLlama):
     def loadModelAndTokenizer(self) -> None:
@@ -150,24 +145,24 @@ class batcherMedAlpaca(batcherLlama):
             truncation_side="left",
             padding_side="left",
         )
-        self.generation_config = GenerationConfig(eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.pad_token_id, bos_token_id=self.tokenizer.bos_token_id)
-        
+        self.generation_config = GenerationConfig(
+            eos_token_id=self.tokenizer.eos_token_id,
+            pad_token_id=self.tokenizer.pad_token_id,
+            bos_token_id=self.tokenizer.bos_token_id,
+        )
+
         self.tokenizer.chat_template = """{% if messages[0]['role'] == 'system' %}{% set loop_messages = messages[1:] %}{% set system_message = messages[0]['content'] %}{% else %}{% set loop_messages = messages %}{% set system_message = false %}{% endif %}{% for message in loop_messages %}{% if (message['role'] == 'user') != (loop.index0 % 2 == 0) %}{{ raise_exception('Conversation roles must alternate user/assistant/user/assistant/...') }}{% endif %}{% if loop.index0 == 0 and system_message != false %}{% set content = '<<SYS>>\n' + system_message + '\n<</SYS>>\n\n' + message['content'] %}{% else %}{% set content = message['content'] %}{% endif %}{% if message['role'] == 'user' %}{{ bos_token + '### Instruction:\n' + content.strip() + '\n\n' + '### Response:\n' }}{% elif message['role'] == 'assistant' %}{{ content.strip() + '\n\n' + eos_token }}{% endif %}{% endfor %}"""
 
 
 class batcherPMCLlama(batcherLlama):
     def loadModelAndTokenizer(self):
-        self.tokenizer:LlamaTokenizer = LlamaTokenizer.from_pretrained('chaoyi-wu/PMC_LLAMA_7B')
-        self.model = LlamaForCausalLM.from_pretrained('chaoyi-wu/PMC_LLAMA_7B')
-        self.generation_config = None # GenerationConfig(eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.pad_token_id, bos_token_id=self.tokenizer.bos_token_id)
-
-
-
-
+        self.tokenizer: LlamaTokenizer = LlamaTokenizer.from_pretrained("chaoyi-wu/PMC_LLAMA_7B")
+        self.model = LlamaForCausalLM.from_pretrained("chaoyi-wu/PMC_LLAMA_7B")
+        self.generation_config = None  # GenerationConfig(eos_token_id=self.tokenizer.eos_token_id, pad_token_id=self.tokenizer.pad_token_id, bos_token_id=self.tokenizer.bos_token_id)
 
 
 if __name__ == "__main__":
-    params = Params(True, seed=42, batch_size=16, run_name="benchmarkMistral")
+    params = Params(True, seed=42, batch_size=96, run_name="benchmarkMistral")
 
     device = "cuda:0"
     batcher = batcherMistral(device=device)

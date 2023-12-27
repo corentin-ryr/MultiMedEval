@@ -5,8 +5,8 @@ Filesystems usage for user croyer ( uid 646291381 ):
 [0m-------------------------------------------------------------------------------------
 Directory                 Used   Limit   Used,%         Files     Limit
 [0m-------------------------------------------------------------------------------------
-/home/croyer             1.1GB[0m[1m    15GB[0m     6.7%[0m         29972[0m[1m    100000[0m
-/data/croyer            [1m[33m 182GB[0m[1m   200GB[0m[1m[33m    90.6%[0m        387410[0m[1m          [0m
+/home/croyer             1.1GB[0m[1m    15GB[0m     6.7%[0m         29966[0m[1m    100000[0m
+/data/croyer            [1m[33m 182GB[0m[1m   200GB[0m[1m[33m    90.6%[0m        387438[0m[1m          [0m
 /scratch/croyer          749GB[0m[1m    20TB[0m     3.7%[0m       1040663[0m[1m          [0m
 [0m
 /shares/menze.dqbm.uzh    76TB[0m[1m        [0m         [0m       9471797[0m[1m          [0m
@@ -16,7 +16,7 @@ Directory                 Used   Limit   Used,%         Files     Limit
    Files in /scratch/croyer that have not been accessed in more than 30 days
    may be automatically deleted.
 
-Wed Dec 27 14:30:56 2023       
+Wed Dec 27 18:24:09 2023       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.147.05   Driver Version: 525.147.05   CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -24,9 +24,9 @@ Wed Dec 27 14:30:56 2023
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  Tesla V100-SXM2...  On   | 00000000:15:00.0 Off |                    0 |
-| N/A   29C    P0    41W / 300W |      0MiB / 32768MiB |      0%      Default |
-|                               |                      |                  N/A |
+|   0  NVIDIA A100-SXM...  On   | 00000000:07:00.0 Off |                    0 |
+| N/A   26C    P0    61W / 400W |      0MiB / 81920MiB |      0%      Default |
+|                               |                      |             Disabled |
 +-------------------------------+----------------------+----------------------+
                                                                                
 +-----------------------------------------------------------------------------+
@@ -43,21 +43,11 @@ Wed Dec 27 14:30:56 2023
 Warning: Your Kaggle API key is readable by other users on this system! To fix this, you can run 'chmod 600 /home/croyer/.kaggle/kaggle.json'
 
 
-Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-27 14:30:56.659245')
+Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2023-12-27 18:24:10.358412')
 RadGraph already downloaded
 Chexbert already downloaded
-***** Benchmarking : PubMedQA *****
-Running inference:   0%|          | 0/8 [00:00<?, ?it/s]Question: {'id': '12377809', 'question_id': '12377809', 'document_id': '12377809', 'question': 'Is anorectal endosonography valuable in dyschesia?', 'type': 'yesno', 'choices': ['yes', 'no', 'maybe'], 'context': 'Dyschesia can be provoked by inappropriate defecation movements. The aim of this prospective study was to demonstrate dysfunction of the anal sphincter and/or the musculus (m.) puborectalis in patients with dyschesia using anorectal endosonography. Twenty consecutive patients with a medical history of dyschesia and a control group of 20 healthy subjects underwent linear anorectal endosonography (Toshiba models IUV 5060 and PVL-625 RT). In both groups, the dimensions of the anal sphincter and the m. puborectalis were measured at rest, and during voluntary squeezing and straining. Statistical analysis was performed within and between the two groups. The anal sphincter became paradoxically shorter and/or thicker during straining (versus the resting state) in 85% of patients but in only 35% of control subjects. Changes in sphincter length were statistically significantly different (p<0.01, chi(2) test) in patients compared with control subjects. The m. puborectalis became paradoxically shorter and/or thicker during straining in 80% of patients but in only 30% of controls. Both the changes in length and thickness of the m. puborectalis were significantly different (p<0.01, chi(2) test) in patients versus control subjects.', 'answer': ['yes']}
-Prompt: ([{'role': 'user', 'content': 'Answer the following question with yes, no or maybe. Is anorectal endosonography valuable in dyschesia?'}], [])
-Answer: answer b is correct
-Correct: False
-Running inference:   0%|          | 0/8 [00:00<?, ?it/s]
-Traceback (most recent call last):
-  File "/home/croyer/MultiMedBench/testMedQA.py", line 14, in <module>
-    print(engine.eval("PubMedQA")[0])
-  File "/home/croyer/MultiMedBench/multimedbench/engine.py", line 66, in eval
-    taskResult = self.evaluation.run(self.params, self.batcher)
-  File "/home/croyer/MultiMedBench/multimedbench/qa.py", line 57, in run
-    raise Exception
-Exception
-srun: error: u20-computeibmgpu-vesta8: task 0: Exited with exit code 1
+***** Benchmarking : MedQA *****
+Running inference:   0%|          | 0/20 [00:00<?, ?it/s]Running inference:   5%|▌         | 1/20 [00:00<00:02,  9.01it/s]Running inference:  10%|█         | 2/20 [00:00<00:01,  9.00it/s]Running inference:  15%|█▌        | 3/20 [00:00<00:01,  9.02it/s]Running inference:  20%|██        | 4/20 [00:00<00:01,  9.03it/s]Running inference:  25%|██▌       | 5/20 [00:00<00:01,  9.03it/s]Running inference:  30%|███       | 6/20 [00:00<00:01,  9.02it/s]Running inference:  35%|███▌      | 7/20 [00:00<00:01,  9.01it/s]Running inference:  40%|████      | 8/20 [00:00<00:01,  9.04it/s]Running inference:  45%|████▌     | 9/20 [00:00<00:01,  9.02it/s]Running inference:  50%|█████     | 10/20 [00:01<00:01,  8.94it/s]Running inference:  55%|█████▌    | 11/20 [00:01<00:01,  8.96it/s]Running inference:  60%|██████    | 12/20 [00:01<00:00,  8.97it/s]Running inference:  65%|██████▌   | 13/20 [00:01<00:00,  8.98it/s]Running inference:  70%|███████   | 14/20 [00:01<00:00,  9.02it/s]Running inference:  75%|███████▌  | 15/20 [00:01<00:00,  9.00it/s]Running inference:  80%|████████  | 16/20 [00:01<00:00,  8.99it/s]Running inference:  85%|████████▌ | 17/20 [00:01<00:00,  9.01it/s]Running inference:  90%|█████████ | 18/20 [00:01<00:00,  9.02it/s]Running inference:  95%|█████████▌| 19/20 [00:02<00:00,  9.00it/s]Running inference: 100%|██████████| 20/20 [00:02<00:00,  9.24it/s]Running inference: 100%|██████████| 20/20 [00:02<00:00,  9.04it/s]
+{'accuracy': 0.21681068342498036}
+Done task MedQA
+{'type': 'json', 'name': 'metrics_MedQA', 'value': {'accuracy': 0.21681068342498036}}
