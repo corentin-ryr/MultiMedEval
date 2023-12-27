@@ -44,19 +44,13 @@ class QA(Benchmark):
             answers = batcher(batchPrompts)
 
             for idx, answer in enumerate(answers):
-                isCorrect = False
-                if self.isValid(answer, batch[idx]):
+                gold = self.getCorrectAnswer(batch[idx])
+                pred = self.getPredictedAnswer(answer, batch[idx])
+                if pred == gold:
                     correct_answers += 1
-                    isCorrect = True
                 total_answers += 1
 
-                print(f"Question: {batch[idx]}")
-                print(f"Prompt: {batchPrompts[idx]}")
-                print(f"Answer: {answer}")
-                print(f"Correct: {isCorrect}")
-                raise Exception
-
-                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, isCorrect))
+                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, pred, gold, pred == gold))
 
         # TODO: add others metrics such as AUC, F1...
         metrics = {"accuracy": correct_answers / total_answers}
@@ -91,7 +85,7 @@ class QA(Benchmark):
         pass
 
     @abstractmethod
-    def isValid(self, pred: str, sample):
+    def getPredictedAnswer(self, pred: str, sample):
         pass
 
 
@@ -110,7 +104,7 @@ class MedQA(QA):
 
         self.prompt = self.getPrompt()
 
-        self.bleuScorer = BLEUScore()
+        self.bleuScorer = BLEUScore(n_gram=1)
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
@@ -136,19 +130,21 @@ class MedQA(QA):
         else:
             return sample["answer_idx"].lower().strip()
 
-    def isValid(self, pred: str, sample):
+    def getPredictedAnswer(self, pred: str, sample):
         pred = self.cleanStr(pred)
         if len(pred) == 0:
-            return False
+            return "Invalid answer"
 
         options = [self.cleanStr(f'{option["key"]}: {option["value"]}') for option in sample["options"]]
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer([self.cleanStr(option)], [pred]) for option in options]
+        scores = [self.bleuScorer([pred], [[option]]) for option in options]
+
+        if max(scores) == 0:
+            return "Invalid answer"
 
         pred = sample["options"][scores.index(max(scores))]["key"].lower()
 
-        gold = self.getCorrectAnswer(sample)
-        return pred == gold
+        return pred
 
 
 class PubMedQA(QA):
@@ -192,10 +188,10 @@ class PubMedQA(QA):
             question.append({"role": "assistant", "content": formattedAnswer})
         return (question, [])
 
-    def isValid(self, pred: str, sample):
+    def getPredictedAnswer(self, pred: str, sample):
         pred = self.cleanStr(pred)
         if len(pred) == 0:
-            return False
+            return "Invalid answer"
 
         optionVocabs = [["yes"], ["no"], ["maybe"]]
 
@@ -207,12 +203,10 @@ class PubMedQA(QA):
                     scores[idx] += 1
 
         if max(scores) == 0:
-            return False
+            return "Invalid answer"
 
         pred = optionVocabs[scores.index(max(scores))][0].lower()
-
-        gold = self.getCorrectAnswer(sample)[0]
-        return pred == gold
+        return pred
 
 
 class MedMCQA(QA):
@@ -269,15 +263,16 @@ class MedMCQA(QA):
             f"d: {sample['opd']}.",
         ]
 
-    def isValid(self, pred: str, sample):
+    def getPredictedAnswer(self, pred: str, sample):
         pred = self.cleanStr(pred)
         if len(pred) == 0:
-            return False
+            return "Invalid answer"
 
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer([self.cleanStr(option)], [[pred]]) for option in self._getOptions(sample)]
+        scores = [self.bleuScorer([pred], [[self.cleanStr(option)]]) for option in self._getOptions(sample)]
+
+        if max(scores) == 0:
+            return "Invalid answer"
 
         pred = str(scores.index(max(scores)) + 1)  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
-
-        gold = self.getCorrectAnswer(sample)
-        return pred == gold
+        return pred

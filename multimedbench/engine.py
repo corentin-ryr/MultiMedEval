@@ -50,13 +50,6 @@ class MMB(object):
             for x in name:
                 currentResults = self.eval(x)
                 self.results[x] = currentResults
-                print(f"Done task {x}")
-
-                # Write to files
-                for result in currentResults:
-                    if result["type"] == "json":
-                        print(result["value"])
-                    fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
 
             return self.results
 
@@ -64,6 +57,14 @@ class MMB(object):
 
         self.evaluation: Benchmark = TASKS[name](seed=self.params.seed, engine=self, fewshot=self.fewshot)
         taskResult = self.evaluation.run(self.params, self.batcher)
+
+        # Write to files
+        for result in taskResult:
+            if result["type"] == "json":
+                print(result["value"])
+            fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
+        
+        print(f"Done task {name}")
 
         return taskResult
 
