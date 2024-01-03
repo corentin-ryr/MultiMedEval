@@ -53,6 +53,7 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         # For each sample in the dataset, open its report and check if it contains the keyword "findings"
         self.dataset = []
+        self.studyToDicoms = {}
         for _, row in split.iterrows():
             samplePath = os.path.join(
                 self.path, "files", "p" + str(row["subject_id"])[:2], "p" + str(row["subject_id"])
@@ -71,12 +72,24 @@ class MIMIC_CXR_reportgen(Benchmark):
                 reportIndication = ""
 
             self.dataset.append(
-                [str(row["subject_id"]), str(row["study_id"]), str(row["dicom_id"]), str(reportFindings), str(reportIndication)]
+                [str(row["subject_id"]), str(row["study_id"]), str(reportFindings), str(reportIndication)]
             )
 
+            if str(row["study_id"]) not in self.studyToDicoms:
+                self.studyToDicoms[str(row["study_id"])] = [str(row["dicom_id"])]
+            else:
+                self.studyToDicoms[str(row["study_id"])].append(str(row["dicom_id"]))
+
+        # Convert the dataset to a pandas dataframe
+        self.dataset = pd.DataFrame(columns=["subject_id", "study_id", "findings", "indications"], data=self.dataset)
+
+        # Remove the duplicates
+        self.dataset = self.dataset.drop_duplicates()
+
         self.dataset = datasets.Dataset.from_pandas(
-            pd.DataFrame(columns=["subject_id", "study_id", "dicom_id", "findings", "indications"], data=self.dataset)
+            self.dataset
         )
+
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -92,6 +105,9 @@ class MIMIC_CXR_reportgen(Benchmark):
             refReports += [self.getCorrectAnswer(sample) for sample in batch]
             hypReports += batcher([self.format_question(sample) for sample in batch])
             # break
+
+            print([self.format_question(sample) for sample in batch])
+            raise Exception
 
         refReportsNested = [[report] for report in refReports]
         self.bleu_1.update(hypReports, refReportsNested)
@@ -166,14 +182,18 @@ class MIMIC_CXR_reportgen(Benchmark):
 
     def format_question(self, sample):
         samplePath = os.path.join(
-            self.path, "files", "p" + str(sample["subject_id"])[:2], "p" + str(sample["subject_id"])
+            self.path, "files", "p" + sample["subject_id"][:2], "p" + sample["subject_id"]
         )
 
-        imagePath = os.path.join(samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg")
+        dicomIndices = self.studyToDicoms[sample["study_id"]]
+
+        imagesPath = [os.path.join(samplePath, "s" + sample["study_id"], dicomIndex + ".jpg") for dicomIndex in dicomIndices]
         
         # indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
+        
+        imgTags = "<img>" * len(imagesPath)
 
-        question ="<img>Please caption this scan with findings."
+        question =f"{imgTags}Please caption this scan with findings and impression."
 
         formattedText = [
             {
@@ -183,7 +203,7 @@ class MIMIC_CXR_reportgen(Benchmark):
             # {"role": "assistant", "content": f"Findings: {sample['findings']}"},
         ]
 
-        return (formattedText, [Image.open(imagePath)])
+        return (formattedText, [Image.open(imagePath) for imagePath in imagesPath])
 
     def getCorrectAnswer(self, sample):
         return sample["findings"]
