@@ -116,10 +116,10 @@ class MedQA(QA):
             "Options:\n" + "\n".join([f'{option["key"]}: {option["value"]}.' for option in options]) + "\n"
         )
         formattedQuestion += "What is the correct answer?"
-        formattedAnswer = "The answer is " + (answer if prompt else "") + "."
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
+            formattedAnswer = "The answer is " + sample['answer_idx'] + "."
             question.append({"role": "assistant", "content": formattedAnswer})
 
         return (question, [])
@@ -135,7 +135,7 @@ class MedQA(QA):
         if len(pred) == 0:
             return "Invalid answer"
 
-        options = [self.cleanStr(f'{option["key"]}: {option["value"]}') for option in sample["options"]]
+        options = [self.cleanStr(f'{option["key"]} {option["value"]}') for option in sample["options"]]
         # Compute the BLEU score for each option
         scores = [self.bleuScorer([pred], [[option]]) for option in options]
 
@@ -171,15 +171,15 @@ class PubMedQA(QA):
         self.prompt = self.getPrompt()
 
     def getCorrectAnswer(self, sample, fullText=False):
-        return sample["answer"]
+        return sample["answer"][0]
 
     def format_question(self, sample, prompt=False):
         context = sample["context"]
         question = sample["question"]
         answer = sample["answer"]
 
-        formattedQuestion = "Answer the following question with yes, no or maybe. "
-        formattedQuestion += question
+        formattedQuestion = "Answer the question with yes, no or maybe. "
+        formattedQuestion += f"{context} {question}"
 
         formattedAnswer = answer[0]
 
