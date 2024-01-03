@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH --job-name=RadFM
+#SBATCH --output=multimedbench.out
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=128G
+#SBATCH --gpus=1
+#SBATCH --time=00:20:00
+
+# Your commands here
+source ~/data/miniconda3/etc/profile.d/conda.sh
+
+conda activate multimedbench
+
+nvidia-smi
+
+python benchmark.py
