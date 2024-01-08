@@ -95,6 +95,9 @@ class MIMIC_CXR_reportgen(Benchmark):
         print(f"***** Benchmarking : {self.taskName} *****")
         refReports = []
         hypReports = []
+        bleu1Scores = []
+        bleu4Scores = []
+        rougeLScores = []
 
         # Run the batcher for all data split in chunks
         for batch in tqdm(
@@ -102,17 +105,19 @@ class MIMIC_CXR_reportgen(Benchmark):
             total=math.ceil(len(self.dataset) / params.batch_size),
             desc="Generating reports",
         ):
-            refReports += [self.getCorrectAnswer(sample) for sample in batch]
-            hypReports += batcher([self.format_question(sample) for sample in batch])
-            # break
+            batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
+            batcherHyp = batcher([self.format_question(sample) for sample in batch])
+            
+            refReports += batcherCorrect
+            hypReports += batcherHyp
 
-            print([self.format_question(sample) for sample in batch])
-            raise Exception
+            for hyp, ref in zip(batcherHyp, batcherCorrect):
+                bleu1Scores.append(self.bleu_1([hyp], [[ref]]).item())
+                bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
+                rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
 
-        refReportsNested = [[report] for report in refReports]
-        self.bleu_1.update(hypReports, refReportsNested)
-        self.bleu_4.update(hypReports, refReportsNested)
-        self.rougeL.update(hypReports, refReportsNested)
+            break
+
 
         f1_bertscore = self.compute_bertscore(hypReports, refReports)
 
@@ -142,7 +147,10 @@ class MIMIC_CXR_reportgen(Benchmark):
         }
         metrics.update(rougeScores)
 
-        answersLog = zip(refReports, hypReports)
+        answersLog = zip(refReports, hypReports, bleu1Scores, bleu4Scores, rougeLScores)
+        # Add a header to the log
+        answersLog = [("ref", "hyp", "bleu1", "bleu4", "rougeL")] + list(answersLog)
+
 
         return [
             {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
