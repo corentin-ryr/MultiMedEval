@@ -107,7 +107,8 @@ class MIMIC_CXR_reportgen(Benchmark):
         ):
             batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
             batcherHyp = batcher([self.format_question(sample) for sample in batch])
-            
+            batcherHyp = [h if h != "" else "Invalid Response" for h in batcherHyp]
+
             refReports += batcherCorrect
             hypReports += batcherHyp
 

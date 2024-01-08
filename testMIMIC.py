@@ -5,7 +5,7 @@ params = Params(True, 42, 64)
 
 
 def batcher(prompts):
-    return ["yes it is a good report" for _ in range(len(prompts))]
+    return ["" for _ in range(len(prompts))]
 
 engine = MMB(params=params, batcher=batcher)
 
