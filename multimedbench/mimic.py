@@ -200,7 +200,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         
         # indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
         
-        imgTags = "<img>" * len(imagesPath)
+        imgTags = "<img> " * len(imagesPath)
 
         question =f"{imgTags}Please caption this scan with findings and impression."
 

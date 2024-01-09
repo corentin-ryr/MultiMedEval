@@ -202,7 +202,7 @@ class VinDr_Mammo(ImageClassification):
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img>. What is the BI-RADS level from 1 to 5??",
+                "content": f"<img> What is the BI-RADS level from 1 to 5??",
             }
         ]
 
@@ -393,7 +393,7 @@ class CBIS_DDSM_Mass(ImageClassification):
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img>Is the mass benign, malignant or benign without callback?",
+                "content": f"<img> Is the mass benign, malignant or benign without callback?",
             }
         ]
 
