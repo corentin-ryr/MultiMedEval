@@ -1,2 +1,3 @@
 include multimedbench/composite_metric_model_dill.pkl
 include multimedbench/normalizer_dill.pkl
+include multimedbench/mimiciiisplit.csv

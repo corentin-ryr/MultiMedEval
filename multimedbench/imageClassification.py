@@ -61,7 +61,7 @@ class ImageClassification(Benchmark):
                 predictions.append(pred)
                 groundTruth.append(gt)
 
-                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt == pred))
+                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
 
         # Convert pred and gt to tensor
         predictions = torch.tensor(predictions)
@@ -222,11 +222,10 @@ class VinDr_Mammo(ImageClassification):
         return (formattedText, [image])
 
     def getPredictedAnswer(self, answer: str) -> int:
-        print(f"Answer: {answer}")
         # Find the numbers in the string answer
         findings = [int(s) for s in answer.split() if s.isdigit()]
-        if len(findings) > 0:
-            return findings[0]
+        if len(findings) > 0 and findings[0] <= 5:
+            return findings[0] - 1
         else:
             return random.randint(0, 4)  # 5 classes so 0 to 4
 
@@ -252,9 +251,6 @@ class Pad_UFES_20(ImageClassification):
             self._generateDataset()
 
         self.dataset = pd.read_csv(os.path.join(self.path, "metadata.csv"))
-
-        images = os.listdir(os.path.join(self.path, "images"))
-
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
         self.options = ["BCC", "SCC", "ACK", "SEK", "BOD", "MEL", "NEV"]
@@ -295,7 +291,9 @@ class Pad_UFES_20(ImageClassification):
     def getPredictedAnswer(self, answer: str) -> int:
         answer = self.cleanStr(answer)
         # Find the best bleu score between the answer and the options
-        scores = [self.bleu([answer], [[self.cleanStr(option)]]) for option in self.options]
+        options = [self.cleanStr(self.mapAcronymToName[option]) for option in self.options]
+        scores = [float(self.bleu([answer], [[option]])) for option in options]
+
         return scores.index(max(scores))
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
@@ -405,7 +403,7 @@ class CBIS_DDSM_Mass(ImageClassification):
     def getPredictedAnswer(self, answer: str) -> int:
         answer = self.cleanStr(answer)
         # Find the best bleu score between the answer and the options
-        scores = [self.bleu([answer], [[self.cleanStr(option)]]) for option in self.options]
+        scores = [float(self.bleu([answer], [[self.cleanStr(option)]])) for option in self.options]
         return scores.index(max(scores))
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
