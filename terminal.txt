@@ -5,18 +5,18 @@ Filesystems usage for user croyer ( uid 646291381 ):
 [0m-------------------------------------------------------------------------------------
 Directory                 Used   Limit   Used,%         Files     Limit
 [0m-------------------------------------------------------------------------------------
-/home/croyer             1.2GB[0m[1m    15GB[0m     7.7%[0m         31734[0m[1m    100000[0m
-/data/croyer            [1m[31m 205GB[0m[1m   200GB[0m[1m[31m   102.4%[0m        391103[0m[1m          [0m
-/scratch/croyer          749GB[0m[1m    20TB[0m     3.7%[0m       1040663[0m[1m          [0m
+/home/croyer             1.2GB[0m[1m    15GB[0m     7.9%[0m         32434[0m[1m    100000[0m
+/data/croyer            [1m[33m 199GB[0m[1m   200GB[0m[1m[33m    99.2%[0m        435543[0m[1m          [0m
+/scratch/croyer          861GB[0m[1m    20TB[0m     4.2%[0m       1041229[0m[1m          [0m
 [0m
-/shares/menze.dqbm.uzh    77TB[0m[1m        [0m         [0m       9471959[0m[1m          [0m
+/shares/menze.dqbm.uzh    77TB[0m[1m        [0m         [0m       9472018[0m[1m          [0m
 [0m-------------------------------------------------------------------------------------
 
 !! Please note: the scratch filesystem is intended only for temporary storage.
    Files in /scratch/croyer that have not been accessed in more than 30 days
    may be automatically deleted.
 
-Mon Jan  8 10:27:50 2024       
+Thu Jan 11 17:42:46 2024       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.147.05   Driver Version: 525.147.05   CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -24,8 +24,8 @@ Mon Jan  8 10:27:50 2024
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  Tesla V100-SXM2...  On   | 00000000:3A:00.0 Off |                    0 |
-| N/A   28C    P0    41W / 300W |      0MiB / 16384MiB |      0%      Default |
+|   0  Tesla V100-SXM2...  On   | 00000000:B2:00.0 Off |                    0 |
+| N/A   35C    P0    42W / 300W |      0MiB / 16384MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -41,29 +41,28 @@ Mon Jan  8 10:27:50 2024
 [nltk_data] Downloading package wordnet to /home/croyer/nltk_data...
 [nltk_data]   Package wordnet is already up-to-date!
 Warning: Your Kaggle API key is readable by other users on this system! To fix this, you can run 'chmod 600 /home/croyer/.kaggle/kaggle.json'
+[nltk_data] Downloading package punkt to /home/croyer/nltk_data...
+[nltk_data]   Package punkt is already up-to-date!
+[nltk_data] Downloading package wordnet to /home/croyer/nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
 
 
-Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2024-01-08 10:27:50.654424')
+Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2024-01-11 17:42:47.129146')
 RadGraph already downloaded
 Chexbert already downloaded
-***** Benchmarking : MIMIC_CXR report generation *****
-Generating reports:   0%|          | 0/37 [00:00<?, ?it/s]['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
-['Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response', 'Invalid Response']
-Generating reports:   0%|          | 0/37 [00:00<?, ?it/s]
-Using 1 GPUs!
-
-Begin report impression labeling. The progress bar counts the # of batches completed:
-The batch size is 18
-  0%|          | 0/4 [00:00<?, ?it/s] 75%|███████▌  | 3/4 [00:00<00:00, 19.87it/s]100%|██████████| 4/4 [00:00<00:00, 22.84it/s]
-Using 1 GPUs!
-
-Begin report impression labeling. The progress bar counts the # of batches completed:
-The batch size is 18
-  0%|          | 0/4 [00:00<?, ?it/s]100%|██████████| 4/4 [00:00<00:00, 108.38it/s]
-/shares/menze.dqbm.uzh/corentin/RadGraph/scorers/RadGraph/allennlp/nn/util.py:1467: UserWarning: The torch.cuda.*DtypeTensor constructors are no longer recommended. It's best to use methods such as torch.tensor(data, dtype=*, device='cuda') to create tensors. (Triggered internally at ../torch/csrc/tensor/python_tensor.cpp:83.)
-  return torch.cuda.LongTensor(size, device=device).fill_(1).cumsum(0) - 1
-/shares/menze.dqbm.uzh/corentin/RadGraph/scorers/RadGraph/dygie/data/dataset_readers/dygie.py:192: UserWarning: Document 1 has a sentence with a single token or no tokens. This may break the modeling code.
-  warnings.warn(msg)
-{'bleu1': 0.0, 'bleu4': 0.0, 'f1-radgraph': 0.0, 'CheXBert vector similarity': 0.16239525377750397, 'f1-bertscore': -5.550156116485596, 'radcliq': 21.916961259181214, 'meteor': 0.0, 'rougeL_fmeasure': 0.0, 'rougeL_precision': 0.0, 'rougeL_recall': 0.0}
-Done task MIMIC-CXR-ReportGeneration
-{'type': 'json', 'name': 'metrics_MIMIC_CXR report generation', 'value': {'bleu1': 0.0, 'bleu4': 0.0, 'f1-radgraph': 0.0, 'CheXBert vector similarity': 0.16239525377750397, 'f1-bertscore': -5.550156116485596, 'radcliq': 21.916961259181214, 'meteor': 0.0, 'rougeL_fmeasure': 0.0, 'rougeL_precision': 0.0, 'rougeL_recall': 0.0}}
+***** Benchmarking : Pad UFES 20 Image Classification *****
+Running inference:   0%|          | 0/36 [00:00<?, ?it/s]['basal cell carcinoma  bcc ', 'squamous cell carcinoma  scc ', 'actinic keratosis  ack ', 'seborrheic keratosis  sek ', 'bowen’s disease  bod ', 'melanoma  mel ', 'nevus  nev ']
+basal cell carcinoma
+[0.7165312767028809, 0.4776875376701355, 0.0, 0.0, 0.0, 0.0, 0.0]
+Running inference:   0%|          | 0/36 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/croyer/MultiMedBench/testPadUfes.py", line 14, in <module>
+    print(engine.eval("Pad-UFES-20")[0])
+  File "/home/croyer/MultiMedBench/multimedbench/engine.py", line 59, in eval
+    taskResult = self.evaluation.run(self.params, self.batcher)
+  File "/home/croyer/MultiMedBench/multimedbench/imageClassification.py", line 58, in run
+    pred = self.getPredictedAnswer(answer)
+  File "/home/croyer/MultiMedBench/multimedbench/imageClassification.py", line 300, in getPredictedAnswer
+    raise Exception()
+Exception
+srun: error: u20-computeibmgpu-vesta6: task 0: Exited with exit code 1

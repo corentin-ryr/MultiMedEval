@@ -15,11 +15,12 @@ nvidia-smi
 
 # Run the benchmark script
 # python benchmark.py
-python testMIMIC.py
+# python testMIMIC.py
 # python testImageClassification.py
 # python MIMIC_entity_extraction.py
 # python testMedQA.py
 # python testMIMIC3.py
+python testPadUfes.py
 
 
 

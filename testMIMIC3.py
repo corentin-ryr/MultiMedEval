@@ -1,5 +1,3 @@
-from multimedbench.imageClassification import MIMIC_CXR_ImageClassification
-import json
 from multimedbench.utils import Params
 from multimedbench.engine import MMB
 
