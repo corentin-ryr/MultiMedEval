@@ -222,6 +222,7 @@ class VinDr_Mammo(ImageClassification):
         return (formattedText, [image])
 
     def getPredictedAnswer(self, answer: str) -> int:
+        print(f"Answer: {answer}")
         # Find the numbers in the string answer
         findings = [int(s) for s in answer.split() if s.isdigit()]
         if len(findings) > 0:
@@ -292,8 +293,9 @@ class Pad_UFES_20(ImageClassification):
         return (formattedText, [image])
 
     def getPredictedAnswer(self, answer: str) -> int:
+        answer = self.cleanStr(answer)
         # Find the best bleu score between the answer and the options
-        scores = [self.bleu(answer, option) for option in self.options]
+        scores = [self.bleu([answer], [[self.cleanStr(option)]]) for option in self.options]
         return scores.index(max(scores))
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
