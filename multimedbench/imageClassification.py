@@ -202,7 +202,7 @@ class VinDr_Mammo(ImageClassification):
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img> What is the BI-RADS level from 1 to 5??",
+                "content": f"<img> What is the BI-RADS level from 1 to 5?",
             }
         ]
 
@@ -292,7 +292,7 @@ class Pad_UFES_20(ImageClassification):
         answer = self.cleanStr(answer)
         # Find the best bleu score between the answer and the options
         options = [self.cleanStr(self.mapAcronymToName[option]) for option in self.options]
-        scores = [float(self.bleu([answer], [[option]])) for option in options]
+        scores = [self.bleu([answer], [[option]]) for option in options]
 
         return scores.index(max(scores))
 
@@ -403,7 +403,7 @@ class CBIS_DDSM_Mass(ImageClassification):
     def getPredictedAnswer(self, answer: str) -> int:
         answer = self.cleanStr(answer)
         # Find the best bleu score between the answer and the options
-        scores = [float(self.bleu([answer], [[self.cleanStr(option)]])) for option in self.options]
+        scores = [self.bleu([answer], [[self.cleanStr(option)]]) for option in self.options]
         return scores.index(max(scores))
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:

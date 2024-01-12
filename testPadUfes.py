@@ -7,7 +7,7 @@ if __name__ == "__main__":
     params = Params(True, 42, 64)
 
     def batcher(prompts):
-        return ["Basal Cell Carcinoma" for _ in range(len(prompts))]
+        return ["Actinic Keratosis" for _ in range(len(prompts))]
 
     engine = MMB(params=params, batcher=batcher)
 

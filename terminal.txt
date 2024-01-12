@@ -5,8 +5,8 @@ Filesystems usage for user croyer ( uid 646291381 ):
 [0m-------------------------------------------------------------------------------------
 Directory                 Used   Limit   Used,%         Files     Limit
 [0m-------------------------------------------------------------------------------------
-/home/croyer             1.2GB[0m[1m    15GB[0m     7.9%[0m         32434[0m[1m    100000[0m
-/data/croyer            [1m[33m 199GB[0m[1m   200GB[0m[1m[33m    99.2%[0m        435543[0m[1m          [0m
+/home/croyer             1.2GB[0m[1m    15GB[0m     7.9%[0m         32442[0m[1m    100000[0m
+/data/croyer            [1m[33m 199GB[0m[1m   200GB[0m[1m[33m    99.2%[0m        435544[0m[1m          [0m
 /scratch/croyer          861GB[0m[1m    20TB[0m     4.2%[0m       1041229[0m[1m          [0m
 [0m
 /shares/menze.dqbm.uzh    77TB[0m[1m        [0m         [0m       9472018[0m[1m          [0m
@@ -16,7 +16,7 @@ Directory                 Used   Limit   Used,%         Files     Limit
    Files in /scratch/croyer that have not been accessed in more than 30 days
    may be automatically deleted.
 
-Thu Jan 11 17:42:46 2024       
+Fri Jan 12 10:35:31 2024       
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 525.147.05   Driver Version: 525.147.05   CUDA Version: 12.0     |
 |-------------------------------+----------------------+----------------------+
@@ -24,8 +24,8 @@ Thu Jan 11 17:42:46 2024
 | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
 |                               |                      |               MIG M. |
 |===============================+======================+======================|
-|   0  Tesla V100-SXM2...  On   | 00000000:B2:00.0 Off |                    0 |
-| N/A   35C    P0    42W / 300W |      0MiB / 16384MiB |      0%      Default |
+|   0  Tesla V100-SXM2...  On   | 00000000:3B:00.0 Off |                    0 |
+| N/A   33C    P0    47W / 300W |      0MiB / 16384MiB |      0%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
                                                                                
@@ -47,13 +47,12 @@ Warning: Your Kaggle API key is readable by other users on this system! To fix t
 [nltk_data]   Package wordnet is already up-to-date!
 
 
-Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2024-01-11 17:42:47.129146')
+Running MultiMedBenchmark with Params(usepytorch=True, seed=42, batch_size=64, run_name='run 2024-01-12 10:35:32.533474')
 RadGraph already downloaded
 Chexbert already downloaded
 ***** Benchmarking : Pad UFES 20 Image Classification *****
-Running inference:   0%|          | 0/36 [00:00<?, ?it/s]['basal cell carcinoma  bcc ', 'squamous cell carcinoma  scc ', 'actinic keratosis  ack ', 'seborrheic keratosis  sek ', 'bowen’s disease  bod ', 'melanoma  mel ', 'nevus  nev ']
-basal cell carcinoma
-[0.7165312767028809, 0.4776875376701355, 0.0, 0.0, 0.0, 0.0, 0.0]
+Running inference:   0%|          | 0/36 [00:00<?, ?it/s][tensor(0.), tensor(0.), tensor(0.6065), tensor(0.3033), tensor(0.), tensor(0.), tensor(0.)]
+2
 Running inference:   0%|          | 0/36 [00:00<?, ?it/s]
 Traceback (most recent call last):
   File "/home/croyer/MultiMedBench/testPadUfes.py", line 14, in <module>
@@ -63,6 +62,6 @@ Traceback (most recent call last):
   File "/home/croyer/MultiMedBench/multimedbench/imageClassification.py", line 58, in run
     pred = self.getPredictedAnswer(answer)
   File "/home/croyer/MultiMedBench/multimedbench/imageClassification.py", line 300, in getPredictedAnswer
-    raise Exception()
+    raise Exception
 Exception
 srun: error: u20-computeibmgpu-vesta6: task 0: Exited with exit code 1
