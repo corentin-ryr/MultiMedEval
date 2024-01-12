@@ -21,6 +21,9 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
 from multimedbench.utils import remove_punctuation
 import random
+from zipfile import ZipFile
+from requests.auth import HTTPBasicAuth
+import requests
 
 
 class ImageClassification(Benchmark):
@@ -185,7 +188,9 @@ class VinDr_Mammo(ImageClassification):
         super().__init__(**kwargs)
 
         self.taskName = "VinDr Mammo Image Classification"
-        self.path = json.load(open("MedMD_config.json", "r"))["VinDr-Mammo"]["path"]
+        self.path = json.load(open("MedMD_config.json", "r"))["physionetCacheDir"]["path"]
+
+        self._generateDataset()
 
         self.num_classes = 5
 
@@ -202,7 +207,7 @@ class VinDr_Mammo(ImageClassification):
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img> What is the BI-RADS level from 1 to 5?",
+                "content": f"<img> What is the BI-RADS level in this mammography (from 1 to 5)?",
             }
         ]
 
@@ -235,6 +240,32 @@ class VinDr_Mammo(ImageClassification):
         findings = int(findings[-1])
 
         return findings - 1  # 5 classes so 0 to 4
+    
+    def _generateDataset(self):        
+        # Check if the path already exists and if so return
+        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0", "finding_annotations.csv")):
+            self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
+            return
+        
+        os.makedirs(self.path, exist_ok=True)
+
+        url = "https://physionet.org/files/vindr-mammo/1.0.0/"
+        username, password = self.engine.getPhysioNetCredentials()
+        response = requests.get(url, auth=HTTPBasicAuth(username, password), stream=True)
+
+        if response.status_code == 200:
+            with open(self.path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            print(f"Download successful. File saved to: {self.path}")
+        else:
+            print(f"Failed to download. Status code: {response.status_code}")
+            print(response.text)
+
+            raise Exception("Failed to download the dataset")
+        
+        self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
 
 
 class Pad_UFES_20(ImageClassification):
@@ -279,11 +310,10 @@ class Pad_UFES_20(ImageClassification):
             "has sewage system": sample["has_sewage_system"],
         }
         # Create a sentence out of the patient information don't include Nones
-        patientInfo = ", ".join([f"{key} {value}" for key, value in patientInfo.items() if value is not None])
-        question = f"Given <img> and the patient's information: {patientInfo}, what is the most likely diagnosis?"
+        # patientInfo = ", ".join([f"{key} {value}" for key, value in patientInfo.items() if value is not None])
         options = "Options:\n" + "\n".join([self.mapAcronymToName[option] for option in self.options])
 
-        formattedText = [{"role": "user", "content": f"{question}\n{options}"}]
+        formattedText = [{"role": "user", "content": f"<img> {options} What is the most likely diagnosis among the following propositions?"}]
 
         image = Image.open(os.path.join(self.path, "images", sample["img_id"]))
         return (formattedText, [image])

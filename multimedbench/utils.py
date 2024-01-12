@@ -9,7 +9,6 @@ import re
 from abc import abstractmethod, ABC
 
 
-
 class dotdict(dict):
     """dot.notation access to dictionary attributes"""
 
@@ -34,9 +33,8 @@ class Benchmark(ABC):
 
 @dataclass
 class Params:
-    usepytorch: bool = True
     seed: int = 1111
-    batch_size: str = 128
+    batch_size: int = 128
     run_name: str = f"run {datetime.now()}"
 
 

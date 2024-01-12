@@ -1,6 +1,4 @@
 torch
-torchtext
-datasets
 transformers
 datasets
 bitsandbytes
@@ -23,3 +21,4 @@ bert_score
 pydicom
 py7zr
 kaggle
+getpass

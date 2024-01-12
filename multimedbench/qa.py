@@ -94,13 +94,13 @@ class MedQA(QA):
         super().__init__(**kwargs)
         self.taskName = "MedQA"
 
-        params = json.load(open("MedMD_config.json", "r"))
+        cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
 
         self.dataset = load_dataset(
-            "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=params["MedQA"]["path"]
+            "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=cacheDir, trust_remote_code=True
         )
 
-        self.trainDataset = load_dataset("bigbio/med_qa", split="train", cache_dir=params["MedQA"]["path"])
+        self.trainDataset = load_dataset("bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True)
 
         self.prompt = self.getPrompt()
 
@@ -119,7 +119,7 @@ class MedQA(QA):
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
-            formattedAnswer = "The answer is " + sample['answer_idx'] + "."
+            formattedAnswer = "The answer is " + sample["answer_idx"] + "."
             question.append({"role": "assistant", "content": formattedAnswer})
 
         return (question, [])
@@ -152,20 +152,20 @@ class PubMedQA(QA):
         super().__init__(**kwargs)
         self.taskName = "PubMedQA"
 
-        params = json.load(open("MedMD_config.json", "r"))
+        cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
 
         self.dataset = load_dataset(
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="test",
-            cache_dir=params["PubMedQA"]["path"],
+            cache_dir=cacheDir,
         )
 
         self.trainDataset = load_dataset(
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="train",
-            cache_dir=params["PubMedQA"]["path"],
+            cache_dir=cacheDir,
         )
 
         self.prompt = self.getPrompt()
@@ -214,18 +214,18 @@ class MedMCQA(QA):
         super().__init__(**kwargs)
         self.taskName = "MedMCQA"
 
-        params = json.load(open("MedMD_config.json", "r"))
+        cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
 
         self.dataset = load_dataset(
             "medmcqa",
             split="validation",
-            cache_dir=params["MedMCQA"]["path"],
+            cache_dir=cacheDir,
         )
 
         self.trainDataset = load_dataset(
             "medmcqa",
             split="train",
-            cache_dir=params["MedMCQA"]["path"],
+            cache_dir=cacheDir,
         )
 
         self.prompt = self.getPrompt()
