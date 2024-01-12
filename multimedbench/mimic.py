@@ -47,6 +47,8 @@ class MIMIC_CXR_reportgen(Benchmark):
         # Get the dataset ====================================================================
         self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-CXR"]["path"]
 
+        self._generate_dataset()
+
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
         split = split[split.split == "test"]
@@ -276,3 +278,34 @@ class MIMIC_CXR_reportgen(Benchmark):
                 exact_entity_token_if_rel_exists_reward(hyp_annotation_lists[0], ref_annotation_lists[0])
             )
         return torch.tensor(f1_radgraph)
+
+    def _generate_dataset(self):
+        # Check if the path already exists and if so return
+        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv")):
+            self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+            return
+        
+        os.makedirs(self.path, exist_ok=True)
+
+        url = "https://physionet.org/files/mimiciii/1.4/"
+        username, password = self.engine.getPhysioNetCredentials()
+        response = requests.get(url, auth=HTTPBasicAuth(username, password), stream=True)
+
+        if response.status_code == 200:
+            with open(self.path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            print(f"Download successful. File saved to: {self.path}")
+        else:
+            print(f"Failed to download. Status code: {response.status_code}")
+            print(response.text)
+
+            raise Exception("Failed to download the dataset")
+        
+        self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+        
+        # Unzip the NOTEEVENTS file
+        file = os.path.join(self.path, "NOTEEVENTS.csv")
+        with ZipFile(file + ".gz", "r") as zipObj:
+            zipObj.extractall(file)

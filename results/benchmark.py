@@ -1,4 +1,3 @@
-from typing import Any
 import torch
 from transformers import (
     AutoModelForCausalLM,
@@ -9,11 +8,8 @@ from transformers import (
     LlamaTokenizer,
     GenerationConfig,
 )
-from multimedbench.engine import MMB
-from multimedbench.utils import Params
-from transformers import pipeline
+from multimedbench import MMB, Params
 import time
-import os
 
 
 class batcherMistral:
@@ -36,16 +32,7 @@ class batcherMistral:
         self.tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1")
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        # self.pl = pipeline(
-        #     "text-generation",
-        #     model=self.model,
-        #     tokenizer=self.tokenizer,
-        #     device_map=self.device,
-        # )
-
     def __call__(self, prompts):
-        answers = []
-
         model_inputs = [
             self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts
         ]
@@ -126,7 +113,6 @@ class batcherLlama:
         # print(answers)
 
         # raise Exception
-
 
         return answers
 

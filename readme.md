@@ -1,15 +1,76 @@
 # MultiMedBench
 
-MultiMedBench is a benchmark for medical conversational models.
 
+MultiMedBench is a library to evaluate the performance of Vision-Language Models (VLM) on medical domain tasks. The goal is to have a set of benchmark with a unified evaluation scheme to facilitate the development and comparison of medical VLM.
+We include 12 tasks representing a range of different imaging modalities.
+
+
+## Tasks
+
+| Task                           | Description                                                                                       | Modality       | Size
+|--------------------------------|---------------------------------------------------------------------------------------------------|----------------|----------
+| MedQA                          | Multiple choice questions on general medical knowledge                                            | Text           |
+| PubMedQA                       | Yes/no/maybe questions based on PubMed paper abstracts                                            | Text           |
+| MedMCQA                        | Multiple choice questions on general medical knowledge                                            | Text           |
+| MIMIC-CXR-ReportGeneration     | Generation of finding sections of radiology reports based on the radiology images                 | Chest X-ray    |
+| VQA-RAD                        | Open ended questions on radiology images                                                          | X-ray          |
+| Path-VQA                       | Open ended questions on pathology images                                                          | Pathology      |
+| SLAKE                          | Open ended questions on radiology images                                                          | X-ray          |
+| MIMIC-CXR-ImageClassification  | Classification of radiology images into 5 diseases                                                | Chest X-ray    |
+| VinDr-Mammo                    | Classification of mammography images into 5 BIRADS levels                                         | Mammography    |
+| Pad-UFES-20                    | Classification of skin lesion images into 7 diseases                                              | Dermatology    |
+| CBIS-DDSM                      | Classification of mammography images into "benign", "malignant" or "benign without callback"      | Mammography    |
+| MIMIC-III                      | Summarization of radiology reports                                                                | Text           |
+
+
+
+## Setup MultiMedBench
+
+To install the library, you can use `pip`
+
+```console
+pip install git+https://github.com/corentin-ryr/MultiMedBench.git
+```
+
+To download the datasets and prepare the evaluation models, you can instantiate the main "engine" with a dummy batcher and default parameters. This will run the setup for all tasks but not the evaluation itself.
+
+```python
+from multimedbench import MMB, Params
+
+def batcher(prompts):
+    return ["" for _ in range(len(prompts))]
+
+engine = MMB(params=Params(), batcher=batcher)
+```
+
+The setup script needs a configuration file containing the destination folder for every dataset. You need to specify this config file manually to fit your system. The config file follows this example:
+```json
+{
+  "huggingfaceCacheDir": {"path": ""},
+  "physionetCacheDir": {"path": ""},
+  "SLAKE": {"path": ""},
+  "MIMIC-CXR": {"path":"/PATH/mimic-cxr-jpg/2.0.0"},
+  "RadGraph": {"dlLocation": ""},
+  "CheXBert": {"dlLocation": ""},
+  "Pad-UFES-20": {"path": ""},
+  "CBIS-DDSM": {"path": ""}
+}
+  
+```
+
+
+During the setup process, the script will ask for a Physionet password to download "VinDr-Mammo", "MIMIC-CXR" and "MIMIC-III".
+You also need to setup Kaggle on your machine before running the setup as the "CBIS-DDSM" is hosted on Kaggle.
+
+At the end of the setup process, you will see a summary of which tasks are ready and which didn't run properly.
 
 ## Usage
 
-The user must implement one functions: `batcher`. It takes a batch of input and must return the answer.
+The user must implement one function: `batcher`. It takes a batch of input and must return the answer.
 The batch is a list of inputs.
-The input is a tuple of:
-* a prompt in the form of a text that may or may not refer to images.
-* a dictionary of id: images
+Each input is a tuple of:
+* a prompt in the form of a conversation between a user and an assistant.
+* a list of Pillow images. The number of images matches the number of <img> tokens in the prompt.
 
 ```python
 [
@@ -31,27 +92,49 @@ The input is a tuple of:
     ),
 
 ]
-
-
 ```
 
+Here is an example of a `batcher`. This example shows the implementation of a batcher as a callable class. It initializes the Mistral model (a language only model) and queries it in the `__call__` function.
+
+```python
+class batcherMistral:
+    def __init__(self, device=None) -> None:
+        self.model: MistralModel = AutoModelForCausalLM.from_pretrained(
+            "mistralai/Mistral-7B-Instruct-v0.1",
+            quantization_config=nf4_config,
+            device_map=device,
+        )
+        self.tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1")
+        self.tokenizer.pad_token = self.tokenizer.eos_token
+
+    def __call__(self, prompts):
+        model_inputs = [
+            self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts
+        ]
+        model_inputs = self.tokenizer(
+            model_inputs, padding="max_length", truncation=True, max_length=1024, return_tensors="pt"
+        )
+        model_inputs = {k: v.to("cuda") for k, v in model_inputs.items()}
+
+        generated_ids = self.model.generate(
+            **model_inputs, max_new_tokens=200, do_sample=True, pad_token_id=self.tokenizer.pad_token_id
+        )
+
+        # Remove the first 1024 tokens (prompt)
+        generated_ids = generated_ids[:, model_inputs["input_ids"].shape[1] :]
+
+        answers = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
+        return answers
+``` 
+
+## MultiMedBench parameters
+
+The `Params` class takes the following arguments:
+* seed: an int initialized as `1111`
+* batch_size: an int initialized as `128` and representing the number of prompt sent to the batcher at once.
+* run_name: a string initialized as the current date. It will be the name of the folder where the results are saved.
+
+## References
 
 
-## Inference speed
-
-
-For Llama2 on a V100 with 32GB it takes 18min to benchmark MedQA:
-* batch size: 36 (with context length 512)
-* 125 token/second (with float 16 but 60t/s with bfloat)
-* There is some problems when using float16 (sometimes it gives nan values in logits). The solution is to use bfloat16 (it was trained using that) but the format is poorly supported on v100 and earlier GPUs (it reduces the performance by 50%).
-
-For Llama2 on a A100 with 80GB it takes min to benchmark MedQA:
-* batch size of 50 (with context length 1024)
-* 200t/s
-* bfloat16 is supported
-
-
-
-## Indexing problem
-
-There use to be an indexing problem because we need to check that the generation_config is good.
+## Related work

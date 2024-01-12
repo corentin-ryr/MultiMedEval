@@ -1,5 +1,4 @@
 from multimedbench.utils import Params
-from multimedbench.utils import Params
 from multimedbench.engine import MMB
 
 # Test the class
@@ -10,5 +9,7 @@ if __name__ == "__main__":
         return ["Actinic Keratosis" for _ in range(len(prompts))]
 
     engine = MMB(params=params, batcher=batcher)
+
+    raise Exception
 
     print(engine.eval("Pad-UFES-20")[0])

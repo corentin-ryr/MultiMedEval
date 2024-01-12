@@ -12,6 +12,7 @@ from nltk.translate.meteor_score import meteor_score
 from nltk.tokenize import word_tokenize
 import nltk
 from torchmetrics.text import BLEUScore, ROUGEScore
+from zipfile import ZipFile
 
 
 nltk.download("punkt")
@@ -20,7 +21,8 @@ nltk.download("wordnet")
 from multimedbench.chexbert.label import encode
 import dill
 from bert_score import BERTScorer
-
+import requests
+from requests.auth import HTTPBasicAuth
 
 def get_final_report(text):
     if "FINAL REPORT" not in text:
@@ -86,8 +88,10 @@ class MIMIC_III(Benchmark):
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
-        self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-III"]["path"]
+        self.path = json.load(open("MedMD_config.json", "r"))["physionetCacheDir"]["path"]
         self.chexbertPath = json.load(open("MedMD_config.json", "r"))["CheXBert"]["dlLocation"]
+
+        self._generate_dataset()
 
         reports_csv = pd.read_csv(os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False)
         reports_csv = reports_csv.fillna(-1)
@@ -187,7 +191,7 @@ class MIMIC_III(Benchmark):
                     )
 
         self.dataset = datasets.Dataset.from_list(datasetTest)
-        print(self.dataset)
+
 
     def run(self, params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -327,6 +331,42 @@ class MIMIC_III(Benchmark):
                 exact_entity_token_if_rel_exists_reward(hyp_annotation_lists[0], ref_annotation_lists[0])
             )
         return torch.tensor(f1_radgraph)
+    
+    def _generate_dataset(self):
+        # Check if the path already exists and if so return
+        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv")):
+            self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+            return
+        
+        os.makedirs(self.path, exist_ok=True)
+
+        url = "https://physionet.org/files/mimiciii/1.4/"
+        username, password = self.engine.getPhysioNetCredentials()
+        response = requests.get(url, auth=HTTPBasicAuth(username, password), stream=True)
+
+        if response.status_code == 200:
+            with open(self.path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            print(f"Download successful. File saved to: {self.path}")
+        else:
+            print(f"Failed to download. Status code: {response.status_code}")
+            print(response.text)
+
+            raise Exception("Failed to download the dataset")
+        
+        self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+        
+        # Unzip the NOTEEVENTS file
+        file = os.path.join(self.path, "NOTEEVENTS.csv")
+        with ZipFile(file + ".gz", "r") as zipObj:
+            zipObj.extractall(file)
+
+
+
+
+
 
 
 # which reports go into the given modality_anatomy pair

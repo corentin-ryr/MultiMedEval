@@ -9,6 +9,8 @@ import json
 import os
 import gdown
 import sys
+from tqdm import tqdm
+import getpass
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -28,6 +30,21 @@ TASKS: dict[str, Benchmark] = {
     "MIMIC-III": MIMIC_III,
 }
 
+TASKS_REQUIREMENTS: dict[str, list[str]] = {
+    "MedQA": ["MedQA"],
+    "PubMedQA": ["PubMedQA"],
+    "MedMCQA": ["MedMCQA"],
+    "MIMIC-CXR-ReportGeneration": ["MIMIC-CXR-ReportGeneration", "RadGraph", "Chexbert"],
+    "VQA-RAD": ["VQA-RAD"],
+    "Path-VQA": ["Path-VQA"],
+    "SLAKE": ["SLAKE"],
+    "MIMIC-CXR-ImageClassification": ["MIMIC-CXR-ImageClassification"],
+    "VinDr-Mammo": ["VinDr-Mammo"],
+    "Pad-UFES-20": ["Pad-UFES-20"],
+    "CBIS-DDSM": ["CBIS-DDSM"],
+    "MIMIC-III": ["MIMIC-III", "RadGraph", "Chexbert"],
+}
+
 
 class MMB(object):
     def __init__(self, params: Params, batcher, fewshot: bool = False):
@@ -40,8 +57,44 @@ class MMB(object):
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
 
-        self._prepare_radgraph()
-        self._prepare_chexbert()
+        print(f"Running the setup")
+        self.tasksReady = {}
+
+        self._physionet_username = None
+        self._physionet_password = None
+
+        progressBar = tqdm(total=len(TASKS))
+        for taskName in TASKS:
+            progressBar.set_description(f"Setup {taskName}")
+            try:
+                taskBenchmark = TASKS[taskName](seed=self.params.seed, engine=self, fewshot=self.fewshot)
+            except Exception as e:
+                self.tasksReady[taskName] = {"ready": False, "error": str(e)}
+            else:
+                self.tasksReady[taskName] = {"ready": True, "task": taskBenchmark}
+
+            progressBar.update(1)
+
+        try:
+            self._prepare_radgraph()
+        except Exception as e:
+            self.tasksReady["RadGraph"] = {"ready": False, "error": str(e)}
+        else:
+            self.tasksReady["RadGraph"] = {"ready": True}
+
+        try:
+            self._prepare_chexbert()
+        except Exception as e:
+            self.tasksReady["Chexbert"] = {"ready": False, "error": str(e)}
+        else:
+            self.tasksReady["Chexbert"] = {"ready": True}
+
+        # Print a table of the tasks and their status
+        print("\n\n")
+        print("Task".ljust(30) + "Status".ljust(30) + "Error")
+        for taskName in self.tasksReady:
+            error = "" if "error" not in self.tasksReady[taskName] else self.tasksReady[taskName]["error"]
+            print(taskName.ljust(30) + str(self.tasksReady[taskName]["ready"]).ljust(30) + error)
 
     def eval(self, name: str | list[str]):
         # evaluate on evaluation [name], either takes string or list of strings
@@ -54,8 +107,16 @@ class MMB(object):
             return self.results
 
         assert name in TASKS, str(name) + " not in " + str(TASKS.keys())
+        # Check if the requirements are satisfied
+        for req in TASKS_REQUIREMENTS[name]:
+            if not self.tasksReady[req]["ready"]:
+                if "error" in self.tasksReady[req]:
+                    error = self.tasksReady[req]["error"]
+                else:
+                    error = "No error message"
+                raise Exception(f"Task {name} requires {req} to be ready: {error}")
 
-        self.evaluation: Benchmark = TASKS[name](seed=self.params.seed, engine=self, fewshot=self.fewshot)
+        self.evaluation: Benchmark = self.tasksReady[name]["task"]
         taskResult = self.evaluation.run(self.params, self.batcher)
 
         # Write to files
@@ -63,7 +124,7 @@ class MMB(object):
             if result["type"] == "json":
                 print(result["value"])
             fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
-        
+
         print(f"Done task {name}")
 
         return taskResult
@@ -112,3 +173,11 @@ class MMB(object):
             )
         else:
             print("Chexbert already downloaded")
+
+    def getPhysioNetCredentials(self):
+        if self._physionet_password is None or self._physionet_username is None:
+            print("To setup tasks requiring a PhysioNet dataset, the scripts requires the PhysioNet username and password.")
+            self._physionet_username = input("Enter your username: ")
+            self._physionet_password = getpass.getpass("Enter your password: ")
+
+        return self._physionet_username, self._physionet_password
