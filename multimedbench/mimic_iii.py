@@ -14,10 +14,6 @@ import nltk
 from torchmetrics.text import BLEUScore, ROUGEScore
 from zipfile import ZipFile
 
-
-nltk.download("punkt")
-nltk.download("wordnet")
-
 from multimedbench.chexbert.label import encode
 import dill
 from bert_score import BERTScorer

@@ -11,6 +11,7 @@ import gdown
 import sys
 from tqdm import tqdm
 import getpass
+import nltk
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -58,12 +59,15 @@ class MMB(object):
             os.mkdir(params.run_name)
 
         print(f"Running the setup")
+        nltk.download("punkt", quiet=True)
+        nltk.download("wordnet", quiet=True)
+
         self.tasksReady = {}
 
         self._physionet_username = None
         self._physionet_password = None
 
-        progressBar = tqdm(total=len(TASKS))
+        progressBar = tqdm(total=len(TASKS) + 2)
         for taskName in TASKS:
             progressBar.set_description(f"Setup {taskName}")
             try:
@@ -75,19 +79,24 @@ class MMB(object):
 
             progressBar.update(1)
 
+        progressBar.set_description(f"Setup RadGraph")
         try:
             self._prepare_radgraph()
         except Exception as e:
             self.tasksReady["RadGraph"] = {"ready": False, "error": str(e)}
         else:
             self.tasksReady["RadGraph"] = {"ready": True}
-
+        progressBar.update(1)
+        
+        progressBar.set_description(f"Setup Chexbert")
         try:
             self._prepare_chexbert()
         except Exception as e:
             self.tasksReady["Chexbert"] = {"ready": False, "error": str(e)}
         else:
             self.tasksReady["Chexbert"] = {"ready": True}
+        progressBar.update(1)
+
 
         # Print a table of the tasks and their status
         print("\n\n")
@@ -143,8 +152,8 @@ class MMB(object):
             with zipfile.ZipFile(os.path.join(output, "scorers.zip"), "r") as zip_ref:
                 zip_ref.extractall(os.path.join(output, "scorers"))
             os.remove(os.path.join(output, "scorers.zip"))
-        else:
-            print("RadGraph already downloaded")
+        # else:
+        #     print("RadGraph already downloaded")
 
         # Add the RadGraph to the path
         sys.path.append(output)
@@ -171,8 +180,8 @@ class MMB(object):
                 os.path.join(output, "chexbert.pth"),
                 quiet=False,
             )
-        else:
-            print("Chexbert already downloaded")
+        # else:
+        #     print("Chexbert already downloaded")
 
     def getPhysioNetCredentials(self):
         if self._physionet_password is None or self._physionet_username is None:
