@@ -100,7 +100,9 @@ class MedQA(QA):
             "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=cacheDir, trust_remote_code=True
         )
 
-        self.trainDataset = load_dataset("bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True)
+        self.trainDataset = load_dataset(
+            "bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True
+        )
 
         self.prompt = self.getPrompt()
 
@@ -159,6 +161,7 @@ class PubMedQA(QA):
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="test",
             cache_dir=cacheDir,
+            trust_remote_code=True
         )
 
         self.trainDataset = load_dataset(
@@ -166,6 +169,7 @@ class PubMedQA(QA):
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="train",
             cache_dir=cacheDir,
+            trust_remote_code=True
         )
 
         self.prompt = self.getPrompt()

@@ -131,7 +131,22 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         self.dataset = datasets.Dataset.from_pandas(chexbertMimic)
 
-        self.labelNames = chexbertMimic.columns.tolist()[2:]
+        self.labelNames = [
+            "Enlarged Cardiomediastinum",
+            "Cardiomegaly",
+            "Lung Opacity",
+            "Lung Lesion",
+            "Edema",
+            "Consolidation",
+            "Pneumonia",
+            "Atelectasis",
+            "Pneumothorax",
+            "Pleural Effusion",
+            "Pleural Other",
+            "Fracture",
+            "Support Devices",
+            "No Finding",
+        ]
         self.conditions = [
             "Atelectasis",
             "Cardiomegaly",
@@ -141,6 +156,58 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         ]
 
         self.labeler = label(self.chexbertPath, verbose=False)
+
+    def run(self, params: Params, batcher):
+        print(f"***** Benchmarking : {self.taskName} *****")
+
+        predictions = []
+        groundTruth = []
+        answersLog = []
+
+        # Run the batcher for all data split in chunks
+        for batch in tqdm(
+            batchSampler(self.dataset, params.batch_size),
+            total=math.ceil(len(self.dataset) / params.batch_size),
+            desc="Running inference",
+        ):
+            batchPrompts = []
+            for sample in batch:
+                text, img = self.format_question(sample)
+                if self.fewshot:
+                    raise NotImplementedError("Few shot not implemented because no prompt is given")
+                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                else:
+                    batchPrompts.append((text, img))
+
+            answers = batcher(batchPrompts)
+
+            for idx, answer in enumerate(answers):
+                pred = self.getPredictedAnswer(answer)
+                gt = self.getCorrectAnswer(batch[idx])
+
+                predictions.append(pred)
+                groundTruth.append(gt)
+
+                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
+
+
+        # Convert pred and gt to tensor
+        predictions = torch.tensor(predictions)
+        groundTruth = torch.tensor(groundTruth)
+
+        f1Scorer = F1Score(task="multilabel", num_labels=self.num_classes, average="macro")
+        f1Macro = f1Scorer(predictions, groundTruth).item()
+
+        aurocScorer = AUROC(task="multilabel", num_labels=self.num_classes, average="macro")
+        auroc = aurocScorer(predictions.to(dtype=torch.float), groundTruth).item()
+
+        metrics = {"AUC-macro": auroc, "F1-macro": f1Macro}
+
+        # Compute the scores
+        return [
+            {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
+            {"type": "csv", "name": self.taskName, "value": answersLog},
+        ]
 
     def format_question(self, sample):
         samplePath = os.path.join(
@@ -160,27 +227,20 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
     def getPredictedAnswer(self, answer: str) -> int:
         df = pd.DataFrame(columns=["Report Impression"], data=[answer])
         labels = [element[0] == 1 for element in self.labeler(df)]
-        labels = [labels[self.labelNames.index(condition)] for condition in self.conditions]
+        labels = [int(labels[self.labelNames.index(condition)]) for condition in self.conditions]
 
-        if any(labels):
-            return 1
-        else:
-            return 0
+        return labels
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
         # Features: [Atelectasis, cardiomegaly, consolidation, edema, and pleural effusion]
         # If any of the features is 1, then it is positive
         # If all the features are 0, -1 or NaN, then it is negative
-
-        labels = [int(sample[condition]) == 1 for condition in self.conditions if sample[condition] is not None]
+        labels = [int(sample[condition] == 1) for condition in self.conditions]
 
         if fullText:
             return ", ".join([self.conditions[idx] for idx, label in enumerate(labels) if label])
 
-        if any(labels):
-            return 1
-        else:
-            return 0
+        return labels
 
 
 class VinDr_Mammo(ImageClassification):
@@ -240,13 +300,15 @@ class VinDr_Mammo(ImageClassification):
         findings = int(findings[-1])
 
         return findings - 1  # 5 classes so 0 to 4
-    
-    def _generateDataset(self):        
+
+    def _generateDataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0", "finding_annotations.csv")):
+        if os.path.exists(
+            os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0", "finding_annotations.csv")
+        ):
             self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
             return
-        
+
         os.makedirs(self.path, exist_ok=True)
 
         url = "https://physionet.org/files/vindr-mammo/1.0.0/"
@@ -264,7 +326,7 @@ class VinDr_Mammo(ImageClassification):
             print(response.text)
 
             raise Exception("Failed to download the dataset")
-        
+
         self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
 
 
@@ -313,7 +375,12 @@ class Pad_UFES_20(ImageClassification):
         # patientInfo = ", ".join([f"{key} {value}" for key, value in patientInfo.items() if value is not None])
         options = "Options:\n" + "\n".join([self.mapAcronymToName[option] for option in self.options])
 
-        formattedText = [{"role": "user", "content": f"<img> {options} What is the most likely diagnosis among the following propositions?"}]
+        formattedText = [
+            {
+                "role": "user",
+                "content": f"<img> {options} What is the most likely diagnosis among the following propositions?",
+            }
+        ]
 
         image = Image.open(os.path.join(self.path, "images", sample["img_id"]))
         return (formattedText, [image])

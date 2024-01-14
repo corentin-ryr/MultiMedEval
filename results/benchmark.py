@@ -196,7 +196,7 @@ class batcherPMCLlama(batcherLlama):
 
 
 if __name__ == "__main__":
-    params = Params(True, seed=42, batch_size=8, run_name="benchmarkMedAlpaca")
+    params = Params(seed=42, batch_size=8, run_name="benchmarkMedAlpaca")
 
     device = "cuda:0"
     batcher = batcherMedAlpaca(device=device)

@@ -25,9 +25,10 @@ import dill
 from nltk.translate.meteor_score import meteor_score
 from nltk.tokenize import word_tokenize
 import nltk
+from zipfile import ZipFile
+import requests
+from requests.auth import HTTPBasicAuth
 
-nltk.download("punkt")
-nltk.download("wordnet")
 
 
 class MIMIC_CXR_reportgen(Benchmark):
@@ -47,7 +48,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         # Get the dataset ====================================================================
         self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-CXR"]["path"]
 
-        self._generate_dataset()
+        # self._generate_dataset()
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))

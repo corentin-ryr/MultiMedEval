@@ -1,7 +1,7 @@
 from multimedbench.utils import Params
 from multimedbench.engine import MMB
 
-params = Params(True, 42, 64)
+params = Params( 42, 64)
 
 
 def batcher(prompts):

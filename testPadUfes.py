@@ -3,7 +3,7 @@ from multimedbench.engine import MMB
 
 # Test the class
 if __name__ == "__main__":
-    params = Params(True, 42, 64)
+    params = Params(42, 64)
 
     def batcher(prompts):
         return ["Actinic Keratosis" for _ in range(len(prompts))]
