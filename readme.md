@@ -98,27 +98,16 @@ Here is an example of a `batcher`. This example shows the implementation of a ba
 
 ```python
 class batcherMistral:
-    def __init__(self, device=None) -> None:
-        self.model: MistralModel = AutoModelForCausalLM.from_pretrained(
-            "mistralai/Mistral-7B-Instruct-v0.1",
-            quantization_config=nf4_config,
-            device_map=device,
-        )
+    def __init__(self) -> None:
+        self.model: MistralModel = AutoModelForCausalLM.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1")
         self.tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1")
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def __call__(self, prompts):
-        model_inputs = [
-            self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts
-        ]
-        model_inputs = self.tokenizer(
-            model_inputs, padding="max_length", truncation=True, max_length=1024, return_tensors="pt"
-        )
-        model_inputs = {k: v.to("cuda") for k, v in model_inputs.items()}
+        model_inputs = [self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts]
+        model_inputs = self.tokenizer(model_inputs, padding="max_length", truncation=True, max_length=1024, return_tensors="pt")
 
-        generated_ids = self.model.generate(
-            **model_inputs, max_new_tokens=200, do_sample=True, pad_token_id=self.tokenizer.pad_token_id
-        )
+        generated_ids = self.model.generate(**model_inputs, max_new_tokens=200, do_sample=True, pad_token_id=self.tokenizer.pad_token_id)
 
         # Remove the first 1024 tokens (prompt)
         generated_ids = generated_ids[:, model_inputs["input_ids"].shape[1] :]
