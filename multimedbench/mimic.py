@@ -37,6 +37,8 @@ class MIMIC_CXR_reportgen(Benchmark):
         logging.debug("***** Transfer task : MIMIC_CXR *****\n\n")
 
         self.taskName = "MIMIC_CXR report generation"
+        self.modality = "Radiology"
+        self.task = "Report generation"
 
         self.bleu_1 = BLEUScore(n_gram=1)
         self.bleu_2 = BLEUScore(n_gram=2)
@@ -310,3 +312,6 @@ class MIMIC_CXR_reportgen(Benchmark):
         file = os.path.join(self.path, "NOTEEVENTS.csv")
         with ZipFile(file + ".gz", "r") as zipObj:
             zipObj.extractall(file)
+
+    def __len__(self):
+        return len(self.dataset)

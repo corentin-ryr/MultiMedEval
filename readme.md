@@ -22,6 +22,12 @@ We include 12 tasks representing a range of different imaging modalities.
 | CBIS-DDSM                      | Classification of mammography images into "benign", "malignant" or "benign without callback"      | Mammography    |
 | MIMIC-III                      | Summarization of radiology reports                                                                | Text           |
 
+<p align="center">
+    <img src="figures/modalities.png" alt="modality sunburst graph">
+    <br>
+    <em>Representation of the modalities and tasks in MultiMedBench</em>
+</p>
+
 
 
 ## Setup MultiMedBench
@@ -33,6 +39,7 @@ pip install git+https://github.com/corentin-ryr/MultiMedBench.git
 ```
 
 To download the datasets and prepare the evaluation models, you can instantiate the main "engine" with a dummy batcher and default parameters. This will run the setup for all tasks but not the evaluation itself.
+
 
 ```python
 from multimedbench import MMB, Params

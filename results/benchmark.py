@@ -201,7 +201,7 @@ if __name__ == "__main__":
     device = "cuda:0"
     batcher = batcherMedAlpaca(device=device)
 
-    mmb = MMB(params, batcher, fewshot=False)
+    mmb = MMB(params, batcher)
 
     results = mmb.eval(["PubMedQA", "MedMCQA", "MedQA"])
     print(f"Everything is done, see the {params.run_name} folder for detailed results.")

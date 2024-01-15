@@ -25,9 +25,15 @@ class Benchmark(ABC):
         self.taskName = "None"
         self.engine = engine
         self.fewshot = fewshot
+        self.modality = "None"
+        self.task = "None"
 
     @abstractmethod
     def run(self, params, batcher):
+        pass
+
+    @abstractmethod
+    def __len__(self):
         pass
 
 
@@ -36,6 +42,7 @@ class Params:
     seed: int = 1111
     batch_size: int = 128
     run_name: str = f"run {datetime.now()}"
+    fewshot: bool = False
 
 
 def batchSampler(samples, n):

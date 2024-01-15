@@ -76,6 +76,9 @@ class QA(Benchmark):
             images += img
         return (prompt, images)
 
+    def __len__(self):
+        return len(self.dataset)
+
     @abstractmethod
     def format_question(self, sample, prompt=False):
         pass
@@ -93,6 +96,8 @@ class MedQA(QA):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.taskName = "MedQA"
+        self.modality = "General medicine"
+        self.task = "QA"
 
         cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
 
@@ -153,6 +158,8 @@ class PubMedQA(QA):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.taskName = "PubMedQA"
+        self.modality = "General medicine"
+        self.task = "QA"
 
         cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
 
@@ -217,6 +224,8 @@ class MedMCQA(QA):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.taskName = "MedMCQA"
+        self.modality = "General medicine"
+        self.task = "QA"
 
         cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
 

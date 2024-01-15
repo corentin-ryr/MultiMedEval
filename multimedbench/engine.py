@@ -12,6 +12,7 @@ import sys
 from tqdm import tqdm
 import getpass
 import nltk
+from multimedbench.visualization import BenchmarkVisualizer
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -48,11 +49,10 @@ TASKS_REQUIREMENTS: dict[str, list[str]] = {
 
 
 class MMB(object):
-    def __init__(self, params: Params, batcher, fewshot: bool = False):
+    def __init__(self, params: Params, batcher, generateVisualization: bool = False):
         self.params = params
         print(f"\n\nRunning MultiMedBenchmark with {self.params}")
 
-        self.fewshot = fewshot
         self.batcher = batcher
 
         if not os.path.exists(params.run_name):
@@ -71,7 +71,7 @@ class MMB(object):
         for taskName in TASKS:
             progressBar.set_description(f"Setup {taskName}")
             try:
-                taskBenchmark = TASKS[taskName](seed=self.params.seed, engine=self, fewshot=self.fewshot)
+                taskBenchmark = TASKS[taskName](seed=self.params.seed, engine=self, fewshot=self.params.fewshot)
             except Exception as e:
                 self.tasksReady[taskName] = {"ready": False, "error": str(e)}
             else:
@@ -103,7 +103,14 @@ class MMB(object):
         print("Task".ljust(30) + "Status".ljust(30) + "Error")
         for taskName in self.tasksReady:
             error = "" if "error" not in self.tasksReady[taskName] else self.tasksReady[taskName]["error"]
-            print(taskName.ljust(30) + str(self.tasksReady[taskName]["ready"]).ljust(30) + error)
+            ready = "Ready" if self.tasksReady[taskName]["ready"] else "Problem"
+            print(taskName.ljust(30) + ready.ljust(30) + error)
+
+        if generateVisualization:
+            benchmarks = [self.tasksReady[x]["task"] for x in self.tasksReady if (self.tasksReady[x]["ready"] and "task" in self.tasksReady[x])]
+            visualizer = BenchmarkVisualizer(benchmarks)
+            visualizer.sunburstModalities()
+
 
     def eval(self, name: str | list[str]):
         # evaluate on evaluation [name], either takes string or list of strings

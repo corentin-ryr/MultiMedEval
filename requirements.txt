@@ -21,3 +21,5 @@ bert_score
 pydicom
 py7zr
 kaggle
+plotly
+kaleido

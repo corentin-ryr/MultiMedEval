@@ -78,6 +78,8 @@ class MIMIC_III(Benchmark):
     def __init__(self, engine, **kwargs) -> None:
         super().__init__(engine, **kwargs)
         self.taskName = "MIMIC-III"
+        self.modality = "Radiology"
+        self.task = "Report Generation"
 
         self.bleu_1 = BLEUScore(n_gram=1)
         self.bleu_2 = BLEUScore(n_gram=2)
@@ -358,6 +360,9 @@ class MIMIC_III(Benchmark):
         file = os.path.join(self.path, "NOTEEVENTS.csv")
         with ZipFile(file + ".gz", "r") as zipObj:
             zipObj.extractall(file)
+
+    def __len__(self):
+        return len(self.dataset)
 
 
 
