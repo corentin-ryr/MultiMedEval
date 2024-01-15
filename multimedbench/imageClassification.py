@@ -30,6 +30,7 @@ class ImageClassification(Benchmark):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.bleu = BLEUScore(n_gram=1)
+        self.task = "Image Classification"
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -105,6 +106,9 @@ class ImageClassification(Benchmark):
 
     def cleanStr(self, text: str):
         return remove_punctuation(text.lower().replace("\n", " ").replace("_", " ").strip())
+    
+    def __len__(self):
+        return len(self.dataset)
 
 
 class MIMIC_CXR_ImageClassification(ImageClassification):
@@ -112,6 +116,8 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         super().__init__(**kwargs)
 
         self.taskName = "MIMIC Image Classification"
+        self.modality = "Radiology"
+
         self.num_classes = 5
         self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-CXR"]["path"]
 
@@ -248,6 +254,8 @@ class VinDr_Mammo(ImageClassification):
         super().__init__(**kwargs)
 
         self.taskName = "VinDr Mammo Image Classification"
+        self.modality = "Mammology"
+
         self.path = json.load(open("MedMD_config.json", "r"))["physionetCacheDir"]["path"]
 
         self._generateDataset()
@@ -335,6 +343,8 @@ class Pad_UFES_20(ImageClassification):
         super().__init__(**kwargs)
 
         self.taskName = "Pad UFES 20 Image Classification"
+        self.modality = "Dermatology"
+
         self.num_classes = 7
 
         self.path = json.load(open("MedMD_config.json", "r"))["Pad-UFES-20"]["path"]
@@ -443,6 +453,7 @@ class CBIS_DDSM_Mass(ImageClassification):
         super().__init__(**kwargs)
 
         self.taskName = "CBIS-DDSM Image Classification"
+        self.modality = "Mammology"
         self.num_classes = 3
 
         # Get the dataset from Kaggle

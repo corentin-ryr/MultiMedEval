@@ -18,6 +18,7 @@ class VQA(Benchmark):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.bleu = BLEUScore(n_gram=1)
+        self.task = "VQA"
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -81,6 +82,9 @@ class VQA(Benchmark):
             images += img
         return (prompt, images)
 
+    def __len__(self):
+        return len(self.dataset)
+
     @abstractmethod
     def format_question(self, sample, prompt=False):
         pass
@@ -94,6 +98,7 @@ class VQA_RAD(VQA):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.taskName = "VQA-Rad"
+        self.modality = "Radiology"
 
         cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
 
@@ -121,6 +126,7 @@ class Path_VQA(VQA):
         super().__init__(**kwargs)
 
         self.taskName = "VQA-Path"
+        self.modality = "Pathology"
 
         cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
         self.dataset = load_dataset("flaviagiammarino/path-vqa", split="test", cache_dir=cacheDir)
@@ -147,6 +153,7 @@ class SLAKE(VQA):
         super().__init__(**kwargs)
 
         self.taskName = "SLAKE"
+        self.modality = "Radiology"
 
         params = json.load(open("MedMD_config.json", "r"))
 
