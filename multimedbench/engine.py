@@ -68,16 +68,6 @@ class MMB(object):
         self._physionet_password = None
 
         progressBar = tqdm(total=len(TASKS) + 2)
-        for taskName in TASKS:
-            progressBar.set_description(f"Setup {taskName}")
-            try:
-                taskBenchmark = TASKS[taskName](seed=self.params.seed, engine=self, fewshot=self.params.fewshot)
-            except Exception as e:
-                self.tasksReady[taskName] = {"ready": False, "error": str(e)}
-            else:
-                self.tasksReady[taskName] = {"ready": True, "task": taskBenchmark}
-
-            progressBar.update(1)
 
         progressBar.set_description(f"Setup RadGraph")
         try:
@@ -96,6 +86,18 @@ class MMB(object):
         else:
             self.tasksReady["Chexbert"] = {"ready": True}
         progressBar.update(1)
+
+
+        for taskName in TASKS:
+            progressBar.set_description(f"Setup {taskName}")
+            try:
+                taskBenchmark = TASKS[taskName](seed=self.params.seed, engine=self, fewshot=self.params.fewshot)
+            except Exception as e:
+                self.tasksReady[taskName] = {"ready": False, "error": str(e)}
+            else:
+                self.tasksReady[taskName] = {"ready": True, "task": taskBenchmark}
+
+            progressBar.update(1)
 
 
         # Print a table of the tasks and their status

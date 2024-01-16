@@ -115,6 +115,10 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
+        # Check if chexbert is ready in engine
+        if not self.engine.tasksReady["Chexbert"]["ready"]:
+            raise Exception("Chexbert is needed for the Image classification task on MIMIC-CXR but it is not ready.")
+
         self.taskName = "MIMIC Image Classification"
         self.modality = "Radiology"
 
