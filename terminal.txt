@@ -1,83 +1,0 @@
-srun: error: ioctl(TIOCGWINSZ): Inappropriate ioctl for device
-srun: error: Not using a pseudo-terminal, disregarding --pty option
-
-Filesystems usage for user croyer ( uid 646291381 ):
-[0m-------------------------------------------------------------------------------------
-Directory                 Used   Limit   Used,%         Files     Limit
-[0m-------------------------------------------------------------------------------------
-/home/croyer             1.2GB[0m[1m    15GB[0m     7.9%[0m         32291[0m[1m    100000[0m
-/data/croyer            [1m[33m 199GB[0m[1m   200GB[0m[1m[33m    99.4%[0m        465374[0m[1m          [0m
-/scratch/croyer          861GB[0m[1m    20TB[0m     4.2%[0m       1041229[0m[1m          [0m
-[0m
-/shares/menze.dqbm.uzh    77TB[0m[1m        [0m         [0m      10019016[0m[1m          [0m
-[0m-------------------------------------------------------------------------------------
-
-!! Please note: the scratch filesystem is intended only for temporary storage.
-   Files in /scratch/croyer that have not been accessed in more than 30 days
-   may be automatically deleted.
-
-Mon Jan 15 14:26:30 2024       
-+-----------------------------------------------------------------------------+
-| NVIDIA-SMI 525.147.05   Driver Version: 525.147.05   CUDA Version: 12.0     |
-|-------------------------------+----------------------+----------------------+
-| GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-|                               |                      |               MIG M. |
-|===============================+======================+======================|
-|   0  Tesla V100-SXM2...  On   | 00000000:89:00.0 Off |                    0 |
-| N/A   29C    P0    42W / 300W |      0MiB / 16384MiB |      0%      Default |
-|                               |                      |                  N/A |
-+-------------------------------+----------------------+----------------------+
-                                                                               
-+-----------------------------------------------------------------------------+
-| Processes:                                                                  |
-|  GPU   GI   CI        PID   Type   Process name                  GPU Memory |
-|        ID   ID                                                   Usage      |
-|=============================================================================|
-|  No running processes found                                                 |
-+-----------------------------------------------------------------------------+
-Warning: Your Kaggle API key is readable by other users on this system! To fix this, you can run 'chmod 600 /home/croyer/.kaggle/kaggle.json'
-
-
-Running MultiMedBenchmark with Params(seed=1111, batch_size=64, run_name='run 2024-01-15 14:26:31.208644', fewshot=False)
-Running the setup
-  0%|          | 0/14 [00:00<?, ?it/s]Setup MedQA:   0%|          | 0/14 [00:00<?, ?it/s]Setup MedQA:   7%|▋         | 1/14 [00:03<00:51,  3.95s/it]Setup PubMedQA:   7%|▋         | 1/14 [00:03<00:51,  3.95s/it]Setup PubMedQA:  14%|█▍        | 2/14 [00:08<00:52,  4.36s/it]Setup MedMCQA:  14%|█▍        | 2/14 [00:08<00:52,  4.36s/it] Setup MedMCQA:  21%|██▏       | 3/14 [00:17<01:09,  6.28s/it]Setup MIMIC-CXR-ReportGeneration:  21%|██▏       | 3/14 [00:17<01:09,  6.28s/it]Setup MIMIC-CXR-ReportGeneration:  29%|██▊       | 4/14 [00:18<00:42,  4.21s/it]Setup VQA-RAD:  29%|██▊       | 4/14 [00:18<00:42,  4.21s/it]                   Setup VQA-RAD:  36%|███▌      | 5/14 [00:23<00:42,  4.77s/it]Setup Path-VQA:  36%|███▌      | 5/14 [00:23<00:42,  4.77s/it]Setup Path-VQA:  43%|████▎     | 6/14 [00:30<00:42,  5.33s/it]Setup SLAKE:  43%|████▎     | 6/14 [00:30<00:42,  5.33s/it]   Setup MIMIC-CXR-ImageClassification:  50%|█████     | 7/14 [00:30<00:37,  5.33s/it]Setup MIMIC-CXR-ImageClassification:  57%|█████▋    | 8/14 [00:34<00:22,  3.76s/it]Setup VinDr-Mammo:  57%|█████▋    | 8/14 [00:34<00:22,  3.76s/it]                  Setup Pad-UFES-20:  64%|██████▍   | 9/14 [00:34<00:18,  3.76s/it]Setup CBIS-DDSM:  71%|███████▏  | 10/14 [00:34<00:15,  3.76s/it] 
-  0%|          | 0/326 [00:00<?, ?it/s][A100%|██████████| 326/326 [00:00<00:00, 5917.03it/s]
-Setup CBIS-DDSM:  79%|███████▊  | 11/14 [00:34<00:05,  1.87s/it]Setup MIMIC-III:  79%|███████▊  | 11/14 [00:34<00:05,  1.87s/it]
-Extracting reports:   0%|          | 0/11 [00:00<?, ?it/s][A
-Extracting reports:   9%|▉         | 1/11 [00:06<01:08,  6.80s/it][A
-Extracting reports:  18%|█▊        | 2/11 [00:07<00:27,  3.00s/it][A
-Extracting reports:  27%|██▋       | 3/11 [00:07<00:13,  1.74s/it][A
-Extracting reports:  36%|███▋      | 4/11 [00:08<00:09,  1.40s/it][A
-Extracting reports:  45%|████▌     | 5/11 [00:11<00:12,  2.10s/it][A
-Extracting reports:  55%|█████▍    | 6/11 [00:15<00:13,  2.70s/it][A
-Extracting reports:  64%|██████▎   | 7/11 [00:15<00:07,  1.93s/it][A
-Extracting reports:  73%|███████▎  | 8/11 [00:15<00:04,  1.36s/it][A
-Extracting reports:  82%|████████▏ | 9/11 [00:16<00:02,  1.17s/it][A
-Extracting reports:  91%|█████████ | 10/11 [00:18<00:01,  1.39s/it][A
-Extracting reports: 100%|██████████| 11/11 [00:18<00:00,  1.03s/it][AExtracting reports: 100%|██████████| 11/11 [00:18<00:00,  1.71s/it]
-Setup MIMIC-III:  86%|████████▌ | 12/14 [01:43<00:30, 15.05s/it]Setup RadGraph:  86%|████████▌ | 12/14 [01:43<00:30, 15.05s/it] Setup RadGraph:  93%|█████████▎| 13/14 [01:49<00:12, 12.95s/it]Setup Chexbert:  93%|█████████▎| 13/14 [01:49<00:12, 12.95s/it]
-
-
-Task                          Status                        Error
-MedQA                         Ready                         
-PubMedQA                      Ready                         
-MedMCQA                       Ready                         
-MIMIC-CXR-ReportGeneration    Ready                         
-VQA-RAD                       Ready                         
-Path-VQA                      Ready                         
-SLAKE                         Ready                         
-MIMIC-CXR-ImageClassification Ready                         
-VinDr-Mammo                   Ready                         
-Pad-UFES-20                   Ready                         
-CBIS-DDSM                     Ready                         
-MIMIC-III                     Ready                         
-RadGraph                      Ready                         
-Chexbert                      Ready                         
-======================= Creating sunburst modalities =======================
-Setup Chexbert: 100%|██████████| 14/14 [01:54<00:00,  8.16s/it]
-Traceback (most recent call last):
-  File "/home/croyer/MultiMedBench/testImageClassification.py", line 8, in <module>
-    raise Exception
-Exception
-srun: error: u20-computeibmgpu-vesta6: task 0: Exited with exit code 1

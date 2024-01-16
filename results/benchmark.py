@@ -12,6 +12,7 @@ from multimedbench import MMB, Params
 import time
 
 
+
 class batcherMistral:
     def __init__(self, device=None) -> None:
         self.device = device
@@ -193,6 +194,39 @@ class batcherPMCLlama(batcherLlama):
         output_str = self.tokenizer.batch_decode(topk_output, skip_special_tokens=True)
 
         return output_str
+
+
+class batcherLLaVA_Med():
+    def __init__(self) -> None:
+        base_model_path = "meta-llama/Llama-2-7b-chat-hf"
+        delta_path = "llava/llava-7b-med"
+
+
+        print("Loading base model")
+        base = AutoModelForCausalLM.from_pretrained(
+            base_model_path, torch_dtype=torch.float16, low_cpu_mem_usage=True)
+
+        print("Loading delta")
+        delta = LlavaLlamaForCausalLM.from_pretrained(delta_path, torch_dtype=torch.float16, low_cpu_mem_usage=True)
+        delta_tokenizer = AutoTokenizer.from_pretrained(delta_path)
+
+        print("Applying delta")
+        for name, param in tqdm(delta.state_dict().items(), desc="Applying delta"):
+            if name not in base.state_dict():
+                assert name in ['model.mm_projector.weight', 'model.mm_projector.bias'], f'{name} not in base model'
+                continue
+            if param.data.shape == base.state_dict()[name].shape:
+                param.data += base.state_dict()[name]
+            else:
+                assert name in ['model.embed_tokens.weight', 'lm_head.weight'], \
+                    f'{name} dimension mismatch: {param.data.shape} vs {base.state_dict()[name].shape}'
+                bparam = base.state_dict()[name]
+                param.data[:bparam.shape[0], :bparam.shape[1]] += bparam
+
+
+    def batcher(self, prompts):
+        pass
+
 
 
 if __name__ == "__main__":
