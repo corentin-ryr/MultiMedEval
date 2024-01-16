@@ -63,7 +63,7 @@ class label:
             model = nn.DataParallel(model) #to utilize multiple GPU's
             model = model.to(device)
             checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint['model_state_dict'])
+            model.load_state_dict(checkpoint['model_state_dict'], strict=False) # TODO check if it works
         else:
             checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
             new_state_dict = OrderedDict()
