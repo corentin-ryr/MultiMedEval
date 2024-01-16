@@ -1,5 +1,5 @@
 torch
-transformers
+transformers>=4.36.2
 datasets
 bitsandbytes
 scipy
