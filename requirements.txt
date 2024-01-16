@@ -1,5 +1,5 @@
 torch
-transformers>=4.36.2
+transformers>=4.28.0
 datasets
 protobuf
 nltk
