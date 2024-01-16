@@ -93,17 +93,14 @@ class MIMIC_III(Benchmark):
 
         reports_csv = pd.read_csv(os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False)
         reports_csv = reports_csv.fillna(-1)
-        # Get all the differetn values for the column "category"
 
         expToReport = {}
-
         for EXP in tqdm(mapping.keys(), desc="Extracting reports"):
             # for EXP in ['CT head']:
             filter_reports = reports_csv[reports_csv["DESCRIPTION"].isin(mapping[EXP])]
             reports_list = filter_reports["TEXT"].tolist()
             reports_ids = filter_reports["ROW_ID"].tolist()
             missing_idx = []
-            counter = 0
             all_sections = []
             impressions_list = []
             findings_list = []
@@ -126,7 +123,6 @@ class MIMIC_III(Benchmark):
                 # Is there no or two impressions ? Its safer to skip (multiple studies of differents body parts in the same reports)
                 count = section_names.count("impression")
                 if count > 1 or count == 0:
-                    counter += 1
                     continue
 
                 # Finding the findings
@@ -140,7 +136,7 @@ class MIMIC_III(Benchmark):
                             break
 
                 # No findings ? Skip
-                if not findings_text:
+                if not findings_text or not impression_text:
                     continue
 
                 findings_list.append(re.sub("\s+", " ", findings_text))
@@ -163,6 +159,7 @@ class MIMIC_III(Benchmark):
             assert (len(impressions_list_clean)) == (len(findings_list_clean))
 
             expToReport[EXP] = {"impression": impressions_list_clean, "findings": findings_list_clean, "ids": ids_list}
+
 
         # Open the split csv
         split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mimiciiisplit.csv"))
@@ -189,6 +186,7 @@ class MIMIC_III(Benchmark):
                     )
 
         self.dataset = datasets.Dataset.from_list(datasetTest)
+        print(f"Dataset size: {len(self.dataset)}")
 
 
     def run(self, params, batcher):
@@ -216,6 +214,7 @@ class MIMIC_III(Benchmark):
                 bleu1Scores.append(self.bleu_1([hyp], [[ref]]).item())
                 bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
                 rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
+            
 
         f1_bertscore = self.compute_bertscore(hypReports, refReports)
 

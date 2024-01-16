@@ -15,7 +15,7 @@ from multimedbench.utils import (
     Params,
     remove_punctuation,
     exact_entity_token_if_rel_exists_reward,
-    section_text
+    section_text,
 )
 import math
 from torchmetrics.text import BLEUScore, ROUGEScore
@@ -28,7 +28,6 @@ import nltk
 from zipfile import ZipFile
 import requests
 from requests.auth import HTTPBasicAuth
-
 
 
 class MIMIC_CXR_reportgen(Benchmark):
@@ -68,13 +67,9 @@ class MIMIC_CXR_reportgen(Benchmark):
 
             if "findings" not in categories:
                 continue
-            
-            reportFindings = report[categories.index("findings")]
 
-            if "indication" in categories:
-                reportIndication = report[categories.index("indication")]
-            else:
-                reportIndication = ""
+            reportFindings = report[categories.index("findings")]
+            reportIndication = report[categories.index("indication")] if "indication" in categories else ""
 
             self.dataset.append(
                 [str(row["subject_id"]), str(row["study_id"]), str(reportFindings), str(reportIndication)]
@@ -91,10 +86,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         # Remove the duplicates
         self.dataset = self.dataset.drop_duplicates()
 
-        self.dataset = datasets.Dataset.from_pandas(
-            self.dataset
-        )
-
+        self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -123,7 +115,6 @@ class MIMIC_CXR_reportgen(Benchmark):
                 rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
 
             break
-
 
         f1_bertscore = self.compute_bertscore(hypReports, refReports)
 
@@ -156,7 +147,6 @@ class MIMIC_CXR_reportgen(Benchmark):
         answersLog = zip(refReports, hypReports, bleu1Scores, bleu4Scores, rougeLScores)
         # Add a header to the log
         answersLog = [("ref", "hyp", "bleu1", "bleu4", "rougeL")] + list(answersLog)
-
 
         return [
             {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
@@ -195,19 +185,19 @@ class MIMIC_CXR_reportgen(Benchmark):
         return radiology_dict
 
     def format_question(self, sample):
-        samplePath = os.path.join(
-            self.path, "files", "p" + sample["subject_id"][:2], "p" + sample["subject_id"]
-        )
+        samplePath = os.path.join(self.path, "files", "p" + sample["subject_id"][:2], "p" + sample["subject_id"])
 
         dicomIndices = self.studyToDicoms[sample["study_id"]]
 
-        imagesPath = [os.path.join(samplePath, "s" + sample["study_id"], dicomIndex + ".jpg") for dicomIndex in dicomIndices]
-        
+        imagesPath = [
+            os.path.join(samplePath, "s" + sample["study_id"], dicomIndex + ".jpg") for dicomIndex in dicomIndices
+        ]
+
         # indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
-        
+
         imgTags = "<img> " * len(imagesPath)
 
-        question =f"{imgTags}Please caption this scan with findings and impression."
+        question = f"{imgTags}Please caption this scan with findings and impression."
 
         formattedText = [
             {
@@ -287,7 +277,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv")):
             self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
             return
-        
+
         os.makedirs(self.path, exist_ok=True)
 
         url = "https://physionet.org/files/mimiciii/1.4/"
@@ -305,9 +295,9 @@ class MIMIC_CXR_reportgen(Benchmark):
             print(response.text)
 
             raise Exception("Failed to download the dataset")
-        
+
         self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
-        
+
         # Unzip the NOTEEVENTS file
         file = os.path.join(self.path, "NOTEEVENTS.csv")
         with ZipFile(file + ".gz", "r") as zipObj:
