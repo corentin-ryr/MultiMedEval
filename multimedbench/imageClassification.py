@@ -21,7 +21,6 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
 from multimedbench.utils import remove_punctuation
 import random
-from zipfile import ZipFile
 from requests.auth import HTTPBasicAuth
 import requests
 
@@ -48,12 +47,11 @@ class ImageClassification(Benchmark):
             batchPrompts = []
             for sample in batch:
                 text, img = self.format_question(sample)
-                if self.fewshot:
-                    raise NotImplementedError("Few shot not implemented because no prompt is given")
+                if self.fewshot and self.prompt is not None:
                     batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
                 else:
                     batchPrompts.append((text, img))
-
+                
             answers = batcher(batchPrompts)
 
             correctAnswers = [self.getCorrectAnswer(sample) for sample in batch]
@@ -66,6 +64,7 @@ class ImageClassification(Benchmark):
                 groundTruth.append(gt)
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
+            
 
         # Convert pred and gt to tensor
         predictions = torch.tensor(predictions)
@@ -89,7 +88,7 @@ class ImageClassification(Benchmark):
     def getCorrectAnswer(self, sample, fullText=False) -> int:
         pass
 
-    def format_question(self, sample):
+    def format_question(self, sample, prompt=False):
         pass
 
     def getPredictedAnswer(self, answer) -> int:
@@ -109,6 +108,18 @@ class ImageClassification(Benchmark):
     
     def __len__(self):
         return len(self.dataset)
+    
+    def getPrompt(self):
+        prompt = []
+        images = []
+        for _ in range(3):
+            text, img = self.format_question(
+                self.trainDataset[random.randint(0, len(self.trainDataset))],
+                prompt=True,
+            )
+            prompt += text
+            images += img
+        return (prompt, images)
 
 
 class MIMIC_CXR_ImageClassification(ImageClassification):
@@ -131,15 +142,18 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
-        split = split[split.split == "test"]
+        testSplit = split[split.split == "test"]
 
         chexbertMimic = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-chexpert.csv"))
-        chexbertMimic = chexbertMimic[chexbertMimic.study_id.isin(split.study_id)]
+        chexbertMimicTest = chexbertMimic[chexbertMimic.study_id.isin(testSplit.study_id)]
+        chexbertMimicTest = chexbertMimicTest.merge(testSplit, on=["study_id", "subject_id"])
+        self.dataset = datasets.Dataset.from_pandas(chexbertMimicTest)
 
-        # Add the dicomid column from split in the chexbertMimic dataframe such that the studyid matches
-        chexbertMimic = chexbertMimic.merge(split, on=["study_id", "subject_id"])
+        trainSplit = split[split.split == "train"]
+        chexbertMimicTrain = chexbertMimic[chexbertMimic.study_id.isin(trainSplit.study_id)]
+        chexbertMimicTrain = chexbertMimicTrain.merge(trainSplit, on=["study_id", "subject_id"])
+        self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
 
-        self.dataset = datasets.Dataset.from_pandas(chexbertMimic)
 
         self.labelNames = [
             "Enlarged Cardiomediastinum",
@@ -166,6 +180,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         ]
 
         self.labeler = label(self.chexbertPath, verbose=False)
+        self.prompt = self.getPrompt()
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -184,11 +199,10 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
             for sample in batch:
                 text, img = self.format_question(sample)
                 if self.fewshot:
-                    raise NotImplementedError("Few shot not implemented because no prompt is given")
                     batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
                 else:
                     batchPrompts.append((text, img))
-
+                
             answers = batcher(batchPrompts)
 
             for idx, answer in enumerate(answers):
@@ -199,7 +213,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
                 groundTruth.append(gt)
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
-
+            
 
         # Convert pred and gt to tensor
         predictions = torch.tensor(predictions)
@@ -219,7 +233,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
 
-    def format_question(self, sample):
+    def format_question(self, sample, prompt=False):
         samplePath = os.path.join(
             self.path, "files", "p" + str(sample["subject_id"])[:2], "p" + str(sample["subject_id"])
         )
@@ -231,6 +245,10 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
                 "content": question,
             }
         ]
+        answer = self.getCorrectAnswer(sample, fullText=True)
+
+        if prompt:
+            formattedText.append({"role": "assistant", "content": answer})
 
         return (formattedText, [Image.open(imagePath)])
 
@@ -268,20 +286,30 @@ class VinDr_Mammo(ImageClassification):
 
         # Open the finding_annotation.csv file
         annotations = pd.read_csv(os.path.join(self.path, "finding_annotations.csv"))
-        annotations = annotations[annotations["split"] == "test"]
+        annotationsTest = annotations[annotations["split"] == "test"]
 
         # Only keep rows where "finding_birads" is not None
-        annotations = annotations[annotations["finding_birads"].notna()]
+        annotationsTest = annotationsTest[annotationsTest["finding_birads"].notna()]
 
-        self.dataset = datasets.Dataset.from_pandas(annotations)
+        self.dataset = datasets.Dataset.from_pandas(annotationsTest)
 
-    def format_question(self, sample):
+        annotationsTrain = annotations[annotations["split"] == "training"]
+        annotationsTrain = annotationsTrain[annotationsTrain["finding_birads"].notna()]
+        self.trainDataset = datasets.Dataset.from_pandas(annotationsTrain)
+
+        self.prompt = self.getPrompt()
+
+
+    def format_question(self, sample, prompt=False):
         formattedText = [
             {
                 "role": "user",
                 "content": f"<img> What is the BI-RADS level in this mammography (from 1 to 5)?",
             }
         ]
+
+        if prompt:
+            formattedText.append({"role": "assistant", "content": f"{sample['finding_birads']}"})
 
         dicom = pydicom.dcmread(os.path.join(self.path, "images", sample["study_id"], f"{sample['image_id']}.dicom"))
 
@@ -370,6 +398,9 @@ class Pad_UFES_20(ImageClassification):
             "MEL": "Melanoma (MEL)",
             "NEV": "Nevus (NEV)",
         }
+
+        self.prompt = None
+
 
     def format_question(self, sample):
         patientInfo = {
@@ -467,7 +498,6 @@ class CBIS_DDSM_Mass(ImageClassification):
         self._generateDataset()
 
         # Open the calc_case_description_test_set.csv file with pandas
-        self.dataset = pd.read_csv(os.path.join(self.path, "csv", "calc_case_description_test_set.csv"))
         df_dicom = pd.read_csv(os.path.join(self.path, "csv", "dicom_info.csv"))
 
         cropped_images = df_dicom[df_dicom.SeriesDescription == "cropped images"].image_path
@@ -493,12 +523,20 @@ class CBIS_DDSM_Mass(ImageClassification):
             key = dicom.split("/")[2]
             self.nan_dict[key] = dicom
 
-        self._fix_image_path(self.dataset)
-
-        self.dataset = datasets.Dataset.from_pandas(self.dataset)
         self.options = ["BENIGN", "MALIGNANT", "BENIGN_WITHOUT_CALLBACK"]
 
-    def format_question(self, sample):
+
+        self.dataset = pd.read_csv(os.path.join(self.path, "csv", "calc_case_description_test_set.csv"))
+        self._fix_image_path(self.dataset)
+        self.dataset = datasets.Dataset.from_pandas(self.dataset)
+
+        self.trainDataset = pd.read_csv(os.path.join(self.path, "csv", "mass_case_description_train_set.csv"))
+        self._fix_image_path(self.trainDataset)
+        self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
+
+        self.prompt = self.getPrompt()
+
+    def format_question(self, sample, prompt=False):
         path = Path(sample["cropped image file path"])
         path = Path(self.path) / Path(*path.parts[1:])
 
@@ -508,6 +546,8 @@ class CBIS_DDSM_Mass(ImageClassification):
                 "content": f"<img> Is the mass benign, malignant or benign without callback?",
             }
         ]
+        if prompt:
+            formattedText.append({"role": "assistant", "content": f"{sample['pathology'].lower()}"})
 
         image = Image.open(os.path.join(self.path, "images", path))
         return (formattedText, [image])
@@ -537,7 +577,7 @@ class CBIS_DDSM_Mass(ImageClassification):
 
     def _fix_image_path(self, data: pd.DataFrame):
         """correct dicom paths to correct image paths"""
-        for idx in tqdm(range(len(data))):
+        for idx in range(len(data)):
             sample = data.iloc[idx]
 
             img_name = sample["image file path"].split("/")[2]
