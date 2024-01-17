@@ -23,7 +23,6 @@ class VQA(Benchmark):
         self.task = "VQA"
         self.wnl = WordNetLemmatizer()
 
-
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
 
@@ -32,6 +31,7 @@ class VQA(Benchmark):
         f1 = []
         recall = []
 
+        closedQuestions = []
         # Run the batcher for all data split in chunks
         for batch in tqdm(
             batchSampler(self.dataset, params.batch_size),
@@ -55,22 +55,50 @@ class VQA(Benchmark):
 
                 predictedTokens = set([self.wnl.lemmatize(token) for token in cleanPredicted.split(" ")])
                 correctTokens = set([self.wnl.lemmatize(token) for token in cleanCorrect.split(" ")])
-                precision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens)
+                currentPrecision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens)
                 currentRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens)
-                currentF1 = 2 * (precision * currentRecall) / (precision + currentRecall + 1e-8)
+                currentF1 = 2 * (currentPrecision * currentRecall) / (currentPrecision + currentRecall + 1e-8)
                 f1.append(currentF1)
                 recall.append(currentRecall)
 
-                currentBleu = self.bleu(
-                    [cleanPredicted], [[cleanCorrect]]
-                ).item()
+                currentBleu = self.bleu([cleanPredicted], [[cleanCorrect]]).item()
                 bleuScores.append(currentBleu)
 
-                answersLog.append((self.getCorrectAnswer(batch[idx]), answer, currentF1, currentBleu, currentRecall, correctTokens, predictedTokens))
-        
-            break
+                # If the question is closed, decide if it is correct or not
+                if cleanCorrect in ["yes", "no"]:
+                    closedQuestions.append(True)
+                else:
+                    closedQuestions.append(False)
 
-        metrics = {"bleu": sum(bleuScores) / len(bleuScores), "F1": sum(f1) / len(f1), "recall": sum(recall) / len(recall)}
+                answersLog.append(
+                    (
+                        self.getCorrectAnswer(batch[idx]),
+                        answer,
+                        currentF1,
+                        currentBleu,
+                        currentRecall,
+                        correctTokens,
+                        predictedTokens,
+                    )
+                )
+
+        # Compute the accuracy for closed questions
+        closedQuestionsCorrect = 0
+        openQuestionsRecall = []
+        for idx, isClosed in enumerate(closedQuestions):
+            if isClosed and recall[idx] > 0.5:
+                closedQuestionsCorrect += 1
+            elif not isClosed:
+                openQuestionsRecall.append(recall[idx])
+
+
+        metrics = {
+            "bleu": sum(bleuScores) / len(bleuScores),
+            "F1": sum(f1) / len(f1),
+            "recall": sum(recall) / len(recall),
+            "closedQuestionsAccuracy": closedQuestionsCorrect / sum(closedQuestions),
+            "openQuestionsRecall": sum(openQuestionsRecall) / len(openQuestionsRecall),
+        }
 
         # Compute the scores
         return [
@@ -80,7 +108,7 @@ class VQA(Benchmark):
 
     def cleanStr(self, text: str):
         tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
-        return re.sub(' +', ' ', tempStr)
+        return re.sub(" +", " ", tempStr)
 
     def getPrompt(self):
         prompt = []
@@ -136,7 +164,6 @@ class VQA_RAD(VQA):
 class Path_VQA(VQA):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
         self.taskName = "VQA-Path"
         self.modality = "Pathology"
 
