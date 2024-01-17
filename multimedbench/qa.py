@@ -105,11 +105,11 @@ class MedQA(QA):
             "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=cacheDir, trust_remote_code=True
         )
 
-        self.trainDataset = load_dataset(
-            "bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True
-        )
-
-        self.prompt = self.getPrompt()
+        if self.engine.params.fewshot:
+            self.trainDataset = load_dataset(
+                "bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True
+            )
+            self.prompt = self.getPrompt()
 
         self.bleuScorer = BLEUScore(n_gram=1)
 
@@ -171,15 +171,15 @@ class PubMedQA(QA):
             trust_remote_code=True
         )
 
-        self.trainDataset = load_dataset(
-            "bigbio/pubmed_qa",
-            name="pubmed_qa_labeled_fold1_bigbio_qa",
-            split="train",
-            cache_dir=cacheDir,
-            trust_remote_code=True
-        )
-
-        self.prompt = self.getPrompt()
+        if self.engine.params.fewshot:
+            self.trainDataset = load_dataset(
+                "bigbio/pubmed_qa",
+                name="pubmed_qa_labeled_fold1_bigbio_qa",
+                split="train",
+                cache_dir=cacheDir,
+                trust_remote_code=True
+            )
+            self.prompt = self.getPrompt()
 
     def getCorrectAnswer(self, sample, fullText=False):
         return sample["answer"][0]
@@ -235,13 +235,13 @@ class MedMCQA(QA):
             cache_dir=cacheDir,
         )
 
-        self.trainDataset = load_dataset(
-            "medmcqa",
-            split="train",
-            cache_dir=cacheDir,
-        )
-
-        self.prompt = self.getPrompt()
+        if self.engine.params.fewshot:
+            self.trainDataset = load_dataset(
+                "medmcqa",
+                split="train",
+                cache_dir=cacheDir,
+            )
+            self.prompt = self.getPrompt()
 
         self.bleuScorer = BLEUScore(n_gram=1)
 

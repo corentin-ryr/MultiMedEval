@@ -149,10 +149,12 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         chexbertMimicTest = chexbertMimicTest.merge(testSplit, on=["study_id", "subject_id"])
         self.dataset = datasets.Dataset.from_pandas(chexbertMimicTest)
 
-        trainSplit = split[split.split == "train"]
-        chexbertMimicTrain = chexbertMimic[chexbertMimic.study_id.isin(trainSplit.study_id)]
-        chexbertMimicTrain = chexbertMimicTrain.merge(trainSplit, on=["study_id", "subject_id"])
-        self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
+        if self.engine.params.fewshot:
+            trainSplit = split[split.split == "train"]
+            chexbertMimicTrain = chexbertMimic[chexbertMimic.study_id.isin(trainSplit.study_id)]
+            chexbertMimicTrain = chexbertMimicTrain.merge(trainSplit, on=["study_id", "subject_id"])
+            self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
+            self.prompt = self.getPrompt()
 
 
         self.labelNames = [
@@ -180,7 +182,6 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         ]
 
         self.labeler = label(self.chexbertPath, verbose=False)
-        self.prompt = self.getPrompt()
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -293,11 +294,11 @@ class VinDr_Mammo(ImageClassification):
 
         self.dataset = datasets.Dataset.from_pandas(annotationsTest)
 
-        annotationsTrain = annotations[annotations["split"] == "training"]
-        annotationsTrain = annotationsTrain[annotationsTrain["finding_birads"].notna()]
-        self.trainDataset = datasets.Dataset.from_pandas(annotationsTrain)
-
-        self.prompt = self.getPrompt()
+        if self.engine.params.fewshot:
+            annotationsTrain = annotations[annotations["split"] == "training"]
+            annotationsTrain = annotationsTrain[annotationsTrain["finding_birads"].notna()]
+            self.trainDataset = datasets.Dataset.from_pandas(annotationsTrain)
+            self.prompt = self.getPrompt()
 
 
     def format_question(self, sample, prompt=False):
@@ -530,11 +531,11 @@ class CBIS_DDSM_Mass(ImageClassification):
         self._fix_image_path(self.dataset)
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
-        self.trainDataset = pd.read_csv(os.path.join(self.path, "csv", "mass_case_description_train_set.csv"))
-        self._fix_image_path(self.trainDataset)
-        self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
-
-        self.prompt = self.getPrompt()
+        if self.engine.params.fewshot:
+            self.trainDataset = pd.read_csv(os.path.join(self.path, "csv", "mass_case_description_train_set.csv"))
+            self._fix_image_path(self.trainDataset)
+            self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
+            self.prompt = self.getPrompt()
 
     def format_question(self, sample, prompt=False):
         path = Path(sample["cropped image file path"])
