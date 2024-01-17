@@ -27,6 +27,7 @@ class Benchmark(ABC):
         self.fewshot = fewshot
         self.modality = "None"
         self.task = "None"
+        self.prompt = None
 
     @abstractmethod
     def run(self, params, batcher):
