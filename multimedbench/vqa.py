@@ -12,6 +12,7 @@ import os
 import PIL
 import gdown
 from zipfile import ZipFile
+from nltk.stem import WordNetLemmatizer
 
 
 class VQA(Benchmark):
@@ -19,13 +20,16 @@ class VQA(Benchmark):
         super().__init__(**kwargs)
         self.bleu = BLEUScore(n_gram=1)
         self.task = "VQA"
+        self.wnl = WordNetLemmatizer()
+
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
 
-        answersLog = []
+        answersLog = ["correct", "predicted", "F1", "BLEU", "recall", "correct tokens", "predicted tokens"]
         bleuScores = []
         f1 = []
+        recall = []
 
         # Run the batcher for all data split in chunks
         for batch in tqdm(
@@ -45,21 +49,25 @@ class VQA(Benchmark):
 
             for idx, answer in enumerate(answers):
                 # Compute the number of tokens recalled in the answer
-                tokens = set(self.cleanStr(answer).split(" "))
-                correctTokens = set(self.cleanStr(self.getCorrectAnswer(batch[idx])).split(" "))
-                precision = len(tokens.intersection(correctTokens)) / len(tokens)
-                recall = len(tokens.intersection(correctTokens)) / len(correctTokens)
-                currentF1 = 2 * (precision * recall) / (precision + recall + 1e-8)
+                cleanCorrect = self.cleanStr(self.getCorrectAnswer(batch[idx]))
+                cleanPredicted = self.cleanStr(answer)
+
+                predictedTokens = set([self.wnl(token) for token in cleanPredicted.split(" ")])
+                correctTokens = set([self.wnl(token) for token in cleanCorrect.split(" ")])
+                precision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens)
+                currentRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens)
+                currentF1 = 2 * (precision * currentRecall) / (precision + currentRecall + 1e-8)
                 f1.append(currentF1)
+                recall.append(currentRecall)
 
                 currentBleu = self.bleu(
-                    [self.cleanStr(answer)], [[self.cleanStr(self.getCorrectAnswer(batch[idx]))]]
+                    [cleanPredicted], [[cleanCorrect]]
                 ).item()
                 bleuScores.append(currentBleu)
 
-                answersLog.append((self.getCorrectAnswer(batch[idx]), answer, currentF1, currentBleu))
+                answersLog.append((self.getCorrectAnswer(batch[idx]), answer, currentF1, currentBleu, currentRecall, correctTokens, predictedTokens))
 
-        metrics = {"bleu": sum(bleuScores) / len(bleuScores), "F1": sum(f1) / len(f1)}
+        metrics = {"bleu": sum(bleuScores) / len(bleuScores), "F1": sum(f1) / len(f1), "recall": sum(recall) / len(recall)}
 
         # Compute the scores
         return [
