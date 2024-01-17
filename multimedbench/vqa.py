@@ -13,6 +13,7 @@ import PIL
 import gdown
 from zipfile import ZipFile
 from nltk.stem import WordNetLemmatizer
+import re
 
 
 class VQA(Benchmark):
@@ -26,7 +27,7 @@ class VQA(Benchmark):
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
 
-        answersLog = ["correct", "predicted", "F1", "BLEU", "recall", "correct tokens", "predicted tokens"]
+        answersLog = [["correct", "predicted", "F1", "BLEU", "recall", "correct tokens", "predicted tokens"]]
         bleuScores = []
         f1 = []
         recall = []
@@ -52,8 +53,8 @@ class VQA(Benchmark):
                 cleanCorrect = self.cleanStr(self.getCorrectAnswer(batch[idx]))
                 cleanPredicted = self.cleanStr(answer)
 
-                predictedTokens = set([self.wnl(token) for token in cleanPredicted.split(" ")])
-                correctTokens = set([self.wnl(token) for token in cleanCorrect.split(" ")])
+                predictedTokens = set([self.wnl.lemmatize(token) for token in cleanPredicted.split(" ")])
+                correctTokens = set([self.wnl.lemmatize(token) for token in cleanCorrect.split(" ")])
                 precision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens)
                 currentRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens)
                 currentF1 = 2 * (precision * currentRecall) / (precision + currentRecall + 1e-8)
@@ -66,6 +67,8 @@ class VQA(Benchmark):
                 bleuScores.append(currentBleu)
 
                 answersLog.append((self.getCorrectAnswer(batch[idx]), answer, currentF1, currentBleu, currentRecall, correctTokens, predictedTokens))
+        
+            break
 
         metrics = {"bleu": sum(bleuScores) / len(bleuScores), "F1": sum(f1) / len(f1), "recall": sum(recall) / len(recall)}
 
@@ -76,7 +79,8 @@ class VQA(Benchmark):
         ]
 
     def cleanStr(self, text: str):
-        return remove_punctuation(text.lower().replace("\n", " ").strip())
+        tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
+        return re.sub(' +', ' ', tempStr)
 
     def getPrompt(self):
         prompt = []
