@@ -55,6 +55,7 @@ class VQA(Benchmark):
 
                 predictedTokens = set([self.wnl.lemmatize(token) for token in cleanPredicted.split(" ")])
                 correctTokens = set([self.wnl.lemmatize(token) for token in cleanCorrect.split(" ")])
+                # correctTokens.add("not")
                 currentPrecision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens)
                 currentRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens)
                 currentF1 = 2 * (currentPrecision * currentRecall) / (currentPrecision + currentRecall + 1e-8)
@@ -86,7 +87,7 @@ class VQA(Benchmark):
         closedQuestionsCorrect = 0
         openQuestionsRecall = []
         for idx, isClosed in enumerate(closedQuestions):
-            if isClosed and recall[idx] > 0.5:
+            if isClosed and recall[idx] >= 0.4:
                 closedQuestionsCorrect += 1
             elif not isClosed:
                 openQuestionsRecall.append(recall[idx])
@@ -150,6 +151,8 @@ class VQA_RAD(VQA):
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"<img> {sample['question']}"
         formattedAnswer = f"{sample['answer']}"
+        if formattedAnswer in ["yes", "no"]:
+            formattedQuestion = "Answer the following question with yes or no. " + formattedQuestion
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
@@ -176,6 +179,8 @@ class Path_VQA(VQA):
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"<img> {sample['question']}"
         formattedAnswer = f"{sample['answer']}"
+        if formattedAnswer in ["yes", "no"]:
+            formattedQuestion = "Answer the following question with yes or no. " + formattedQuestion
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
@@ -223,6 +228,8 @@ class SLAKE(VQA):
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"<img> {sample['question']}"
         formattedAnswer = f"{sample['answer']}"
+        if formattedAnswer in ["yes", "no"]:
+            formattedQuestion = "Answer the following question with yes or no. " + formattedQuestion
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
