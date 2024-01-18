@@ -44,10 +44,10 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
-        self.chexbertPath = json.load(open("MedMD_config.json", "r"))["CheXBert"]["dlLocation"]
+        self.chexbertPath = self.engine.getConfig()["CheXBert"]["dlLocation"]
 
         # Get the dataset ====================================================================
-        self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-CXR"]["path"]
+        self.path = self.engine.getConfig()["MIMIC-CXR"]["path"]
 
         # self._generate_dataset()
 

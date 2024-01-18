@@ -13,6 +13,7 @@ from tqdm import tqdm
 import getpass
 import nltk
 from multimedbench.visualization import BenchmarkVisualizer
+from collections.abc import Callable
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -49,8 +50,8 @@ TASKS_REQUIREMENTS: dict[str, list[str]] = {
 
 
 class MMB(object):
-    def __init__(self, params: Params, batcher, generateVisualization: bool = False):
-        self.params = params
+    def __init__(self, params: Params=None, batcher:Callable=None, generateVisualization: bool = False):
+        self.params = params if params is not None else Params()
         print(f"\n\nRunning MultiMedBenchmark with {self.params}")
 
         self.batcher = batcher
@@ -115,6 +116,9 @@ class MMB(object):
 
 
     def eval(self, name: str | list[str]):
+        if self.batcher is None:
+            raise Exception("The engine was not initialized with a batcher, please provide a batcher to the engine")
+
         # evaluate on evaluation [name], either takes string or list of strings
         if isinstance(name, list):
             self.results = {}
@@ -149,8 +153,7 @@ class MMB(object):
 
     def _prepare_radgraph(self):
         # Open the MedMD_config json file and get the download location for radgraph
-        with open("MedMD_config.json", "r") as f:
-            output = json.load(f)["RadGraph"]["dlLocation"]
+        output = self.getConfig()["dlLocation"]
 
         if not os.path.exists(os.path.join(output, "scorers")):
             gdown.download("https://drive.google.com/uc?id=1koePS_rgP5_zNUeqnQgdQ89nQEolTEbR", output, quiet=False)
@@ -179,8 +182,7 @@ class MMB(object):
 
     def _prepare_chexbert(self):
         # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
-        with open("MedMD_config.json", "r") as f:
-            output = json.load(f)["CheXBert"]["dlLocation"]
+        output = self.getConfig()["CheXBert"]["dlLocation"]
 
         if not os.path.exists(os.path.join(output, "chexbert.pth")):
             os.makedirs(output, exist_ok=True)
@@ -199,3 +201,9 @@ class MMB(object):
             self._physionet_password = getpass.getpass("Enter your password: ")
 
         return self._physionet_username, self._physionet_password
+    
+    def getConfig(self) -> dict:
+        if self._config is None:
+            self._config = json.load(open("MedMD_config.json", "r"))
+        
+        return self._config

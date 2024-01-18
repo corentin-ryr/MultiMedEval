@@ -75,8 +75,8 @@ def extract_sections(text):
 
 
 class MIMIC_III(Benchmark):
-    def __init__(self, engine, **kwargs) -> None:
-        super().__init__(engine, **kwargs)
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.taskName = "MIMIC-III"
         self.modality = "Radiology"
         self.task = "Report Generation"
@@ -86,8 +86,8 @@ class MIMIC_III(Benchmark):
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
-        self.path = json.load(open("MedMD_config.json", "r"))["physionetCacheDir"]["path"]
-        self.chexbertPath = json.load(open("MedMD_config.json", "r"))["CheXBert"]["dlLocation"]
+        self.path = self.engine.getConfig()["physionetCacheDir"]["path"]
+        self.chexbertPath = self.engine.getConfig()["CheXBert"]["dlLocation"]
 
         self._generate_dataset()
 
