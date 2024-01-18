@@ -99,7 +99,7 @@ class MedQA(QA):
         self.modality = "General medicine"
         self.task = "QA"
 
-        cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
+        cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
 
         self.dataset = load_dataset(
             "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=cacheDir, trust_remote_code=True
@@ -161,7 +161,7 @@ class PubMedQA(QA):
         self.modality = "General medicine"
         self.task = "QA"
 
-        cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
+        cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
 
         self.dataset = load_dataset(
             "bigbio/pubmed_qa",
@@ -227,7 +227,7 @@ class MedMCQA(QA):
         self.modality = "General medicine"
         self.task = "QA"
 
-        cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
+        cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
 
         self.dataset = load_dataset(
             "medmcqa",

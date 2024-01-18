@@ -38,18 +38,6 @@ To install the library, you can use `pip`
 pip install git+https://github.com/corentin-ryr/MultiMedBench.git
 ```
 
-To download the datasets and prepare the evaluation models, you can instantiate the main "engine" with a dummy batcher and default parameters. This will run the setup for all tasks but not the evaluation itself.
-
-
-```python
-from multimedbench import MMB, Params
-
-def batcher(prompts):
-    return ["" for _ in range(len(prompts))]
-
-engine = MMB(params=Params(), batcher=batcher)
-```
-
 The setup script needs a configuration file containing the destination folder for every dataset. You need to specify this config file manually to fit your system. The config file follows this example:
 ```json
 {
@@ -62,9 +50,15 @@ The setup script needs a configuration file containing the destination folder fo
   "Pad-UFES-20": {"path": ""},
   "CBIS-DDSM": {"path": ""}
 }
-  
 ```
 
+To download the datasets and prepare the evaluation models, you can instantiate the main "engine" without any parameters. This will run the setup for all tasks but not the evaluation itself.
+
+```python
+from multimedbench import MMB, Params
+
+engine = MMB()
+```
 
 During the setup process, the script will ask for a Physionet password to download "VinDr-Mammo", "MIMIC-CXR" and "MIMIC-III".
 You also need to setup Kaggle on your machine before running the setup as the "CBIS-DDSM" is hosted on Kaggle.
@@ -121,7 +115,16 @@ class batcherMistral:
 
         answers = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
         return answers
-``` 
+```
+
+To run the benchmark, call the `eval` method of the `MMB` class.
+
+```python
+from multimedbench import MMB, Params
+engine = MMB(params=Params(), batcher=batcher)
+
+engine.eval(["MedQA", "VQA-RAD", "MIMIC-CXR-ReportGeneration"])
+```
 
 ## MultiMedBench parameters
 

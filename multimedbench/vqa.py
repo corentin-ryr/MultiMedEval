@@ -92,7 +92,6 @@ class VQA(Benchmark):
             elif not isClosed:
                 openQuestionsRecall.append(recall[idx])
 
-
         metrics = {
             "bleu": sum(bleuScores) / len(bleuScores),
             "F1": sum(f1) / len(f1),
@@ -141,7 +140,7 @@ class VQA_RAD(VQA):
         self.taskName = "VQA-Rad"
         self.modality = "Radiology"
 
-        cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
+        cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
 
         self.dataset = load_dataset("flaviagiammarino/vqa-rad", split="test", cache_dir=cacheDir)
         if self.engine.params.fewshot:
@@ -170,7 +169,7 @@ class Path_VQA(VQA):
         self.taskName = "VQA-Path"
         self.modality = "Pathology"
 
-        cacheDir = json.load(open("MedMD_config.json", "r"))["huggingfaceCacheDir"]["path"]
+        cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
         self.dataset = load_dataset("flaviagiammarino/path-vqa", split="test", cache_dir=cacheDir)
         if self.engine.params.fewshot:
             self.trainDataset = load_dataset("flaviagiammarino/path-vqa", split="train", cache_dir=cacheDir)
@@ -199,17 +198,13 @@ class SLAKE(VQA):
         self.taskName = "SLAKE"
         self.modality = "Radiology"
 
-        params = json.load(open("MedMD_config.json", "r"))
-
-        self.path = params["SLAKE"]["path"]
+        self.path = self.engine.getConfig()["SLAKE"]["path"]
 
         self._generate_dataset()
 
         self.path = os.path.join(self.path, "Slake1.0")
 
-
-        with open(os.path.join(self.path, "test.json"), "r") as f:
-            jsonFile = json.load(f)
+        jsonFile = json.load(open(os.path.join(self.path, "test.json"), "r"))
 
         self.dataset = []
         for sample in jsonFile:
@@ -217,8 +212,7 @@ class SLAKE(VQA):
                 self.dataset.append(sample)
 
         if self.engine.params.fewshot:
-            with open(os.path.join(self.path, "train.json"), "r") as f:
-                jsonFile = json.load(f)
+            jsonFile = json.load(open(os.path.join(self.path, "train.json"), "r"))
             self.trainDataset = []
             for sample in jsonFile:
                 if sample["q_lang"] == "en":

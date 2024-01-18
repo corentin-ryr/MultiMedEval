@@ -19,7 +19,7 @@ class MIMIC_entity_extraction:
         self._prepare_radgraph()
 
         # Get the dataset ====================================================================
-        self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-CXR"]["path"]
+        self.path = self.engine.getConfig()["MIMIC-CXR"]["path"]
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
@@ -48,8 +48,7 @@ class MIMIC_entity_extraction:
 
     def _prepare_radgraph(self):
         # Open the MedMD_config json file and get the download location for radgraph
-        with open("MedMD_config.json", "r") as f:
-            output = json.load(f)["RadGraph"]["dlLocation"]
+        output = self.engine.getConfig()["RadGraph"]["dlLocation"]
 
         if not os.path.exists(os.path.join(output, "scorers")):
             gdown.download("https://drive.google.com/uc?id=1koePS_rgP5_zNUeqnQgdQ89nQEolTEbR", output, quiet=False)

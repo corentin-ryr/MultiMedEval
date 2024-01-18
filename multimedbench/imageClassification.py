@@ -51,7 +51,7 @@ class ImageClassification(Benchmark):
                     batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
                 else:
                     batchPrompts.append((text, img))
-                
+
             answers = batcher(batchPrompts)
 
             correctAnswers = [self.getCorrectAnswer(sample) for sample in batch]
@@ -64,7 +64,6 @@ class ImageClassification(Benchmark):
                 groundTruth.append(gt)
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
-            
 
         # Convert pred and gt to tensor
         predictions = torch.tensor(predictions)
@@ -105,10 +104,10 @@ class ImageClassification(Benchmark):
 
     def cleanStr(self, text: str):
         return remove_punctuation(text.lower().replace("\n", " ").replace("_", " ").strip())
-    
+
     def __len__(self):
         return len(self.dataset)
-    
+
     def getPrompt(self):
         prompt = []
         images = []
@@ -134,11 +133,9 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         self.modality = "Radiology"
 
         self.num_classes = 5
-        self.path = json.load(open("MedMD_config.json", "r"))["MIMIC-CXR"]["path"]
+        self.path = self.engine.getConfig()["MIMIC-CXR"]["path"]
 
-        self.chexbertPath = os.path.join(
-            json.load(open("MedMD_config.json", "r"))["CheXBert"]["dlLocation"], "chexbert.pth"
-        )
+        self.chexbertPath = os.path.join(self.engine.getConfig()["CheXBert"]["dlLocation"], "chexbert.pth")
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
@@ -155,7 +152,6 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
             chexbertMimicTrain = chexbertMimicTrain.merge(trainSplit, on=["study_id", "subject_id"])
             self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
             self.prompt = self.getPrompt()
-
 
         self.labelNames = [
             "Enlarged Cardiomediastinum",
@@ -203,7 +199,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
                     batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
                 else:
                     batchPrompts.append((text, img))
-                
+
             answers = batcher(batchPrompts)
 
             for idx, answer in enumerate(answers):
@@ -214,7 +210,6 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
                 groundTruth.append(gt)
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
-            
 
         # Convert pred and gt to tensor
         predictions = torch.tensor(predictions)
@@ -277,9 +272,9 @@ class VinDr_Mammo(ImageClassification):
         super().__init__(**kwargs)
 
         self.taskName = "VinDr Mammo Image Classification"
-        self.modality = "Mammology"
+        self.modality = "Mammography"
 
-        self.path = json.load(open("MedMD_config.json", "r"))["physionetCacheDir"]["path"]
+        self.path = self.engine.getConfig()["physionetCacheDir"]["path"]
 
         self._generateDataset()
 
@@ -299,7 +294,6 @@ class VinDr_Mammo(ImageClassification):
             annotationsTrain = annotationsTrain[annotationsTrain["finding_birads"].notna()]
             self.trainDataset = datasets.Dataset.from_pandas(annotationsTrain)
             self.prompt = self.getPrompt()
-
 
     def format_question(self, sample, prompt=False):
         formattedText = [
@@ -380,7 +374,7 @@ class Pad_UFES_20(ImageClassification):
 
         self.num_classes = 7
 
-        self.path = json.load(open("MedMD_config.json", "r"))["Pad-UFES-20"]["path"]
+        self.path = self.engine.getConfig()["Pad-UFES-20"]["path"]
 
         # Check if the folder contains the zip file
         if not os.path.exists(os.path.join(self.path, "pad_ufes_20.zip")):
@@ -401,7 +395,6 @@ class Pad_UFES_20(ImageClassification):
         }
 
         self.prompt = None
-
 
     def format_question(self, sample):
         patientInfo = {
@@ -493,7 +486,7 @@ class CBIS_DDSM_Mass(ImageClassification):
         self.num_classes = 3
 
         # Get the dataset from Kaggle
-        self.path = json.load(open("MedMD_config.json", "r"))["CBIS-DDSM"]["path"]
+        self.path = self.engine.getConfig()["CBIS-DDSM"]["path"]
 
         # Download the file at address https://huggingface.co/datasets/Reverb/CBIS-DDSM/resolve/main/CBIS-DDSM.7z?download=true
         self._generateDataset()
@@ -525,7 +518,6 @@ class CBIS_DDSM_Mass(ImageClassification):
             self.nan_dict[key] = dicom
 
         self.options = ["BENIGN", "MALIGNANT", "BENIGN_WITHOUT_CALLBACK"]
-
 
         self.dataset = pd.read_csv(os.path.join(self.path, "csv", "calc_case_description_test_set.csv"))
         self._fix_image_path(self.dataset)
