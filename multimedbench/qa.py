@@ -2,20 +2,11 @@ from datasets import load_dataset
 from multimedbench.utils import Benchmark, batchSampler, Params
 from tqdm import tqdm
 import math
-from multimedbench.utils import remove_punctuation
+from multimedbench.utils import cleanStr
 import random
-
-# from nltk.corpus import stopwords
-# import nltk
 from abc import abstractmethod
 from torchmetrics.text import BLEUScore
 
-# nltk.download("stopwords")
-# STOPWORDS = stopwords.words("english")
-# STOPWORDS.remove("a")
-# STOPWORDS.remove("d")
-
-import json
 
 
 class QA(Benchmark):
@@ -51,6 +42,8 @@ class QA(Benchmark):
                 total_answers += 1
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, pred, gold, pred == gold))
+            
+            break
 
         # TODO: add others metrics such as AUC, F1...
         metrics = {"accuracy": correct_answers / total_answers}
@@ -61,9 +54,7 @@ class QA(Benchmark):
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
 
-    def cleanStr(self, text: str):
-        return remove_punctuation(text.lower().replace("\n", " ").strip())
-
+  
     def getPrompt(self):
         prompt = []
         images = []
@@ -138,11 +129,11 @@ class MedQA(QA):
             return sample["answer_idx"].lower().strip()
 
     def getPredictedAnswer(self, pred: str, sample):
-        pred = self.cleanStr(pred)
+        pred = cleanStr(pred)
         if len(pred) == 0:
             return "Invalid answer"
 
-        options = [self.cleanStr(f'{option["key"]} {option["value"]}') for option in sample["options"]]
+        options = [cleanStr(f'{option["key"]} {option["value"]}') for option in sample["options"]]
         # Compute the BLEU score for each option
         scores = [self.bleuScorer([pred], [[option]]) for option in options]
 
@@ -200,7 +191,7 @@ class PubMedQA(QA):
         return (question, [])
 
     def getPredictedAnswer(self, pred: str, sample):
-        pred = self.cleanStr(pred)
+        pred = cleanStr(pred)
         if len(pred) == 0:
             return "Invalid answer"
 
@@ -252,7 +243,7 @@ class MedMCQA(QA):
 
         formattedQuestion = f"{question}\n"
         formattedQuestion += "\n".join(options) + "\n"
-        formattedQuestion += "What is the answer to the question?"
+        formattedQuestion += "What is the correct answer?"
 
         formattedAnswer = f"The answer is {options[answer]}."
 
@@ -277,12 +268,12 @@ class MedMCQA(QA):
         ]
 
     def getPredictedAnswer(self, pred: str, sample):
-        pred = self.cleanStr(pred)
+        pred = cleanStr(pred)
         if len(pred) == 0:
             return "Invalid answer"
 
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer([pred], [[self.cleanStr(option)]]) for option in self._getOptions(sample)]
+        scores = [self.bleuScorer([pred], [[cleanStr(option)]]) for option in self._getOptions(sample)]
 
         if max(scores) == 0:
             return "Invalid answer"

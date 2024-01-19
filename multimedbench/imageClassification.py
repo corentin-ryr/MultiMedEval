@@ -1,14 +1,11 @@
-from multimedbench.utils import Benchmark
-from multimedbench.utils import Benchmark, batchSampler, Params
+from multimedbench.utils import Benchmark, batchSampler, Params, cleanStr
 from tqdm import tqdm
 import math
 from torchmetrics import F1Score, AUROC
 import torch
-
 import os
 import pandas as pd
 import datasets
-import json
 from multimedbench.chexbert.label import label
 from PIL import Image
 import pydicom
@@ -19,10 +16,10 @@ import shutil
 from torchmetrics.text import BLEUScore
 from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
-from multimedbench.utils import remove_punctuation
 import random
 from requests.auth import HTTPBasicAuth
 import requests
+from abc import abstractmethod
 
 
 class ImageClassification(Benchmark):
@@ -30,6 +27,8 @@ class ImageClassification(Benchmark):
         super().__init__(**kwargs)
         self.bleu = BLEUScore(n_gram=1)
         self.task = "Image Classification"
+        self.scoringType = "multiclass"
+        self.num_classes = None
 
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
@@ -64,16 +63,27 @@ class ImageClassification(Benchmark):
                 groundTruth.append(gt)
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
+            
+            # print(predictions)
+            # print(groundTruth)
+            # break
 
         # Convert pred and gt to tensor
         predictions = torch.tensor(predictions)
-        predictions = torch.nn.functional.one_hot(predictions, num_classes=self.num_classes).to(torch.float32)
+        if self.scoringType == "multiclass": predictions = torch.nn.functional.one_hot(predictions, num_classes=self.num_classes)
+        predictions = predictions.to(torch.float32)
         groundTruth = torch.tensor(groundTruth)
 
-        f1Scorer = F1Score(task="multiclass", num_classes=self.num_classes, average="macro")
+        if self.scoringType == "multiclass":
+            f1Scorer = F1Score(task=self.scoringType, num_classes=self.num_classes, average="macro")
+        else:
+            f1Scorer = F1Score(task=self.scoringType, num_labels=self.num_classes, average="macro")
         f1Macro = f1Scorer(predictions, groundTruth).item()
 
-        aurocScorer = AUROC(task="multiclass", num_classes=self.num_classes, average="macro")
+        if self.scoringType == "multiclass":
+            aurocScorer = AUROC(task=self.scoringType, num_classes=self.num_classes, average="macro")
+        else:
+            aurocScorer = AUROC(task=self.scoringType, num_labels=self.num_classes, average="macro")
         auroc = aurocScorer(predictions, groundTruth).item()
 
         metrics = {"AUC-macro": auroc, "F1-macro": f1Macro}
@@ -83,27 +93,6 @@ class ImageClassification(Benchmark):
             {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
-
-    def getCorrectAnswer(self, sample, fullText=False) -> int:
-        pass
-
-    def format_question(self, sample, prompt=False):
-        pass
-
-    def getPredictedAnswer(self, answer) -> int:
-        """Converts the free form text output to the answer index
-
-        Args:
-            sample (_type_): The sample used to generate the answer
-            answer (_type_): The free form text output of the model
-
-        Returns:
-            int: The index of the answer
-        """
-        pass
-
-    def cleanStr(self, text: str):
-        return remove_punctuation(text.lower().replace("\n", " ").replace("_", " ").strip())
 
     def __len__(self):
         return len(self.dataset)
@@ -119,6 +108,27 @@ class ImageClassification(Benchmark):
             prompt += text
             images += img
         return (prompt, images)
+    
+    @abstractmethod
+    def getCorrectAnswer(self, sample, fullText=False) -> int:
+        pass
+
+    @abstractmethod
+    def format_question(self, sample, prompt=False):
+        pass
+
+    @abstractmethod
+    def getPredictedAnswer(self, answer) -> int:
+        """Converts the free form text output to the answer index
+
+        Args:
+            sample (_type_): The sample used to generate the answer
+            answer (_type_): The free form text output of the model
+
+        Returns:
+            int: The index of the answer
+        """
+        pass
 
 
 class MIMIC_CXR_ImageClassification(ImageClassification):
@@ -130,7 +140,8 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
             raise Exception("Chexbert is needed for the Image classification task on MIMIC-CXR but it is not ready.")
 
         self.taskName = "MIMIC Image Classification"
-        self.modality = "Radiology"
+        self.modality = "X-Ray"
+        self.scoringType = "multilabel"
 
         self.num_classes = 5
         self.path = self.engine.getConfig()["MIMIC-CXR"]["path"]
@@ -179,62 +190,12 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         self.labeler = label(self.chexbertPath, verbose=False)
 
-    def run(self, params: Params, batcher):
-        print(f"***** Benchmarking : {self.taskName} *****")
-
-        predictions = []
-        groundTruth = []
-        answersLog = []
-
-        # Run the batcher for all data split in chunks
-        for batch in tqdm(
-            batchSampler(self.dataset, params.batch_size),
-            total=math.ceil(len(self.dataset) / params.batch_size),
-            desc="Running inference",
-        ):
-            batchPrompts = []
-            for sample in batch:
-                text, img = self.format_question(sample)
-                if self.fewshot:
-                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
-                else:
-                    batchPrompts.append((text, img))
-
-            answers = batcher(batchPrompts)
-
-            for idx, answer in enumerate(answers):
-                pred = self.getPredictedAnswer(answer)
-                gt = self.getCorrectAnswer(batch[idx])
-
-                predictions.append(pred)
-                groundTruth.append(gt)
-
-                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
-
-        # Convert pred and gt to tensor
-        predictions = torch.tensor(predictions)
-        groundTruth = torch.tensor(groundTruth)
-
-        f1Scorer = F1Score(task="multilabel", num_labels=self.num_classes, average="macro")
-        f1Macro = f1Scorer(predictions, groundTruth).item()
-
-        aurocScorer = AUROC(task="multilabel", num_labels=self.num_classes, average="macro")
-        auroc = aurocScorer(predictions.to(dtype=torch.float), groundTruth).item()
-
-        metrics = {"AUC-macro": auroc, "F1-macro": f1Macro}
-
-        # Compute the scores
-        return [
-            {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
-            {"type": "csv", "name": self.taskName, "value": answersLog},
-        ]
-
     def format_question(self, sample, prompt=False):
         samplePath = os.path.join(
             self.path, "files", "p" + str(sample["subject_id"])[:2], "p" + str(sample["subject_id"])
         )
         imagePath = os.path.join(samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg")
-        question = "<img> List the conditions that can be seen on this picture."
+        question = "<img> List the conditions that can be seen in this picture."
         formattedText = [
             {
                 "role": "user",
@@ -330,7 +291,6 @@ class VinDr_Mammo(ImageClassification):
             return random.randint(0, 4)  # 5 classes so 0 to 4
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
-        # print(sample)
         findings = sample["finding_birads"]
         findings = int(findings[-1])
 
@@ -425,9 +385,9 @@ class Pad_UFES_20(ImageClassification):
         return (formattedText, [image])
 
     def getPredictedAnswer(self, answer: str) -> int:
-        answer = self.cleanStr(answer)
+        answer = cleanStr(answer)
         # Find the best bleu score between the answer and the options
-        options = [self.cleanStr(self.mapAcronymToName[option]) for option in self.options]
+        options = [cleanStr(self.mapAcronymToName[option]) for option in self.options]
         scores = [self.bleu([answer], [[option]]) for option in options]
 
         return scores.index(max(scores))
@@ -477,12 +437,9 @@ class Pad_UFES_20(ImageClassification):
             os.rmdir(os.path.join(dataFolder, "images", file))
 
 
-class CBIS_DDSM_Mass(ImageClassification):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
-        self.taskName = "CBIS-DDSM Image Classification"
-        self.modality = "Mammology"
+class CBIS_DDSM(ImageClassification):
+    def setup(self, abnormality: str):
+        self.modality = "Mammography"
         self.num_classes = 3
 
         # Get the dataset from Kaggle
@@ -519,36 +476,25 @@ class CBIS_DDSM_Mass(ImageClassification):
 
         self.options = ["BENIGN", "MALIGNANT", "BENIGN_WITHOUT_CALLBACK"]
 
-        self.dataset = pd.read_csv(os.path.join(self.path, "csv", "calc_case_description_test_set.csv"))
+        self.dataset = pd.read_csv(os.path.join(self.path, "csv", f"{abnormality}_case_description_test_set.csv"))
+        # only keep the columns "pathology" and "cropped image file path"
+        self.dataset = self.dataset[["pathology", "cropped image file path", "image file path"]]
         self._fix_image_path(self.dataset)
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
         if self.engine.params.fewshot:
-            self.trainDataset = pd.read_csv(os.path.join(self.path, "csv", "mass_case_description_train_set.csv"))
+            self.trainDataset = pd.read_csv(
+                os.path.join(self.path, "csv", f"{abnormality}_case_description_train_set.csv")
+            )
+            self.trainDataset = self.trainDataset[["pathology", "cropped image file path", "image file path"]]
             self._fix_image_path(self.trainDataset)
             self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
             self.prompt = self.getPrompt()
 
-    def format_question(self, sample, prompt=False):
-        path = Path(sample["cropped image file path"])
-        path = Path(self.path) / Path(*path.parts[1:])
-
-        formattedText = [
-            {
-                "role": "user",
-                "content": f"<img> Is the mass benign, malignant or benign without callback?",
-            }
-        ]
-        if prompt:
-            formattedText.append({"role": "assistant", "content": f"{sample['pathology'].lower()}"})
-
-        image = Image.open(os.path.join(self.path, "images", path))
-        return (formattedText, [image])
-
     def getPredictedAnswer(self, answer: str) -> int:
-        answer = self.cleanStr(answer)
+        answer = cleanStr(answer)
         # Find the best bleu score between the answer and the options
-        scores = [self.bleu([answer], [[self.cleanStr(option)]]) for option in self.options]
+        scores = [self.bleu([answer], [[cleanStr(option)]]) for option in self.options]
         return scores.index(max(scores))
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
@@ -586,3 +532,53 @@ class CBIS_DDSM_Mass(ImageClassification):
             else:
                 imagePath = self.nan_dict[img_name]
             data.iloc[idx, data.columns.get_loc("cropped image file path")] = imagePath
+
+
+class CBIS_DDSM_Calcification(CBIS_DDSM):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+        self.taskName = "CBIS-DDSM Calcification Image Classification"
+
+        self.setup("calc")
+
+    def format_question(self, sample, prompt=False):
+        path = Path(sample["cropped image file path"])
+        path = Path(self.path) / Path(*path.parts[1:])
+
+        formattedText = [
+            {
+                "role": "user",
+                "content": f"<img> Is the calcification benign, malignant or benign without callback?",
+            }
+        ]
+        if prompt:
+            formattedText.append({"role": "assistant", "content": f"{sample['pathology'].lower()}"})
+
+        image = Image.open(os.path.join(self.path, "images", path))
+        return (formattedText, [image])
+
+
+class CBIS_DDSM_Mass(CBIS_DDSM):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+
+        self.taskName = "CBIS-DDSM Mass Image Classification"
+
+        self.setup("mass")
+
+    def format_question(self, sample, prompt=False):
+        path = Path(sample["cropped image file path"])
+        path = Path(self.path) / Path(*path.parts[1:])
+
+        formattedText = [
+            {
+                "role": "user",
+                "content": f"<img> Is the mass benign, malignant or benign without callback?",
+            }
+        ]
+        if prompt:
+            formattedText.append({"role": "assistant", "content": f"{sample['pathology'].lower()}"})
+
+        image = Image.open(os.path.join(self.path, "images", path))
+        return (formattedText, [image])

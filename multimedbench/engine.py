@@ -3,8 +3,10 @@ from multimedbench.utils import Params, fileWriterFactory, Benchmark
 from multimedbench.qa import MedQA, PubMedQA, MedMCQA
 from multimedbench.vqa import VQA_RAD, Path_VQA, SLAKE
 from multimedbench.mimic import MIMIC_CXR_reportgen
-from multimedbench.imageClassification import MIMIC_CXR_ImageClassification, VinDr_Mammo, Pad_UFES_20, CBIS_DDSM_Mass
+from multimedbench.imageClassification import MIMIC_CXR_ImageClassification, VinDr_Mammo, Pad_UFES_20, CBIS_DDSM_Mass, CBIS_DDSM_Calcification
 from multimedbench.mimic_iii import MIMIC_III
+from multimedbench.mednli import MedNLI
+from multimedbench.mnist import MNIST_Oct, MNIST_Path, MNIST_Blood, MNIST_Breast, MNIST_Derma, MNIST_OrganA, MNIST_Chest, MNIST_OrganC, MNIST_OrganS, MNIST_Pneumonia, MNIST_Retina, MNIST_Tissue
 import json
 import os
 import gdown
@@ -29,32 +31,40 @@ TASKS: dict[str, Benchmark] = {
     "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification,
     "VinDr-Mammo": VinDr_Mammo,
     "Pad-UFES-20": Pad_UFES_20,
-    "CBIS-DDSM": CBIS_DDSM_Mass,
+    "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
+    "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
     "MIMIC-III": MIMIC_III,
+    "MedNLI": MedNLI,
+    "MNIST-Oct": MNIST_Oct,
+    "MNIST-Path": MNIST_Path,
+    "MNIST-Blood": MNIST_Blood,
+    "MNIST-Breast": MNIST_Breast,
+    "MNIST-Derma": MNIST_Derma,
+    "MNIST-OrganA": MNIST_OrganA,
+    "MNIST-Chest": MNIST_Chest,
+    "MNIST-OrganC": MNIST_OrganC,
+    "MNIST-OrganS": MNIST_OrganS,
+    "MNIST-Pneumonia": MNIST_Pneumonia,
+    "MNIST-Retina": MNIST_Retina,
+    "MNIST-Tissue": MNIST_Tissue
 }
 
 TASKS_REQUIREMENTS: dict[str, list[str]] = {
-    "MedQA": ["MedQA"],
-    "PubMedQA": ["PubMedQA"],
-    "MedMCQA": ["MedMCQA"],
-    "MIMIC-CXR-ReportGeneration": ["MIMIC-CXR-ReportGeneration", "RadGraph", "Chexbert"],
-    "VQA-RAD": ["VQA-RAD"],
-    "Path-VQA": ["Path-VQA"],
-    "SLAKE": ["SLAKE"],
-    "MIMIC-CXR-ImageClassification": ["MIMIC-CXR-ImageClassification"],
-    "VinDr-Mammo": ["VinDr-Mammo"],
-    "Pad-UFES-20": ["Pad-UFES-20"],
-    "CBIS-DDSM": ["CBIS-DDSM"],
-    "MIMIC-III": ["MIMIC-III", "RadGraph", "Chexbert"],
+    "MIMIC-CXR-ReportGeneration": ["RadGraph", "Chexbert"],
+    "MIMIC-III": ["RadGraph", "Chexbert"],
 }
 
 
 class MMB(object):
     def __init__(self, params: Params=None, batcher:Callable=None, generateVisualization: bool = False):
         self.params = params if params is not None else Params()
+        self.batcher = batcher
+        self._config = None
+        self._physionet_username = None
+        self._physionet_password = None
+
         print(f"\n\nRunning MultiMedBenchmark with {self.params}")
 
-        self.batcher = batcher
 
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
@@ -64,12 +74,11 @@ class MMB(object):
         nltk.download("wordnet", quiet=True)
 
         self.tasksReady = {}
+        tasksToSkip = []
+        if len(self.getConfig()["tasksToPrepare"]) > 0:
+            tasksToSkip = [x for x in TASKS if x not in self.getConfig()["tasksToPrepare"]]
 
-        self._physionet_username = None
-        self._physionet_password = None
-
-        progressBar = tqdm(total=len(TASKS) + 2)
-
+        progressBar = tqdm(total=len(TASKS) + 2, dynamic_ncols=True)
         progressBar.set_description(f"Setup RadGraph")
         try:
             self._prepare_radgraph()
@@ -92,6 +101,8 @@ class MMB(object):
         for taskName in TASKS:
             progressBar.set_description(f"Setup {taskName}")
             try:
+                if taskName in tasksToSkip:
+                    raise Exception(f"Task {taskName} is skipped")
                 taskBenchmark = TASKS[taskName](seed=self.params.seed, engine=self, fewshot=self.params.fewshot)
             except Exception as e:
                 self.tasksReady[taskName] = {"ready": False, "error": str(e)}
@@ -115,6 +126,7 @@ class MMB(object):
             visualizer.sunburstModalities()
 
 
+
     def eval(self, name: str | list[str]):
         if self.batcher is None:
             raise Exception("The engine was not initialized with a batcher, please provide a batcher to the engine")
@@ -130,7 +142,8 @@ class MMB(object):
 
         assert name in TASKS, str(name) + " not in " + str(TASKS.keys())
         # Check if the requirements are satisfied
-        for req in TASKS_REQUIREMENTS[name]:
+        listRequirements =  ([name] + TASKS_REQUIREMENTS[name]) if name in TASKS_REQUIREMENTS else [name]
+        for req in listRequirements:
             if not self.tasksReady[req]["ready"]:
                 if "error" in self.tasksReady[req]:
                     error = self.tasksReady[req]["error"]
@@ -153,7 +166,7 @@ class MMB(object):
 
     def _prepare_radgraph(self):
         # Open the MedMD_config json file and get the download location for radgraph
-        output = self.getConfig()["dlLocation"]
+        output = self.getConfig()["RadGraph"]["dlLocation"]
 
         if not os.path.exists(os.path.join(output, "scorers")):
             gdown.download("https://drive.google.com/uc?id=1koePS_rgP5_zNUeqnQgdQ89nQEolTEbR", output, quiet=False)

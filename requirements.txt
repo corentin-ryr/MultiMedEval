@@ -18,3 +18,4 @@ boto3 # For MedQA
 jsonpickle # For RadGraph
 h5py # For RadGraph
 tensorboardX # For RadGraph
+medmnist

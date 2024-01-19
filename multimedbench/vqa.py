@@ -3,7 +3,7 @@ from torchmetrics.text import BLEUScore
 from multimedbench.utils import Benchmark, batchSampler, Params
 from tqdm import tqdm
 import math
-from multimedbench.utils import remove_punctuation
+from multimedbench.utils import cleanStr
 import random
 
 from abc import abstractmethod
@@ -50,8 +50,8 @@ class VQA(Benchmark):
 
             for idx, answer in enumerate(answers):
                 # Compute the number of tokens recalled in the answer
-                cleanCorrect = self.cleanStr(self.getCorrectAnswer(batch[idx]))
-                cleanPredicted = self.cleanStr(answer)
+                cleanCorrect = cleanStr(self.getCorrectAnswer(batch[idx]))
+                cleanPredicted = cleanStr(answer)
 
                 predictedTokens = set([self.wnl.lemmatize(token) for token in cleanPredicted.split(" ")])
                 correctTokens = set([self.wnl.lemmatize(token) for token in cleanCorrect.split(" ")])
@@ -106,9 +106,6 @@ class VQA(Benchmark):
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
 
-    def cleanStr(self, text: str):
-        tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
-        return re.sub(" +", " ", tempStr)
 
     def getPrompt(self):
         prompt = []

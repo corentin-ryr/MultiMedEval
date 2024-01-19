@@ -48,9 +48,12 @@ The setup script needs a configuration file containing the destination folder fo
   "RadGraph": {"dlLocation": ""},
   "CheXBert": {"dlLocation": ""},
   "Pad-UFES-20": {"path": ""},
-  "CBIS-DDSM": {"path": ""}
+  "CBIS-DDSM": {"path": ""},
+  "MedMNISTCacheDir": {"path": ""},
+  "tasksToPrepare": []
 }
 ```
+`TasksToPrepare` defines the list of the tasks that will be downloaded and available for evaluation. If the list if empty, all tasks will be prepared.
 
 To download the datasets and prepare the evaluation models, you can instantiate the main "engine" without any parameters. This will run the setup for all tasks but not the evaluation itself.
 
