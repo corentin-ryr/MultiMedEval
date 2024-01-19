@@ -453,3 +453,7 @@ def custom_mimic_cxr_rules():
     }
 
     return custom_section_names, custom_indices
+
+def cleanStr(text: str):
+    tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
+    return re.sub(" +", " ", tempStr)

@@ -1,16 +1,14 @@
 from multimedbench.utils import Benchmark
-import json
 import os
 import pandas as pd
 from tqdm import tqdm
 import datasets
 import re
-from multimedbench.utils import Benchmark, batchSampler, Params, exact_entity_token_if_rel_exists_reward
+from multimedbench.utils import Benchmark, batchSampler, exact_entity_token_if_rel_exists_reward
 import math
 import torch
 from nltk.translate.meteor_score import meteor_score
 from nltk.tokenize import word_tokenize
-import nltk
 from torchmetrics.text import BLEUScore, ROUGEScore
 from zipfile import ZipFile
 
@@ -19,6 +17,7 @@ import dill
 from bert_score import BERTScorer
 import requests
 from requests.auth import HTTPBasicAuth
+import csv
 
 def get_final_report(text):
     if "FINAL REPORT" not in text:
@@ -91,12 +90,25 @@ class MIMIC_III(Benchmark):
 
         self._generate_dataset()
 
-        reports_csv = pd.read_csv(os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False)
-        reports_csv = reports_csv.fillna(-1)
+        # reports_csv = pd.read_csv(os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False)
+        # reports_csv = reports_csv.fillna(-1)
+
+        reports_csv = []
+        # Open the NOTEEVENTS.csv file and keep the reports that are in the mapping in the reports_csv list
+        with open(os.path.join(self.path, "NOTEEVENTS.csv"), "r") as f:
+            spamreader = csv.reader(f, delimiter=",", quotechar='"')
+            header = next(spamreader)
+            reports_csv.append(header)
+            descriptionIndex = header.index("DESCRIPTION")
+            flattenMapping = [item for sublist in mapping.values() for item in sublist]
+
+            for row in spamreader:
+                if row[descriptionIndex] in flattenMapping:
+                    reports_csv.append(row)
+        reports_csv = pd.DataFrame(reports_csv[1:], columns=reports_csv[0])
 
         expToReport = {}
         for EXP in tqdm(mapping.keys(), desc="Extracting reports"):
-            # for EXP in ['CT head']:
             filter_reports = reports_csv[reports_csv["DESCRIPTION"].isin(mapping[EXP])]
             reports_list = filter_reports["TEXT"].tolist()
             reports_ids = filter_reports["ROW_ID"].tolist()
@@ -186,7 +198,6 @@ class MIMIC_III(Benchmark):
                     )
 
         self.dataset = datasets.Dataset.from_list(datasetTest)
-        print(f"Dataset size: {len(self.dataset)}")
 
 
     def run(self, params, batcher):

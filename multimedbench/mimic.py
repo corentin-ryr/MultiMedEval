@@ -1,7 +1,6 @@
 import logging
 import os
 from multimedbench.utils import Benchmark
-import json
 import pandas as pd
 from tqdm import tqdm
 from PIL import Image
@@ -24,7 +23,6 @@ import torch
 import dill
 from nltk.translate.meteor_score import meteor_score
 from nltk.tokenize import word_tokenize
-import nltk
 from zipfile import ZipFile
 import requests
 from requests.auth import HTTPBasicAuth
@@ -36,7 +34,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         logging.debug("***** Transfer task : MIMIC_CXR *****\n\n")
 
         self.taskName = "MIMIC_CXR report generation"
-        self.modality = "Radiology"
+        self.modality = "X-Ray"
         self.task = "Report generation"
 
         self.bleu_1 = BLEUScore(n_gram=1)
