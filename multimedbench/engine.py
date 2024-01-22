@@ -1,12 +1,32 @@
+from warnings import warn
 from multimedbench.utils import Params, fileWriterFactory, Benchmark
 
 from multimedbench.qa import MedQA, PubMedQA, MedMCQA
 from multimedbench.vqa import VQA_RAD, Path_VQA, SLAKE
 from multimedbench.mimic import MIMIC_CXR_reportgen
-from multimedbench.imageClassification import MIMIC_CXR_ImageClassification, VinDr_Mammo, Pad_UFES_20, CBIS_DDSM_Mass, CBIS_DDSM_Calcification
+from multimedbench.imageClassification import (
+    MIMIC_CXR_ImageClassification,
+    VinDr_Mammo,
+    Pad_UFES_20,
+    CBIS_DDSM_Mass,
+    CBIS_DDSM_Calcification,
+)
 from multimedbench.mimic_iii import MIMIC_III
 from multimedbench.mednli import MedNLI
-from multimedbench.mnist import MNIST_Oct, MNIST_Path, MNIST_Blood, MNIST_Breast, MNIST_Derma, MNIST_OrganA, MNIST_Chest, MNIST_OrganC, MNIST_OrganS, MNIST_Pneumonia, MNIST_Retina, MNIST_Tissue
+from multimedbench.mnist import (
+    MNIST_Oct,
+    MNIST_Path,
+    MNIST_Blood,
+    MNIST_Breast,
+    MNIST_Derma,
+    MNIST_OrganA,
+    MNIST_Chest,
+    MNIST_OrganC,
+    MNIST_OrganS,
+    MNIST_Pneumonia,
+    MNIST_Retina,
+    MNIST_Tissue,
+)
 import json
 import os
 import gdown
@@ -41,12 +61,12 @@ TASKS: dict[str, Benchmark] = {
     "MNIST-Breast": MNIST_Breast,
     "MNIST-Derma": MNIST_Derma,
     "MNIST-OrganA": MNIST_OrganA,
-    "MNIST-Chest": MNIST_Chest,
+    # "MNIST-Chest": MNIST_Chest,
     "MNIST-OrganC": MNIST_OrganC,
     "MNIST-OrganS": MNIST_OrganS,
     "MNIST-Pneumonia": MNIST_Pneumonia,
     "MNIST-Retina": MNIST_Retina,
-    "MNIST-Tissue": MNIST_Tissue
+    "MNIST-Tissue": MNIST_Tissue,
 }
 
 TASKS_REQUIREMENTS: dict[str, list[str]] = {
@@ -56,7 +76,7 @@ TASKS_REQUIREMENTS: dict[str, list[str]] = {
 
 
 class MMB(object):
-    def __init__(self, params: Params=None, batcher:Callable=None, generateVisualization: bool = False):
+    def __init__(self, params: Params = None, batcher: Callable = None, generateVisualization: bool = False):
         self.params = params if params is not None else Params()
         self.batcher = batcher
         self._config = None
@@ -64,7 +84,6 @@ class MMB(object):
         self._physionet_password = None
 
         print(f"\n\nRunning MultiMedBenchmark with {self.params}")
-
 
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
@@ -87,7 +106,7 @@ class MMB(object):
         else:
             self.tasksReady["RadGraph"] = {"ready": True}
         progressBar.update(1)
-        
+
         progressBar.set_description(f"Setup Chexbert")
         try:
             self._prepare_chexbert()
@@ -96,7 +115,6 @@ class MMB(object):
         else:
             self.tasksReady["Chexbert"] = {"ready": True}
         progressBar.update(1)
-
 
         for taskName in TASKS:
             progressBar.set_description(f"Setup {taskName}")
@@ -121,11 +139,15 @@ class MMB(object):
             print(taskName.ljust(30) + ready.ljust(30) + error)
 
         if generateVisualization:
-            benchmarks = [self.tasksReady[x]["task"] for x in self.tasksReady if (self.tasksReady[x]["ready"] and "task" in self.tasksReady[x])]
+            benchmarks = [
+                self.tasksReady[x]["task"]
+                for x in self.tasksReady
+                if (self.tasksReady[x]["ready"] and "task" in self.tasksReady[x])
+            ]
             visualizer = BenchmarkVisualizer(benchmarks)
             visualizer.sunburstModalities()
-
-
+            visualizer.sunburstTasks()
+            visualizer.tableImageClassification()
 
     def eval(self, name: str | list[str]):
         if self.batcher is None:
@@ -136,20 +158,24 @@ class MMB(object):
             self.results = {}
             for x in name:
                 currentResults = self.eval(x)
+                if currentResults is None:
+                    continue
                 self.results[x] = currentResults
 
             return self.results
 
-        assert name in TASKS, str(name) + " not in " + str(TASKS.keys())
+        if name not in TASKS:
+            warn(f"Task {name} not in {TASKS.keys()}", )
+            return None
+        
         # Check if the requirements are satisfied
-        listRequirements =  ([name] + TASKS_REQUIREMENTS[name]) if name in TASKS_REQUIREMENTS else [name]
+        listRequirements = ([name] + TASKS_REQUIREMENTS[name]) if name in TASKS_REQUIREMENTS else [name]
         for req in listRequirements:
             if not self.tasksReady[req]["ready"]:
-                if "error" in self.tasksReady[req]:
-                    error = self.tasksReady[req]["error"]
-                else:
-                    error = "No error message"
-                raise Exception(f"Task {name} requires {req} to be ready: {error}")
+                error = self.tasksReady[req]["error"] if "error" in self.tasksReady[req] else "No error message"
+
+                warn(f"Task {name} requires {req} to be ready: {error}")
+                return None
 
         self.evaluation: Benchmark = self.tasksReady[name]["task"]
         taskResult = self.evaluation.run(self.params, self.batcher)
@@ -209,14 +235,16 @@ class MMB(object):
 
     def getPhysioNetCredentials(self):
         if self._physionet_password is None or self._physionet_username is None:
-            print("To setup tasks requiring a PhysioNet dataset, the scripts requires the PhysioNet username and password.")
+            print(
+                "To setup tasks requiring a PhysioNet dataset, the scripts requires the PhysioNet username and password."
+            )
             self._physionet_username = input("Enter your username: ")
             self._physionet_password = getpass.getpass("Enter your password: ")
 
         return self._physionet_username, self._physionet_password
-    
+
     def getConfig(self) -> dict:
         if self._config is None:
             self._config = json.load(open("MedMD_config.json", "r"))
-        
+
         return self._config

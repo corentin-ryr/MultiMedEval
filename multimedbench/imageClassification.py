@@ -1,7 +1,7 @@
-from multimedbench.utils import Benchmark, batchSampler, Params, cleanStr, collate_fn
+from multimedbench.utils import Benchmark, Params, cleanStr
 from tqdm import tqdm
 import math
-from torchmetrics import F1Score, AUROC
+from torchmetrics import F1Score, AUROC, Accuracy
 import torch
 import os
 import pandas as pd
@@ -38,8 +38,17 @@ class ImageClassification(Benchmark):
         groundTruth = []
         answersLog = []
 
-        # Run the batcher for all data split in chunks
-        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
+        scorerArgs = {"task": self.scoringType, "average": "macro"}
+        scorerArgs.update(
+            {"num_classes": self.num_classes} if self.scoringType == "multiclass" else {"num_labels": self.num_classes}
+        )
+        f1Scorer = F1Score(**scorerArgs)
+        aurocScorer = AUROC(**scorerArgs)
+        accuracy = Accuracy(**scorerArgs)
+
+        dataloader = DataLoader(
+            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
+        )
         for batch in tqdm(
             dataloader,
             desc="Running inference",
@@ -63,31 +72,26 @@ class ImageClassification(Benchmark):
                 predictions.append(pred)
                 groundTruth.append(gt)
 
-                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, gt, pred, gt == pred))
-            
+                answersLog.append(
+                    (f"{self.getCorrectAnswer(batch[idx], fullText=True)} (index {gt})", f"{answer} (index {pred})")
+                )
+
             # print(predictions)
             # print(groundTruth)
             # break
 
         # Convert pred and gt to tensor
         predictions = torch.tensor(predictions)
-        if self.scoringType == "multiclass": predictions = torch.nn.functional.one_hot(predictions, num_classes=self.num_classes)
+        if self.scoringType == "multiclass":
+            predictions = torch.nn.functional.one_hot(predictions, num_classes=self.num_classes)
         predictions = predictions.to(torch.float32)
         groundTruth = torch.tensor(groundTruth)
 
-        if self.scoringType == "multiclass":
-            f1Scorer = F1Score(task=self.scoringType, num_classes=self.num_classes, average="macro")
-        else:
-            f1Scorer = F1Score(task=self.scoringType, num_labels=self.num_classes, average="macro")
         f1Macro = f1Scorer(predictions, groundTruth).item()
-
-        if self.scoringType == "multiclass":
-            aurocScorer = AUROC(task=self.scoringType, num_classes=self.num_classes, average="macro")
-        else:
-            aurocScorer = AUROC(task=self.scoringType, num_labels=self.num_classes, average="macro")
         auroc = aurocScorer(predictions, groundTruth).item()
+        acc = accuracy(predictions, groundTruth).item()
 
-        metrics = {"AUC-macro": auroc, "F1-macro": f1Macro}
+        metrics = {"AUC-macro": auroc, "F1-macro": f1Macro, "Accuracy": acc}
 
         # Compute the scores
         return [
@@ -95,7 +99,6 @@ class ImageClassification(Benchmark):
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
 
-    
     @abstractmethod
     def getCorrectAnswer(self, sample, fullText=False) -> int:
         pass
@@ -218,7 +221,7 @@ class VinDr_Mammo(ImageClassification):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        self.taskName = "VinDr Mammo Image Classification"
+        self.taskName = "VinDr Mammo"
         self.modality = "Mammography"
 
         self.path = self.engine.getConfig()["physionetCacheDir"]["path"]
@@ -227,6 +230,7 @@ class VinDr_Mammo(ImageClassification):
 
         self.num_classes = 5
         self.scoringType = "multiclass"
+        self.options = ["1", "2", "3", "4", "5"]
 
         # Open the finding_annotation.csv file
         annotations = pd.read_csv(os.path.join(self.path, "finding_annotations.csv"))
@@ -269,12 +273,17 @@ class VinDr_Mammo(ImageClassification):
         return (formattedText, [image])
 
     def getPredictedAnswer(self, answer: str) -> int:
-        # Find the numbers in the string answer
-        findings = [int(s) for s in answer.split() if s.isdigit()]
-        if len(findings) > 0 and findings[0] <= 5 and findings[0] >= 1:
-            return findings[0] - 1
-        else:
-            return random.randint(0, 4)  # 5 classes so 0 to 4
+        # # Find the numbers in the string answer
+        # findings = [int(s) for s in answer.split() if s.isdigit()]
+        # if len(findings) > 0 and findings[0] <= 5 and findings[0] >= 1:
+        #     return findings[0] - 1
+        # else:
+        #     return random.randint(0, 4)  # 5 classes so 0 to 4
+
+        answer = cleanStr(answer)
+        # Find the best bleu score between the answer and the options
+        scores = [self.bleu([answer], [[cleanStr(option)]]) for option in self.options]
+        return scores.index(max(scores))
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
         findings = sample["finding_birads"]
@@ -510,7 +519,7 @@ class CBIS_DDSM(ImageClassification):
                 imagePath = self.cropped_images_dict[img_name]
             elif img_name in self.nan_dict:
                 imagePath = self.nan_dict[img_name]
-                    
+
             data.iloc[idx, data.columns.get_loc("cropped image file path")] = imagePath
 
 
@@ -518,7 +527,7 @@ class CBIS_DDSM_Calcification(CBIS_DDSM):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        self.taskName = "CBIS-DDSM Calcification Image Classification"
+        self.taskName = "CBIS-DDSM Calcification"
 
         self.setup("calc")
 
@@ -543,7 +552,7 @@ class CBIS_DDSM_Mass(CBIS_DDSM):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        self.taskName = "CBIS-DDSM Mass Image Classification"
+        self.taskName = "CBIS-DDSM Mass"
 
         self.setup("mass")
 
