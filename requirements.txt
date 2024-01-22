@@ -1,6 +1,6 @@
 torch
 transformers
-datasets
+datasets>=2.16
 protobuf
 nltk
 torchmetrics
