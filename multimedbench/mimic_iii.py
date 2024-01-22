@@ -1,23 +1,22 @@
-from multimedbench.utils import Benchmark
+from multimedbench.utils import Benchmark, Params
 import os
 import pandas as pd
 from tqdm import tqdm
 import datasets
 import re
-from multimedbench.utils import Benchmark, batchSampler, exact_entity_token_if_rel_exists_reward
-import math
+from multimedbench.utils import Benchmark, exact_entity_token_if_rel_exists_reward
 import torch
 from nltk.translate.meteor_score import meteor_score
 from nltk.tokenize import word_tokenize
 from torchmetrics.text import BLEUScore, ROUGEScore
 from zipfile import ZipFile
-
 from multimedbench.chexbert.label import encode
 import dill
 from bert_score import BERTScorer
 import requests
 from requests.auth import HTTPBasicAuth
 import csv
+from torch.utils.data import DataLoader
 
 def get_final_report(text):
     if "FINAL REPORT" not in text:
@@ -95,17 +94,8 @@ class MIMIC_III(Benchmark):
 
         reports_csv = []
         # Open the NOTEEVENTS.csv file and keep the reports that are in the mapping in the reports_csv list
-        with open(os.path.join(self.path, "NOTEEVENTS.csv"), "r") as f:
-            spamreader = csv.reader(f, delimiter=",", quotechar='"')
-            header = next(spamreader)
-            reports_csv.append(header)
-            descriptionIndex = header.index("DESCRIPTION")
-            flattenMapping = [item for sublist in mapping.values() for item in sublist]
-
-            for row in spamreader:
-                if row[descriptionIndex] in flattenMapping:
-                    reports_csv.append(row)
-        reports_csv = pd.DataFrame(reports_csv[1:], columns=reports_csv[0])
+        reports_csv = pd.read_csv(os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False)
+        reports_csv = reports_csv.fillna(-1)
 
         expToReport = {}
         for EXP in tqdm(mapping.keys(), desc="Extracting reports"):
@@ -200,7 +190,7 @@ class MIMIC_III(Benchmark):
         self.dataset = datasets.Dataset.from_list(datasetTest)
 
 
-    def run(self, params, batcher):
+    def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
         refReports = []
         hypReports = []
@@ -209,9 +199,9 @@ class MIMIC_III(Benchmark):
         rougeLScores = []
 
         # Run the batcher for all data split in chunks
+        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
         for batch in tqdm(
-            batchSampler(self.dataset, params.batch_size),
-            total=math.ceil(len(self.dataset) / params.batch_size),
+            dataloader,
             desc="Generating reports",
         ):
             batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]

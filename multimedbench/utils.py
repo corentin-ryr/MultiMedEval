@@ -58,6 +58,7 @@ class Params:
     batch_size: int = 128
     run_name: str = f"run {datetime.now()}"
     fewshot: bool = False
+    num_workers: int = 0
 
 
 def batchSampler(samples, n):
@@ -462,3 +463,8 @@ def custom_mimic_cxr_rules():
 def cleanStr(text: str):
     tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
     return re.sub(" +", " ", tempStr)
+
+
+def collate_fn(batch):
+    print(batch)
+    return tuple(zip(*batch))

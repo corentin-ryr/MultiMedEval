@@ -1,12 +1,10 @@
 from datasets import load_dataset
-from multimedbench.utils import Benchmark, batchSampler, Params
+from multimedbench.utils import Benchmark, Params
 from tqdm import tqdm
-import math
 from multimedbench.utils import cleanStr
-import random
 from abc import abstractmethod
 from torchmetrics.text import BLEUScore
-
+from torch.utils.data import DataLoader
 
 
 class QA(Benchmark):
@@ -19,9 +17,9 @@ class QA(Benchmark):
         answersLog = []
 
         # Run the batcher for all data split in chunks
+        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
         for batch in tqdm(
-            batchSampler(self.dataset, params.batch_size),
-            total=math.ceil(len(self.dataset) / params.batch_size),
+            dataloader,
             desc="Running inference",
         ):
             batchPrompts = []

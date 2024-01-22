@@ -1,6 +1,6 @@
 from datasets import load_dataset
 from torchmetrics.text import BLEUScore
-from multimedbench.utils import Benchmark, batchSampler, Params
+from multimedbench.utils import Benchmark, Params
 from tqdm import tqdm
 import math
 from multimedbench.utils import cleanStr
@@ -11,6 +11,7 @@ import PIL
 import gdown
 from zipfile import ZipFile
 from nltk.stem import WordNetLemmatizer
+from torch.utils.data import DataLoader
 
 
 class VQA(Benchmark):
@@ -30,9 +31,9 @@ class VQA(Benchmark):
 
         closedQuestions = []
         # Run the batcher for all data split in chunks
+        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
         for batch in tqdm(
-            batchSampler(self.dataset, params.batch_size),
-            total=math.ceil(len(self.dataset) / params.batch_size),
+            dataloader,
             desc="Running inference",
         ):
             batchPrompts = []
@@ -52,7 +53,8 @@ class VQA(Benchmark):
 
                 predictedTokens = set([self.wnl.lemmatize(token) for token in cleanPredicted.split(" ")])
                 correctTokens = set([self.wnl.lemmatize(token) for token in cleanCorrect.split(" ")])
-                # correctTokens.add("not")
+                if correctTokens == {"no"}:
+                    correctTokens.add("not")
                 currentPrecision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens)
                 currentRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens)
                 currentF1 = 2 * (currentPrecision * currentRecall) / (currentPrecision + currentRecall + 1e-8)
@@ -83,11 +85,14 @@ class VQA(Benchmark):
         # Compute the accuracy for closed questions
         closedQuestionsCorrect = 0
         openQuestionsRecall = []
+        openQuestionsAccuracy = 0
         for idx, isClosed in enumerate(closedQuestions):
             if isClosed and recall[idx] >= 0.4:
                 closedQuestionsCorrect += 1
             elif not isClosed:
                 openQuestionsRecall.append(recall[idx])
+                if recall[idx] >= 0.75:
+                    openQuestionsAccuracy += 1
 
         metrics = {
             "bleu": sum(bleuScores) / len(bleuScores),
@@ -95,6 +100,7 @@ class VQA(Benchmark):
             "recall": sum(recall) / len(recall),
             "closedQuestionsAccuracy": closedQuestionsCorrect / sum(closedQuestions),
             "openQuestionsRecall": sum(openQuestionsRecall) / len(openQuestionsRecall),
+            "openQuestionsAccuracy": openQuestionsAccuracy / len(openQuestionsRecall),
         }
 
         # Compute the scores
