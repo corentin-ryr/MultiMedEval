@@ -28,7 +28,7 @@ class QA(Benchmark):
             for sample in batch:
                 text, img = self.format_question(sample)
                 if self.fewshot:
-                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                    batchPrompts.append((self.getPrompt()[0] + text, self.getPrompt()[1] + img))
                 else:
                     batchPrompts.append((text, img))
 
@@ -43,7 +43,7 @@ class QA(Benchmark):
 
                 answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, pred, gold, pred == gold))
             
-            break
+            # break
 
         # TODO: add others metrics such as AUC, F1...
         metrics = {"accuracy": correct_answers / total_answers}
@@ -53,26 +53,6 @@ class QA(Benchmark):
             {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
-
-  
-    def getPrompt(self):
-        prompt = []
-        images = []
-        for _ in range(3):
-            text, img = self.format_question(
-                self.trainDataset[random.randint(0, len(self.trainDataset))],
-                prompt=True,
-            )
-            prompt += text
-            images += img
-        return (prompt, images)
-
-    def __len__(self):
-        return len(self.dataset)
-
-    @abstractmethod
-    def format_question(self, sample, prompt=False):
-        pass
 
     @abstractmethod
     def getCorrectAnswer(self, sample, fullText=False):
@@ -96,11 +76,10 @@ class MedQA(QA):
             "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=cacheDir, trust_remote_code=True
         )
 
-        if self.engine.params.fewshot:
+        if self.fewshot:
             self.trainDataset = load_dataset(
                 "bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True
             )
-            self.prompt = self.getPrompt()
 
         self.bleuScorer = BLEUScore(n_gram=1)
 
@@ -162,7 +141,7 @@ class PubMedQA(QA):
             trust_remote_code=True
         )
 
-        if self.engine.params.fewshot:
+        if self.fewshot:
             self.trainDataset = load_dataset(
                 "bigbio/pubmed_qa",
                 name="pubmed_qa_labeled_fold1_bigbio_qa",
@@ -170,7 +149,6 @@ class PubMedQA(QA):
                 cache_dir=cacheDir,
                 trust_remote_code=True
             )
-            self.prompt = self.getPrompt()
 
     def getCorrectAnswer(self, sample, fullText=False):
         return sample["answer"][0]
@@ -226,13 +204,12 @@ class MedMCQA(QA):
             cache_dir=cacheDir,
         )
 
-        if self.engine.params.fewshot:
+        if self.fewshot:
             self.trainDataset = load_dataset(
                 "medmcqa",
                 split="train",
                 cache_dir=cacheDir,
             )
-            self.prompt = self.getPrompt()
 
         self.bleuScorer = BLEUScore(n_gram=1)
 

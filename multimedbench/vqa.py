@@ -4,8 +4,6 @@ from multimedbench.utils import Benchmark, batchSampler, Params
 from tqdm import tqdm
 import math
 from multimedbench.utils import cleanStr
-import random
-
 from abc import abstractmethod
 import json
 import os
@@ -13,7 +11,6 @@ import PIL
 import gdown
 from zipfile import ZipFile
 from nltk.stem import WordNetLemmatizer
-import re
 
 
 class VQA(Benchmark):
@@ -42,7 +39,7 @@ class VQA(Benchmark):
             for sample in batch:
                 text, img = self.format_question(sample)
                 if self.fewshot:
-                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                    batchPrompts.append((self.getPrompt()[0] + text, self.getPrompt()[1] + img))
                 else:
                     batchPrompts.append((text, img))
 
@@ -106,26 +103,6 @@ class VQA(Benchmark):
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
 
-
-    def getPrompt(self):
-        prompt = []
-        images = []
-        for _ in range(3):
-            text, img = self.format_question(
-                self.trainDataset[random.randint(0, len(self.trainDataset))],
-                prompt=True,
-            )
-            prompt += text
-            images += img
-        return (prompt, images)
-
-    def __len__(self):
-        return len(self.dataset)
-
-    @abstractmethod
-    def format_question(self, sample, prompt=False):
-        pass
-
     @abstractmethod
     def getCorrectAnswer(self, sample):
         pass
@@ -140,9 +117,8 @@ class VQA_RAD(VQA):
         cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
 
         self.dataset = load_dataset("flaviagiammarino/vqa-rad", split="test", cache_dir=cacheDir)
-        if self.engine.params.fewshot:
+        if self.fewshot:
             self.trainDataset = load_dataset("flaviagiammarino/vqa-rad", split="train", cache_dir=cacheDir)
-            self.prompt = self.getPrompt()
 
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"<img> {sample['question']}"
@@ -168,9 +144,8 @@ class Path_VQA(VQA):
 
         cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
         self.dataset = load_dataset("flaviagiammarino/path-vqa", split="test", cache_dir=cacheDir)
-        if self.engine.params.fewshot:
+        if self.fewshot:
             self.trainDataset = load_dataset("flaviagiammarino/path-vqa", split="train", cache_dir=cacheDir)
-            self.prompt = self.getPrompt()
 
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"<img> {sample['question']}"
@@ -208,13 +183,12 @@ class SLAKE(VQA):
             if sample["q_lang"] == "en":
                 self.dataset.append(sample)
 
-        if self.engine.params.fewshot:
+        if self.fewshot:
             jsonFile = json.load(open(os.path.join(self.path, "train.json"), "r"))
             self.trainDataset = []
             for sample in jsonFile:
                 if sample["q_lang"] == "en":
                     self.trainDataset.append(sample)
-            self.prompt = self.getPrompt()
 
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"<img> {sample['question']}"

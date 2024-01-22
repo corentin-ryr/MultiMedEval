@@ -9,15 +9,6 @@ import re
 from abc import abstractmethod, ABC
 
 
-class dotdict(dict):
-    """dot.notation access to dictionary attributes"""
-
-    __getattr__ = dict.get
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-
-
 class Benchmark(ABC):
     def __init__(self, engine, seed=1111, fewshot=False) -> None:
         self.seed = seed
@@ -27,14 +18,37 @@ class Benchmark(ABC):
         self.fewshot = fewshot
         self.modality = "None"
         self.task = "None"
-        self.prompt = None
+        self._prompt = None
+        self.trainDataset = None
+        self.dataset = None
+
+    def getPrompt(self):
+        if not self.fewshot or not self.trainDataset:
+            return None
+
+        if self._prompt is None:
+            prompt = []
+            images = []
+            for _ in range(3):
+                text, img = self.format_question(
+                    self.trainDataset[random.randint(0, len(self.trainDataset))],
+                    prompt=True,
+                )
+                prompt += text
+                images += img
+            self._prompt = (prompt, images)
+
+        return self._prompt
+
+    def __len__(self):
+        return len(self.dataset)
 
     @abstractmethod
     def run(self, params, batcher):
         pass
 
     @abstractmethod
-    def __len__(self):
+    def format_question(self, sample, prompt=False):
         pass
 
 
@@ -62,15 +76,6 @@ def remove_punctuation(input_string: str):
     return input_string.translate(translator)
 
 
-class RateEstimation:
-    def __init__(self) -> None:
-        self.exectimes = []
-
-    def update(self, value):
-        self.exectimes.append(value)
-
-    def getRate(self):
-        pass
 
 
 def csvWriter(data, path):

@@ -371,12 +371,6 @@ class MIMIC_III(Benchmark):
         with ZipFile(file + ".gz", "r") as zipObj:
             zipObj.extractall(file)
 
-    def __len__(self):
-        return len(self.dataset)
-
-
-
-
 
 
 

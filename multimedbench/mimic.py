@@ -112,7 +112,7 @@ class MIMIC_CXR_reportgen(Benchmark):
                 bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
                 rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
 
-            break
+            # break
 
         f1_bertscore = self.compute_bertscore(hypReports, refReports)
 
@@ -300,6 +300,3 @@ class MIMIC_CXR_reportgen(Benchmark):
         file = os.path.join(self.path, "NOTEEVENTS.csv")
         with ZipFile(file + ".gz", "r") as zipObj:
             zipObj.extractall(file)
-
-    def __len__(self):
-        return len(self.dataset)

@@ -20,6 +20,7 @@ import random
 from requests.auth import HTTPBasicAuth
 import requests
 from abc import abstractmethod
+from torch.utils.data import DataLoader
 
 
 class ImageClassification(Benchmark):
@@ -38,6 +39,7 @@ class ImageClassification(Benchmark):
         answersLog = []
 
         # Run the batcher for all data split in chunks
+        # dataloader = DataLoader(self.dataset, batch_size=params.batch_size)
         for batch in tqdm(
             batchSampler(self.dataset, params.batch_size),
             total=math.ceil(len(self.dataset) / params.batch_size),
@@ -46,8 +48,8 @@ class ImageClassification(Benchmark):
             batchPrompts = []
             for sample in batch:
                 text, img = self.format_question(sample)
-                if self.fewshot and self.prompt is not None:
-                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                if self.fewshot and self.getPrompt() is not None:
+                    batchPrompts.append((self.getPrompt()[0] + text, self.getPrompt()[1] + img))
                 else:
                     batchPrompts.append((text, img))
 
@@ -94,20 +96,6 @@ class ImageClassification(Benchmark):
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
 
-    def __len__(self):
-        return len(self.dataset)
-
-    def getPrompt(self):
-        prompt = []
-        images = []
-        for _ in range(3):
-            text, img = self.format_question(
-                self.trainDataset[random.randint(0, len(self.trainDataset))],
-                prompt=True,
-            )
-            prompt += text
-            images += img
-        return (prompt, images)
     
     @abstractmethod
     def getCorrectAnswer(self, sample, fullText=False) -> int:
@@ -162,7 +150,6 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
             chexbertMimicTrain = chexbertMimic[chexbertMimic.study_id.isin(trainSplit.study_id)]
             chexbertMimicTrain = chexbertMimicTrain.merge(trainSplit, on=["study_id", "subject_id"])
             self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
-            self.prompt = self.getPrompt()
 
         self.labelNames = [
             "Enlarged Cardiomediastinum",
@@ -250,11 +237,10 @@ class VinDr_Mammo(ImageClassification):
 
         self.dataset = datasets.Dataset.from_pandas(annotationsTest)
 
-        if self.engine.params.fewshot:
+        if self.fewshot:
             annotationsTrain = annotations[annotations["split"] == "training"]
             annotationsTrain = annotationsTrain[annotationsTrain["finding_birads"].notna()]
             self.trainDataset = datasets.Dataset.from_pandas(annotationsTrain)
-            self.prompt = self.getPrompt()
 
     def format_question(self, sample, prompt=False):
         formattedText = [
@@ -354,7 +340,7 @@ class Pad_UFES_20(ImageClassification):
             "NEV": "Nevus (NEV)",
         }
 
-        self.prompt = None
+        self.fewshot = False
 
     def format_question(self, sample):
         patientInfo = {
@@ -477,19 +463,17 @@ class CBIS_DDSM(ImageClassification):
         self.options = ["BENIGN", "MALIGNANT", "BENIGN_WITHOUT_CALLBACK"]
 
         self.dataset = pd.read_csv(os.path.join(self.path, "csv", f"{abnormality}_case_description_test_set.csv"))
-        # only keep the columns "pathology" and "cropped image file path"
-        self.dataset = self.dataset[["pathology", "cropped image file path", "image file path"]]
+        self.dataset = self.dataset[["pathology", "cropped image file path"]]
         self._fix_image_path(self.dataset)
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
-        if self.engine.params.fewshot:
+        if self.fewshot:
             self.trainDataset = pd.read_csv(
                 os.path.join(self.path, "csv", f"{abnormality}_case_description_train_set.csv")
             )
-            self.trainDataset = self.trainDataset[["pathology", "cropped image file path", "image file path"]]
+            self.trainDataset = self.trainDataset[["pathology", "cropped image file path"]]
             self._fix_image_path(self.trainDataset)
             self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
-            self.prompt = self.getPrompt()
 
     def getPredictedAnswer(self, answer: str) -> int:
         answer = cleanStr(answer)
@@ -519,18 +503,12 @@ class CBIS_DDSM(ImageClassification):
         for idx in range(len(data)):
             sample = data.iloc[idx]
 
-            img_name = sample["image file path"].split("/")[2]
-            if img_name in self.full_mammo_dict:
-                imagePath = self.full_mammo_dict[img_name]
-            else:
-                imagePath = self.nan_dict[img_name]
-            data.iloc[idx, data.columns.get_loc("image file path")] = imagePath
-
             img_name = sample["cropped image file path"].split("/")[2]
             if img_name in self.cropped_images_dict:
                 imagePath = self.cropped_images_dict[img_name]
-            else:
+            elif img_name in self.nan_dict:
                 imagePath = self.nan_dict[img_name]
+                    
             data.iloc[idx, data.columns.get_loc("cropped image file path")] = imagePath
 
 
