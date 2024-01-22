@@ -1,4 +1,4 @@
-from multimedbench.utils import Benchmark, batchSampler, Params, cleanStr
+from multimedbench.utils import Benchmark, batchSampler, Params, cleanStr, collate_fn
 from tqdm import tqdm
 import math
 from torchmetrics import F1Score, AUROC
@@ -39,10 +39,9 @@ class ImageClassification(Benchmark):
         answersLog = []
 
         # Run the batcher for all data split in chunks
-        # dataloader = DataLoader(self.dataset, batch_size=params.batch_size)
+        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
         for batch in tqdm(
-            batchSampler(self.dataset, params.batch_size),
-            total=math.ceil(len(self.dataset) / params.batch_size),
+            dataloader,
             desc="Running inference",
         ):
             batchPrompts = []
@@ -227,6 +226,7 @@ class VinDr_Mammo(ImageClassification):
         self._generateDataset()
 
         self.num_classes = 5
+        self.scoringType = "multiclass"
 
         # Open the finding_annotation.csv file
         annotations = pd.read_csv(os.path.join(self.path, "finding_annotations.csv"))
@@ -271,7 +271,7 @@ class VinDr_Mammo(ImageClassification):
     def getPredictedAnswer(self, answer: str) -> int:
         # Find the numbers in the string answer
         findings = [int(s) for s in answer.split() if s.isdigit()]
-        if len(findings) > 0 and findings[0] <= 5:
+        if len(findings) > 0 and findings[0] <= 5 and findings[0] >= 1:
             return findings[0] - 1
         else:
             return random.randint(0, 4)  # 5 classes so 0 to 4
@@ -319,6 +319,7 @@ class Pad_UFES_20(ImageClassification):
         self.modality = "Dermatology"
 
         self.num_classes = 7
+        self.scoringType = "multiclass"
 
         self.path = self.engine.getConfig()["Pad-UFES-20"]["path"]
 
@@ -427,6 +428,7 @@ class CBIS_DDSM(ImageClassification):
     def setup(self, abnormality: str):
         self.modality = "Mammography"
         self.num_classes = 3
+        self.scoringType = "multiclass"
 
         # Get the dataset from Kaggle
         self.path = self.engine.getConfig()["CBIS-DDSM"]["path"]

@@ -26,6 +26,7 @@ from nltk.tokenize import word_tokenize
 from zipfile import ZipFile
 import requests
 from requests.auth import HTTPBasicAuth
+from torch.utils.data import DataLoader
 
 
 class MIMIC_CXR_reportgen(Benchmark):
@@ -95,9 +96,9 @@ class MIMIC_CXR_reportgen(Benchmark):
         rougeLScores = []
 
         # Run the batcher for all data split in chunks
+        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
         for batch in tqdm(
-            batchSampler(self.dataset, params.batch_size),
-            total=math.ceil(len(self.dataset) / params.batch_size),
+            dataloader,
             desc="Generating reports",
         ):
             batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
