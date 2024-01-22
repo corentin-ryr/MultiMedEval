@@ -66,22 +66,6 @@ class MedNLI(Benchmark):
             {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
-
-
-    def getPrompt(self):
-        prompt = []
-        images = []
-        for _ in range(3):
-            text, img = self.format_question(
-                self.trainDataset[random.randint(0, len(self.trainDataset))],
-                prompt=True,
-            )
-            prompt += text
-            images += img
-        return (prompt, images)
-
-    def __len__(self):
-        return len(self.dataset)
     
 
     def format_question(self, sample, prompt=False):

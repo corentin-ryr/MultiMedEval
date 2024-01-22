@@ -52,10 +52,9 @@ class MNIST(ImageClassification):
         
         self.dataset = wrapperGenerator(self.dataset)
 
-        if self.engine.params.fewshot:
+        if self.fewshot:
             self.trainDataset = NAME_TO_MNIST[mnistName]["class"](split="train", download=True, root=self.cacheDir)
             self.trainDataset = wrapperGenerator(self.trainDataset)
-            self.prompt = self.getPrompt()
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
         label = sample["label"].tolist()
@@ -81,7 +80,7 @@ class MNIST(ImageClassification):
             }
         ]
         if prompt:
-            formattedText.append({"role": "assistant", "content": f"{sample['label'].lower()}"})
+            formattedText.append({"role": "assistant", "content": f"{self.getCorrectAnswer(sample, fullText=True)}"})
 
         return (formattedText, [sample["image"]])
 
@@ -110,54 +109,63 @@ class MNIST(ImageClassification):
 
 class MNIST_Oct(MNIST):
     def __init__(self, **kwargs) -> None:
-        self.question = "Diagnose this retina OCT."
         super().__init__("OCTMNIST", **kwargs)
+        self.question = "Diagnose this retina OCT."
 
 class MNIST_Path(MNIST):
     def __init__(self, **kwargs) -> None:
-        self.question = "Which kind of tissue is represented in the image?"
         super().__init__("PathMNIST", **kwargs)
+        self.question = "Which kind of tissue is represented in the image?"
 
 class MNIST_Pneumonia(MNIST):
     def __init__(self, **kwargs) -> None:
-        self.question = "Diagnose this chest X-Ray."
         super().__init__("PneumoniaMNIST", **kwargs)
+        self.question = "Diagnose this chest X-Ray."
 
 class MNIST_Retina(MNIST):
     def __init__(self, **kwargs) -> None:
-        self.question = "Grade this diabetic retinopathy following the international clinical DR severity scale."
         super().__init__("RetinaMNIST", **kwargs)
+        self.question = "Grade this diabetic retinopathy following the international clinical DR severity scale."
 
 class MNIST_Blood(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("BloodMNIST", **kwargs)
+        self.question = "What kind of peripheral blood cells is shown in the image?"
 
 class MNIST_Chest(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("ChestMNIST", **kwargs)
+        self.question = "Which thoracic diseases can be seen in this chest X-Ray?"
 
 class MNIST_OrganA(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("OrganAMNIST", **kwargs)
+        self.question = "Which organ is present in the image?"
 
 class MNIST_OrganC(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("OrganCMNIST", **kwargs)
+        self.question = "Which organ is present in the image?"
 
 class MNIST_Derma(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("DermaMNIST", **kwargs)
+        self.question = "Which skin disease is present in the image?"
 
 class MNIST_Breast(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("BreastMNIST", **kwargs)
+        self.question = "Does this breast ultrasound show sign of malignant tumor or is it benign?"
 
 class MNIST_Tissue(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("TissueMNIST", **kwargs)
+        self.question = "What kind of tissue is represented in the image?"
 
 class MNIST_OrganS(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("OrganSMNIST", **kwargs)
+        self.question = "Which organ is present in the image?"
+
 
     

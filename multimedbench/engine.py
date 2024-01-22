@@ -34,7 +34,7 @@ TASKS: dict[str, Benchmark] = {
     "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
     "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
     "MIMIC-III": MIMIC_III,
-    "MedNLI": MedNLI,
+    # "MedNLI": MedNLI,
     "MNIST-Oct": MNIST_Oct,
     "MNIST-Path": MNIST_Path,
     "MNIST-Blood": MNIST_Blood,
@@ -110,7 +110,7 @@ class MMB(object):
                 self.tasksReady[taskName] = {"ready": True, "task": taskBenchmark}
 
             progressBar.update(1)
-
+        progressBar.close()
 
         # Print a table of the tasks and their status
         print("\n\n")
