@@ -23,7 +23,8 @@ We include 12 tasks representing a range of different imaging modalities.
 | MIMIC-III                      | Summarization of radiology reports                                                                | Text           |
 
 <p align="center">
-    <img src="dataset_stats/modalities.png" alt="modality sunburst graph">
+    <img src="dataset_stats/modalities.png" alt="modality sunburst graph" style="margin-right: 2.5%;" width="40%">
+    <img src="dataset_stats/tasks.png" alt="modality sunburst graph" style="margin-left: 2.5%;" width="40%">
     <br>
     <em>Representation of the modalities and tasks in MultiMedBench</em>
 </p>
@@ -98,7 +99,13 @@ Each input is a tuple of:
 ]
 ```
 
-Here is an example of a `batcher`. This example shows the implementation of a batcher as a callable class. It initializes the Mistral model (a language-only model) and queries it in the `__call__` function.
+Here is an example of a `batcher` without any logic:
+```python
+def batcher(prompts:list[tuple]) -> list[str]:
+    return ["Answer" for _ in prompts]
+``` 
+
+Here is anotther example of a `batcher` this time implemented as a callable class. It initializes the Mistral model (a language-only model) and queries it in the `__call__` function.
 
 ```python
 class batcherMistral:
@@ -124,7 +131,7 @@ To run the benchmark, call the `eval` method of the `MMB` class.
 
 ```python
 from multimedbench import MMB, Params
-engine = MMB(params=Params(), batcher=batcherMistral)
+engine = MMB(params=Params(), batcher=batcherMistral())
 
 engine.eval(["MedQA", "VQA-RAD", "MIMIC-CXR-ReportGeneration"])
 ```
@@ -132,9 +139,11 @@ engine.eval(["MedQA", "VQA-RAD", "MIMIC-CXR-ReportGeneration"])
 ## MultiMedBench parameters
 
 The `Params` class takes the following arguments:
-* seed: an int initialized as `1111`
 * batch_size: an int initialized as `128` and representing the number of prompt sent to the batcher at once.
 * run_name: a string initialized as the current date. It will be the name of the folder where the results are saved.
+* fewshot: a bool to indicate whether or not to add example prompt before test prompts.
+* num_workers: an int defining how many workers to use in the dataloader.
+* device: a string defining where to run the evaluation.
 
 ## References
 

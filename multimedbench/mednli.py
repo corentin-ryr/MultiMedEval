@@ -1,12 +1,11 @@
-from multimedbench.utils import Benchmark, batchSampler, Params
-from datasets import load_dataset
+from multimedbench.utils import Benchmark, Params
 from tqdm import tqdm
-import math
-import random
-from multimedbench.utils import remove_punctuation
 import os
 import requests
 from requests.auth import HTTPBasicAuth
+import pandas as pd
+from datasets import Dataset
+from torch.utils.data import DataLoader
 
 class MedNLI(Benchmark):
 
@@ -19,8 +18,17 @@ class MedNLI(Benchmark):
         self.path = self.engine.getConfig()["physionetCacheDir"]["path"]
         self._generate_dataset()
 
-        self.options = ['entailment', 'neutral', 'contradiction']
+        testSet = pd.read_json(path_or_buf=os.path.join(self.path, "mli_test_v1.jsonl"), lines=True)
 
+        self.options = testSet["gold_label"].unique().tolist()
+
+        testSet = testSet[["sentence1", "sentence2", "gold_label"]]
+        self.dataset = Dataset.from_pandas(testSet)
+
+        if self.fewshot:
+            trainSet = pd.read_json(path_or_buf=os.path.join(self.path, "mli_train_v1.jsonl"), lines=True)
+            trainSet = trainSet[["sentence1", "sentence2", "gold_label"]]
+            self.trainDataset = Dataset.from_pandas(trainSet)
 
 
     def run(self, params: Params, batcher):
@@ -31,17 +39,16 @@ class MedNLI(Benchmark):
 
         answersLog = []
 
-        # Run the batcher for all data split in chunks
+        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
         for batch in tqdm(
-            batchSampler(self.dataset, params.batch_size),
-            total=math.ceil(len(self.dataset) / params.batch_size),
+            dataloader,
             desc="Running inference",
         ):
             batchPrompts = []
             for sample in batch:
                 text, img = self.format_question(sample)
                 if self.fewshot:
-                    batchPrompts.append((self.prompt[0] + text, self.prompt[1] + img))
+                    batchPrompts.append((self.getPrompt()[0] + text, self.getPrompt()[1] + img))
                 else:
                     batchPrompts.append((text, img))
 
@@ -54,11 +61,8 @@ class MedNLI(Benchmark):
                     correct_answers += 1
                 total_answers += 1
 
-                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, pred, gold, pred == gold))
+                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, pred == gold))
             
-            break
-
-        # TODO: add others metrics such as AUC, F1...
         metrics = {"accuracy": correct_answers / total_answers}
 
         # Compute the scores
@@ -69,36 +73,39 @@ class MedNLI(Benchmark):
     
 
     def format_question(self, sample, prompt=False):
-        print(sample)
-        raise Exception("Not implemented")
-
-        
-
-        formattedQuestion = f"{question}\n"
-        formattedQuestion += (
-            "Options:\n" + "\n".join([f'{option["key"]}: {option["value"]}.' for option in self.options]) + "\n"
-        )
-        formattedQuestion += "What is the correct answer?"
+        formattedQuestion = f"Sentence 1: {sample['sentence1']}\nSentence 2: {sample['sentence2']}\n"
+        formattedQuestion += "Determine the logical relationship between these two sentences. Does the second sentence logically follows from the first (entailment), contradicts the first (contradiction), or if there is no clear logical relationship between them (neutral)?"
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:
-            formattedAnswer = "The answer is " + sample["answer_idx"] + "."
+            formattedAnswer = "The logical relationship is " + sample["gold_label"] + "."
             question.append({"role": "assistant", "content": formattedAnswer})
 
         return (question, [])
 
     def getCorrectAnswer(self, sample, fullText=False):
-        pass
+        return sample["gold_label"]
 
     def getPredictedAnswer(self, pred: str, sample):
-        pass
+        # Check if the prediction contains each of the options
+        scores = []
+        for option in self.options:
+            scores.append(option in pred)
+        
+        if sum(scores) != 1:
+            return "Invalid answer"
+        
+        return self.options[scores.index(True)]
+
+
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
+        # Path /shares/menze.dqbm.uzh/corentin/physionetCacheDir/physionet.org/files/mednli/1.0.0
         if os.path.exists(
-            os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0", "finding_annotations.csv")
+            os.path.join(self.path, "physionet.org", "files", "mednli", "1.0.0", "mli_test_v1.jsonl")
         ):
-            self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
+            self.path = os.path.join(self.path, "physionet.org", "files", "mednli", "1.0.0")
             return
 
         os.makedirs(self.path, exist_ok=True)
@@ -119,6 +126,6 @@ class MedNLI(Benchmark):
 
             raise Exception("Failed to download the dataset")
 
-        self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
+        self.path = os.path.join(self.path, "physionet.org", "files", "mednli", "1.0.0")
 
         

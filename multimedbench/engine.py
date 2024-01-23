@@ -54,13 +54,13 @@ TASKS: dict[str, Benchmark] = {
     "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
     "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
     "MIMIC-III": MIMIC_III,
-    # "MedNLI": MedNLI,
+    "MedNLI": MedNLI,
     "MNIST-Oct": MNIST_Oct,
     "MNIST-Path": MNIST_Path,
     "MNIST-Blood": MNIST_Blood,
     "MNIST-Breast": MNIST_Breast,
     "MNIST-Derma": MNIST_Derma,
-    "MNIST-OrganA": MNIST_OrganA,
+    # "MNIST-OrganA": MNIST_OrganA,
     # "MNIST-Chest": MNIST_Chest,
     "MNIST-OrganC": MNIST_OrganC,
     "MNIST-OrganS": MNIST_OrganS,
@@ -102,6 +102,7 @@ class MMB(object):
         try:
             self._prepare_radgraph()
         except Exception as e:
+            raise e
             self.tasksReady["RadGraph"] = {"ready": False, "error": str(e)}
         else:
             self.tasksReady["RadGraph"] = {"ready": True}
@@ -121,7 +122,7 @@ class MMB(object):
             try:
                 if taskName in tasksToSkip:
                     raise Exception(f"Task {taskName} is skipped")
-                taskBenchmark = TASKS[taskName](seed=self.params.seed, engine=self, fewshot=self.params.fewshot)
+                taskBenchmark = TASKS[taskName](engine=self, fewshot=self.params.fewshot)
             except Exception as e:
                 self.tasksReady[taskName] = {"ready": False, "error": str(e)}
             else:
@@ -155,6 +156,8 @@ class MMB(object):
 
         # evaluate on evaluation [name], either takes string or list of strings
         if isinstance(name, list):
+            if len(name) == 0:
+                name = list(TASKS.keys())
             self.results = {}
             for x in name:
                 currentResults = self.eval(x)
@@ -165,7 +168,7 @@ class MMB(object):
             return self.results
 
         if name not in TASKS:
-            warn(f"Task {name} not in {TASKS.keys()}", )
+            warn(f"Task {name} not in {list(TASKS.keys())}", )
             return None
         
         # Check if the requirements are satisfied
@@ -217,7 +220,9 @@ class MMB(object):
             print("There was an error during the download and install of RadGraph")
             raise e
 
-        self.radgraph = RadGraph(reward_level="partial")
+        device = -1 if self.params.device != "cuda" else 0
+        self.radgraph = RadGraph(reward_level="partial", cuda=device)
+        
 
     def _prepare_chexbert(self):
         # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9

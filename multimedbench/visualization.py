@@ -35,8 +35,11 @@ class BenchmarkVisualizer:
         df = pd.DataFrame(columns=["title", "modality", "task", "dataset", "size"], data=data)
 
         fig = px.sunburst(df, path=["title", "modality", "task", "dataset"], values="size")
-        fig.update_layout(title_text=f"Modality (Total samples: {totalSamples})")
-        fig.write_image(Path(self.folderName, "modalities.png"), scale=1.0, width=1920, height=1080)
+        fig.update_layout(margin=dict(t=0, l=0, r=0, b=0))
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+
+        # fig.update_layout(title_text=f"Modality (Total samples: {totalSamples})")
+        fig.write_image(Path(self.folderName, "modalities.png"), scale=1.0, width=750, height=750)
         # fig.write_html(Path(self.folderName, "modalities.html"))
 
     def sunburstTasks(self):
@@ -63,8 +66,11 @@ class BenchmarkVisualizer:
         df = pd.DataFrame(columns=["title", "modality", "task", "dataset", "size"], data=data)
 
         fig = px.sunburst(df, path=["title", "task", "modality", "dataset"], values="size")
-        fig.update_layout(title_text=f"Task (Total samples: {totalSamples})")
-        fig.write_image(Path(self.folderName, "tasks.png"), scale=1.0, width=1920, height=1080)
+        fig.update_layout(margin=dict(t=0, l=0, r=0, b=0))
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+
+        # fig.update_layout(title_text=f"Task (Total samples: {totalSamples})")
+        fig.write_image(Path(self.folderName, "tasks.png"), scale=1.0, width=750, height=750)
         # fig.write_html(Path(self.folderName, "tasks.html"))
 
     def tableImageClassification(self):
