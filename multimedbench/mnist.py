@@ -161,6 +161,9 @@ class MNIST_Tissue(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("TissueMNIST", **kwargs)
         self.question = "What kind of tissue is represented in the image?"
+    
+    def __len__(self):
+        return super().__len__() // 4
 
 class MNIST_OrganS(MNIST):
     def __init__(self, **kwargs) -> None:

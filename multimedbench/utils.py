@@ -3,16 +3,14 @@ import string
 from datetime import datetime
 import csv
 import json
-import random
 import numpy as np
 import re
 from abc import abstractmethod, ABC
+import torch
 
 
 class Benchmark(ABC):
-    def __init__(self, engine, seed=1111, fewshot=False) -> None:
-        self.seed = seed
-        random.seed(self.seed)
+    def __init__(self, engine, fewshot=False) -> None:
         self.taskName = "None"
         self.engine = engine
         self.fewshot = fewshot
@@ -29,9 +27,10 @@ class Benchmark(ABC):
         if self._prompt is None:
             prompt = []
             images = []
-            for _ in range(3):
+            for i in range(3):
+                index = int(i / 3 * len(self.trainDataset))
                 text, img = self.format_question(
-                    self.trainDataset[random.randint(0, len(self.trainDataset))],
+                    self.trainDataset[index],
                     prompt=True,
                 )
                 prompt += text
@@ -54,20 +53,22 @@ class Benchmark(ABC):
 
 @dataclass
 class Params:
-    seed: int = 1111
     batch_size: int = 128
     run_name: str = f"run {datetime.now()}"
     fewshot: bool = False
     num_workers: int = 0
+    device: str = "cuda"
 
+    def __post_init__(self):
+        if self.device != "cpu":
+            # Check if the device is available (handle cuda and mps)
+            if self.device == "cuda" and not torch.cuda.is_available():
+                self.device = "cpu"
+            
+            elif self.device == "mps" and not torch.backends.mps.is_available():
+                self.device = "cpu"
+                
 
-def batchSampler(samples, n):
-    for i in range(0, len(samples), n):
-        # if is a panda dataframe
-        if hasattr(samples, "iloc"):
-            yield samples.iloc[i : min(i + n, len(samples))]
-        else:
-            yield [samples[j] for j in range(i, min(i + n, len(samples)))]
 
 
 def remove_punctuation(input_string: str):

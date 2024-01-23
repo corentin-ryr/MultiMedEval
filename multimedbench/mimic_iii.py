@@ -338,7 +338,7 @@ class MIMIC_III(Benchmark):
         
         os.makedirs(self.path, exist_ok=True)
 
-        url = "https://physionet.org/files/mimiciii/1.4/"
+        url = "https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv"
         username, password = self.engine.getPhysioNetCredentials()
         response = requests.get(url, auth=HTTPBasicAuth(username, password), stream=True)
 

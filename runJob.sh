@@ -10,14 +10,11 @@ conda activate multimedbench
 free
 nvidia-smi
 
-# (optional) confirm the gpu is available. The output should show basic information about at least
-# one GPU.
-# watch -n0.1 nvidia-smi
-
 # Run the benchmark script
 # python benchmark.py
 python testTasks.py
 # python MIMIC_entity_extraction.py
+
 
 
 

@@ -10,13 +10,11 @@ from bert_score import BERTScorer
 
 from multimedbench.utils import (
     Benchmark,
-    batchSampler,
     Params,
     remove_punctuation,
     exact_entity_token_if_rel_exists_reward,
     section_text,
 )
-import math
 from torchmetrics.text import BLEUScore, ROUGEScore
 
 import torch
