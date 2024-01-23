@@ -81,7 +81,7 @@ Each input is a tuple of:
     (
         [
             {"role": "user", "content": "This is a question with an image <img>."}, 
-            {"role": "asssitant", "content": "This is the answer."},
+            {"role": "assistant", "content": "This is the answer."},
             {"role": "user", "content": "This is a question with an image <img>."}, 
         ], 
         [PIL.Image(), PIL.Image()]
@@ -89,7 +89,7 @@ Each input is a tuple of:
     (
         [
             {"role": "user", "content": "This is a question without images."},
-            {"role": "asssitant", "content": "This is the answer."},
+            {"role": "assistant", "content": "This is the answer."},
             {"role": "user", "content": "This is a question without images."}, 
         ], 
         []
@@ -98,7 +98,7 @@ Each input is a tuple of:
 ]
 ```
 
-Here is an example of a `batcher`. This example shows the implementation of a batcher as a callable class. It initializes the Mistral model (a language only model) and queries it in the `__call__` function.
+Here is an example of a `batcher`. This example shows the implementation of a batcher as a callable class. It initializes the Mistral model (a language-only model) and queries it in the `__call__` function.
 
 ```python
 class batcherMistral:
@@ -124,7 +124,7 @@ To run the benchmark, call the `eval` method of the `MMB` class.
 
 ```python
 from multimedbench import MMB, Params
-engine = MMB(params=Params(), batcher=batcher)
+engine = MMB(params=Params(), batcher=batcherMistral)
 
 engine.eval(["MedQA", "VQA-RAD", "MIMIC-CXR-ReportGeneration"])
 ```
