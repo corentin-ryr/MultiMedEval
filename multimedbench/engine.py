@@ -36,37 +36,39 @@ import getpass
 import nltk
 from multimedbench.visualization import BenchmarkVisualizer
 from collections.abc import Callable
+from radgraph import RadGraph
+
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 TASKS: dict[str, Benchmark] = {
-    "MedQA": MedQA,
-    "PubMedQA": PubMedQA,
-    "MedMCQA": MedMCQA,
-    "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen,
-    "VQA-RAD": VQA_RAD,
-    "Path-VQA": Path_VQA,
-    "SLAKE": SLAKE,
-    "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification,
-    "VinDr-Mammo": VinDr_Mammo,
-    "Pad-UFES-20": Pad_UFES_20,
-    "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
-    "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
-    "MIMIC-III": MIMIC_III,
-    "MedNLI": MedNLI,
-    "MNIST-Oct": MNIST_Oct,
-    "MNIST-Path": MNIST_Path,
-    "MNIST-Blood": MNIST_Blood,
-    "MNIST-Breast": MNIST_Breast,
-    "MNIST-Derma": MNIST_Derma,
-    # "MNIST-OrganA": MNIST_OrganA,
-    # "MNIST-Chest": MNIST_Chest,
-    "MNIST-OrganC": MNIST_OrganC,
-    "MNIST-OrganS": MNIST_OrganS,
-    "MNIST-Pneumonia": MNIST_Pneumonia,
-    "MNIST-Retina": MNIST_Retina,
-    "MNIST-Tissue": MNIST_Tissue,
+    # "MedQA": MedQA,
+    # "PubMedQA": PubMedQA,
+    # "MedMCQA": MedMCQA,
+    # # "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen, # NOT WORKING
+    # "VQA-RAD": VQA_RAD,
+    # "Path-VQA": Path_VQA,
+    # "SLAKE": SLAKE, # NOT WORKING
+    # # "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification, # NOT WORKING
+    "VinDr-Mammo": VinDr_Mammo, # NOT WORKING
+    # "Pad-UFES-20": Pad_UFES_20,
+    # "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
+    # "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
+    "MIMIC-III": MIMIC_III, # NOT WORKING
+    # "MedNLI": MedNLI,
+    # "MNIST-Oct": MNIST_Oct,
+    # "MNIST-Path": MNIST_Path,
+    # "MNIST-Blood": MNIST_Blood,
+    # "MNIST-Breast": MNIST_Breast,
+    # "MNIST-Derma": MNIST_Derma,
+    # # # # "MNIST-OrganA": MNIST_OrganA,
+    # # # # "MNIST-Chest": MNIST_Chest,
+    # "MNIST-OrganC": MNIST_OrganC,
+    # "MNIST-OrganS": MNIST_OrganS,
+    # "MNIST-Pneumonia": MNIST_Pneumonia,
+    # "MNIST-Retina": MNIST_Retina,
+    # "MNIST-Tissue": MNIST_Tissue,
 }
 
 TASKS_REQUIREMENTS: dict[str, list[str]] = {
@@ -102,7 +104,6 @@ class MMB(object):
         try:
             self._prepare_radgraph()
         except Exception as e:
-            raise e
             self.tasksReady["RadGraph"] = {"ready": False, "error": str(e)}
         else:
             self.tasksReady["RadGraph"] = {"ready": True}
@@ -194,32 +195,6 @@ class MMB(object):
         return taskResult
 
     def _prepare_radgraph(self):
-        # Open the MedMD_config json file and get the download location for radgraph
-        output = self.getConfig()["RadGraph"]["dlLocation"]
-
-        if not os.path.exists(os.path.join(output, "scorers")):
-            gdown.download("https://drive.google.com/uc?id=1koePS_rgP5_zNUeqnQgdQ89nQEolTEbR", output, quiet=False)
-
-            # Unzip the archive and delete the archive
-            import zipfile
-
-            with zipfile.ZipFile(os.path.join(output, "scorers.zip"), "r") as zip_ref:
-                zip_ref.extractall(os.path.join(output, "scorers"))
-            os.remove(os.path.join(output, "scorers.zip"))
-        # else:
-        #     print("RadGraph already downloaded")
-
-        # Add the RadGraph to the path
-        sys.path.append(output)
-
-        try:
-            from scorers.RadGraph.RadGraph import (
-                RadGraph,
-            )  # It is normal that the import is not found by the IDE because it will be downloaded and installed at runtime
-        except Exception as e:
-            print("There was an error during the download and install of RadGraph")
-            raise e
-
         device = -1 if self.params.device != "cuda" else 0
         self.radgraph = RadGraph(reward_level="partial", cuda=device)
         
@@ -240,11 +215,16 @@ class MMB(object):
 
     def getPhysioNetCredentials(self):
         if self._physionet_password is None or self._physionet_username is None:
-            print(
-                "To setup tasks requiring a PhysioNet dataset, the scripts requires the PhysioNet username and password."
-            )
-            self._physionet_username = input("Enter your username: ")
-            self._physionet_password = getpass.getpass("Enter your password: ")
+            physionetConfig = self.getConfig()["physionet"]
+            if "username" in physionetConfig and "password" in physionetConfig:
+                self._physionet_username = physionetConfig["username"]
+                self._physionet_password = physionetConfig["password"]
+            else:
+                print(
+                    "To setup the tasks that use a PhysioNet dataset, the scripts requires the PhysioNet username and password."
+                )
+                self._physionet_username = input("Enter your username: ")
+                self._physionet_password = getpass.getpass("Enter your password: ")
 
         return self._physionet_username, self._physionet_password
 

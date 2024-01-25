@@ -19,3 +19,4 @@ jsonpickle # For RadGraph
 h5py # For RadGraph
 tensorboardX # For RadGraph
 medmnist
+radgraph==0.0.8

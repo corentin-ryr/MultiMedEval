@@ -25,6 +25,7 @@ from zipfile import ZipFile
 import requests
 from requests.auth import HTTPBasicAuth
 from torch.utils.data import DataLoader
+import subprocess
 
 
 class MIMIC_CXR_reportgen(Benchmark):
@@ -44,9 +45,8 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.chexbertPath = self.engine.getConfig()["CheXBert"]["dlLocation"]
 
         # Get the dataset ====================================================================
-        self.path = self.engine.getConfig()["MIMIC-CXR"]["path"]
-
-        # self._generate_dataset()
+        self.path = self.engine.getConfig()["physionet"]["path"]
+        self._generate_dataset()
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
@@ -271,31 +271,20 @@ class MIMIC_CXR_reportgen(Benchmark):
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv")):
-            self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv")):
+            self.path = os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0")
             return
 
         os.makedirs(self.path, exist_ok=True)
 
-        url = "https://physionet.org/files/mimiciii/1.4/"
         username, password = self.engine.getPhysioNetCredentials()
-        response = requests.get(url, auth=HTTPBasicAuth(username, password), stream=True)
+        wget_command = f'wget -r -c -np -nc --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/' # Can replace -nc (no clobber) with -N (timestamping)
 
-        if response.status_code == 200:
-            with open(self.path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-            print(f"Download successful. File saved to: {self.path}")
-        else:
-            print(f"Failed to download. Status code: {response.status_code}")
-            print(response.text)
+        subprocess.run(wget_command, shell=True, check=True)
+        
+        self.path = os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0")
 
-            raise Exception("Failed to download the dataset")
-
-        self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
-
-        # Unzip the NOTEEVENTS file
-        file = os.path.join(self.path, "NOTEEVENTS.csv")
+        # Unzip the mimic-cxr-2.0.0-split file
+        file = os.path.join(self.path, "mimic-cxr-2.0.0-split.csv")
         with ZipFile(file + ".gz", "r") as zipObj:
             zipObj.extractall(file)

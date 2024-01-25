@@ -43,7 +43,7 @@ The setup script needs a configuration file containing the destination folder fo
 ```json
 {
   "huggingfaceCacheDir": {"path": ""},
-  "physionetCacheDir": {"path": ""},
+  "physionet": {"path": ""},
   "SLAKE": {"path": ""},
   "MIMIC-CXR": {"path":"/PATH/mimic-cxr-jpg/2.0.0"},
   "RadGraph": {"dlLocation": ""},
