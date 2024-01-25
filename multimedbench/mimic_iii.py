@@ -13,9 +13,7 @@ from zipfile import ZipFile
 from multimedbench.chexbert.label import encode
 import dill
 from bert_score import BERTScorer
-import requests
-from requests.auth import HTTPBasicAuth
-import csv
+import subprocess
 from torch.utils.data import DataLoader
 
 def get_final_report(text):
@@ -84,7 +82,7 @@ class MIMIC_III(Benchmark):
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
-        self.path = self.engine.getConfig()["physionetCacheDir"]["path"]
+        self.path = self.engine.getConfig()["physionet"]["path"]
         self.chexbertPath = self.engine.getConfig()["CheXBert"]["dlLocation"]
 
         self._generate_dataset()
@@ -337,22 +335,12 @@ class MIMIC_III(Benchmark):
             return
         
         os.makedirs(self.path, exist_ok=True)
-
-        url = "https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv"
+        
         username, password = self.engine.getPhysioNetCredentials()
-        response = requests.get(url, auth=HTTPBasicAuth(username, password), stream=True)
+        wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz'
 
-        if response.status_code == 200:
-            with open(self.path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-            print(f"Download successful. File saved to: {self.path}")
-        else:
-            print(f"Failed to download. Status code: {response.status_code}")
-            print(response.text)
-
-            raise Exception("Failed to download the dataset")
+        subprocess.run(wget_command, shell=True, check=True)
+       
         
         self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
         

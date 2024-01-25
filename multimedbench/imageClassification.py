@@ -16,12 +16,11 @@ import shutil
 from torchmetrics.text import BLEUScore
 from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
-import random
-from requests.auth import HTTPBasicAuth
-import requests
+from multimedbench.utils import download_file
 from abc import abstractmethod
 from torch.utils.data import DataLoader
-
+from zipfile import ZipFile
+import subprocess
 
 class ImageClassification(Benchmark):
     def __init__(self, **kwargs) -> None:
@@ -134,7 +133,8 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         self.scoringType = "multilabel"
 
         self.num_classes = 5
-        self.path = self.engine.getConfig()["MIMIC-CXR"]["path"]
+        self.path = self.engine.getConfig()["physionet"]["path"]
+        self._generate_dataset()
 
         self.chexbertPath = os.path.join(self.engine.getConfig()["CheXBert"]["dlLocation"], "chexbert.pth")
 
@@ -216,6 +216,26 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         return labels
 
+    def _generate_dataset(self):
+        # Check if the path already exists and if so return
+        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv")):
+            self.path = os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0")
+            return
+
+        os.makedirs(self.path, exist_ok=True)
+
+        username, password = self.engine.getPhysioNetCredentials()
+        wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/'
+
+        subprocess.run(wget_command, shell=True, check=True)
+        
+        self.path = os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0")
+
+        # Unzip the mimic-cxr-2.0.0-split file
+        file = os.path.join(self.path, "mimic-cxr-2.0.0-split.csv")
+        with ZipFile(file + ".gz", "r") as zipObj:
+            zipObj.extractall(file)
+
 
 class VinDr_Mammo(ImageClassification):
     def __init__(self, **kwargs) -> None:
@@ -224,9 +244,9 @@ class VinDr_Mammo(ImageClassification):
         self.taskName = "VinDr Mammo"
         self.modality = "Mammography"
 
-        self.path = self.engine.getConfig()["physionetCacheDir"]["path"]
+        self.path = self.engine.getConfig()["physionet"]["path"]
 
-        self._generateDataset()
+        self._generate_dataset()
 
         self.num_classes = 5
         self.scoringType = "multiclass"
@@ -291,7 +311,7 @@ class VinDr_Mammo(ImageClassification):
 
         return findings - 1  # 5 classes so 0 to 4
 
-    def _generateDataset(self):
+    def _generate_dataset(self):
         # Check if the path already exists and if so return
         if os.path.exists(
             os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0", "finding_annotations.csv")
@@ -299,23 +319,19 @@ class VinDr_Mammo(ImageClassification):
             self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
             return
 
-        os.makedirs(self.path, exist_ok=True)
-
-        url = "https://physionet.org/files/vindr-mammo/1.0.0/"
+        os.makedirs(self.path, exist_ok=True)    
+        
         username, password = self.engine.getPhysioNetCredentials()
-        response = requests.get(url, auth=HTTPBasicAuth(username, password), stream=True)
+        # wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/vindr-mammo/1.0.0/'
+        wget_command = f'wget -c --user "{username}" --password "{password}" -O "{self.path}vindr_mammo.zip" https://physionet.org/content/vindr-mammo/get-zip/1.0.0/'
 
-        if response.status_code == 200:
-            with open(self.path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-            print(f"Download successful. File saved to: {self.path}")
-        else:
-            print(f"Failed to download. Status code: {response.status_code}")
-            print(response.text)
+        subprocess.run(wget_command, shell=True, check=True)
 
-            raise Exception("Failed to download the dataset")
+        # download_file("https://physionet.org/content/vindr-mammo/get-zip/1.0.0/", os.path.join(self.path, "vindr_mammo.zip"), username, password)
+
+        # Unzip the file
+        with ZipFile(os.path.join(self.path, "vindr_mammo.zip"), "r") as zipObj:
+            zipObj.extractall(self.path)
 
         self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
 
@@ -334,7 +350,7 @@ class Pad_UFES_20(ImageClassification):
 
         # Check if the folder contains the zip file
         if not os.path.exists(os.path.join(self.path, "pad_ufes_20.zip")):
-            self._generateDataset()
+            self._generate_dataset()
 
         self.dataset = pd.read_csv(os.path.join(self.path, "metadata.csv"))
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
@@ -396,7 +412,7 @@ class Pad_UFES_20(ImageClassification):
 
         return self.options.index(correctName)
 
-    def _generateDataset(self):
+    def _generate_dataset(self):
         dataFolder = self.path
         # Download the file
         print("Downloading the dataset...")
@@ -443,7 +459,7 @@ class CBIS_DDSM(ImageClassification):
         self.path = self.engine.getConfig()["CBIS-DDSM"]["path"]
 
         # Download the file at address https://huggingface.co/datasets/Reverb/CBIS-DDSM/resolve/main/CBIS-DDSM.7z?download=true
-        self._generateDataset()
+        self._generate_dataset()
 
         # Open the calc_case_description_test_set.csv file with pandas
         df_dicom = pd.read_csv(os.path.join(self.path, "csv", "dicom_info.csv"))
@@ -498,7 +514,7 @@ class CBIS_DDSM(ImageClassification):
 
         return self.options.index(sample["pathology"])
 
-    def _generateDataset(self):
+    def _generate_dataset(self):
         if os.path.exists(os.path.join(self.path, "csv")):
             return
 

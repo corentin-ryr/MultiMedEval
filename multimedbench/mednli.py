@@ -1,11 +1,11 @@
 from multimedbench.utils import Benchmark, Params
 from tqdm import tqdm
 import os
-import requests
-from requests.auth import HTTPBasicAuth
+import subprocess
 import pandas as pd
 from datasets import Dataset
 from torch.utils.data import DataLoader
+import zipfile
 
 class MedNLI(Benchmark):
 
@@ -15,7 +15,7 @@ class MedNLI(Benchmark):
         self.modality = "General medicine"
         self.task = "NLI"
      
-        self.path = self.engine.getConfig()["physionetCacheDir"]["path"]
+        self.path = self.engine.getConfig()["physionet"]["path"]
         self._generate_dataset()
 
         testSet = pd.read_json(path_or_buf=os.path.join(self.path, "mli_test_v1.jsonl"), lines=True)
@@ -101,31 +101,29 @@ class MedNLI(Benchmark):
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        # Path /shares/menze.dqbm.uzh/corentin/physionetCacheDir/physionet.org/files/mednli/1.0.0
         if os.path.exists(
-            os.path.join(self.path, "physionet.org", "files", "mednli", "1.0.0", "mli_test_v1.jsonl")
+            os.path.join(self.path, "mednli-a-natural-language-inference-dataset-for-the-clinical-domain-1.0.0", "mli_test_v1.jsonl")
         ):
-            self.path = os.path.join(self.path, "physionet.org", "files", "mednli", "1.0.0")
+            self.path = os.path.join(self.path, "mednli-a-natural-language-inference-dataset-for-the-clinical-domain-1.0.0")
             return
 
         os.makedirs(self.path, exist_ok=True)
-
-        url = "https://physionet.org/files/vindr-mammo/1.0.0/"
+        
         username, password = self.engine.getPhysioNetCredentials()
-        response = requests.get(url, auth=HTTPBasicAuth(username, password), stream=True)
+        wget_command = f'wget -c --user "{username}" --password "{password}" -O "{self.path}/mednli.zip"  https://physionet.org/content/mednli/get-zip/1.0.0/'
 
-        if response.status_code == 200:
-            with open(self.path, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-            print(f"Download successful. File saved to: {self.path}")
-        else:
-            print(f"Failed to download. Status code: {response.status_code}")
-            print(response.text)
 
-            raise Exception("Failed to download the dataset")
+        subprocess.run(wget_command, shell=True, check=True)
 
-        self.path = os.path.join(self.path, "physionet.org", "files", "mednli", "1.0.0")
+        # Unzip the file
+        with zipfile.ZipFile(os.path.join(self.path, "mednli.zip"), "r") as zip_ref:
+            zip_ref.extractall(self.path)
+
+        # Remove the zip file
+        os.remove(os.path.join(self.path, "mednli.zip"))
+
+       
+
+        self.path = os.path.join(self.path, "mednli-a-natural-language-inference-dataset-for-the-clinical-domain-1.0.0")
 
         

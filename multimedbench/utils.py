@@ -7,6 +7,9 @@ import numpy as np
 import re
 from abc import abstractmethod, ABC
 import torch
+import requests
+from requests.auth import HTTPBasicAuth, HTTPDigestAuth
+from tqdm import tqdm
 
 
 class Benchmark(ABC):
@@ -64,20 +67,16 @@ class Params:
             # Check if the device is available (handle cuda and mps)
             if self.device == "cuda" and not torch.cuda.is_available():
                 self.device = "cpu"
-            
+
             elif self.device == "mps" and not torch.backends.mps.is_available():
                 self.device = "cpu"
-                
-
 
 
 def remove_punctuation(input_string: str):
     # Make a translator object to replace punctuation with none
-    translator = str.maketrans(string.punctuation, ' '*len(string.punctuation))
+    translator = str.maketrans(string.punctuation, " " * len(string.punctuation))
     # Use the translator
     return input_string.translate(translator)
-
-
 
 
 def csvWriter(data, path):
@@ -106,9 +105,7 @@ def fileWriterFactory(fileType):
     return SUPPORTED_FILETYPES[fileType]
 
 
-def exact_entity_token_if_rel_exists_reward(
-    hypothesis_annotation_list, reference_annotation_list
-):
+def exact_entity_token_if_rel_exists_reward(hypothesis_annotation_list, reference_annotation_list):
     candidates = []
     for annotation_list in [hypothesis_annotation_list, reference_annotation_list]:
         candidate = []
@@ -126,34 +123,18 @@ def exact_entity_token_if_rel_exists_reward(
     # print(reference_relation_token_list)
 
     precision = (
-        sum(
-            [
-                1
-                for x in hypothesis_relation_token_list
-                if (x in reference_relation_token_list)
-            ]
-        )
+        sum([1 for x in hypothesis_relation_token_list if (x in reference_relation_token_list)])
         / len(hypothesis_relation_token_list)
         if len(hypothesis_relation_token_list) > 0
         else 0.0
     )
     recall = (
-        sum(
-            [
-                1
-                for x in reference_relation_token_list
-                if (x in hypothesis_relation_token_list)
-            ]
-        )
+        sum([1 for x in reference_relation_token_list if (x in hypothesis_relation_token_list)])
         / len(reference_relation_token_list)
         if len(reference_relation_token_list) > 0
         else 0.0
     )
-    f1_score = (
-        (2 * precision * recall / (precision + recall))
-        if (precision + recall) > 0
-        else 0.0
-    )
+    f1_score = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
 
     return f1_score
 
@@ -165,6 +146,7 @@ class CompositeMetric:
         scaler: Input normalizer.
         coefs: Coefficients including the intercept.
     """
+
     def __init__(self, scaler, coefs):
         """Initializes the composite metric with a normalizer and coefficients.
 
@@ -185,13 +167,9 @@ class CompositeMetric:
             Composite metric score.
         """
         norm_x = self.scaler.transform(x)
-        norm_x = np.concatenate(
-            (norm_x, np.ones((norm_x.shape[0], 1))), axis=1)
+        norm_x = np.concatenate((norm_x, np.ones((norm_x.shape[0], 1))), axis=1)
         pred = norm_x @ self.coefs
         return pred
-
-
-
 
 
 def section_text(text):
@@ -203,7 +181,7 @@ def section_text(text):
 
         IMPRESSION:  ABC...
 
-    Given text like this, it will output text from each section, 
+    Given text like this, it will output text from each section,
     where the section type is determined by the all caps header.
 
     Returns a three element tuple:
@@ -211,8 +189,7 @@ def section_text(text):
         section_names - a normalized version of the section name
         section_idx - list of start indices of the text in the section
     """
-    p_section = re.compile(
-        r'\n ([A-Z ()/,-]+):\s', re.DOTALL)
+    p_section = re.compile(r"\n ([A-Z ()/,-]+):\s", re.DOTALL)
 
     sections = list()
     section_names = list()
@@ -222,8 +199,8 @@ def section_text(text):
     s = p_section.search(text, idx)
 
     if s:
-        sections.append(text[0:s.start(1)])
-        section_names.append('preamble')
+        sections.append(text[0 : s.start(1)])
+        section_names.append("preamble")
         section_idx.append(0)
 
         while s:
@@ -231,7 +208,7 @@ def section_text(text):
             # get the start of the text for this section
             idx_start = s.end()
             # skip past the first newline to avoid some bad parses
-            idx_skip = text[idx_start:].find('\n')
+            idx_skip = text[idx_start:].find("\n")
             if idx_skip == -1:
                 idx_skip = 0
 
@@ -248,7 +225,7 @@ def section_text(text):
 
     else:
         sections.append(text)
-        section_names.append('full report')
+        section_names.append("full report")
         section_idx.append(0)
 
     section_names = normalize_section_names(section_names)
@@ -263,18 +240,18 @@ def section_text(text):
     # it also helps when there are multiple findings sections
     # usually one is empty
     for i in reversed(range(len(section_names))):
-        if section_names[i] in ('impression', 'findings'):
-            if sections[i].strip() == '':
+        if section_names[i] in ("impression", "findings"):
+            if sections[i].strip() == "":
                 sections.pop(i)
                 section_names.pop(i)
                 section_idx.pop(i)
 
-    if ('impression' not in section_names) & ('findings' not in section_names):
+    if ("impression" not in section_names) & ("findings" not in section_names):
         # create a new section for the final paragraph
-        if '\n \n' in sections[-1]:
-            sections.append('\n \n'.join(sections[-1].split('\n \n')[1:]))
-            sections[-2] = sections[-2].split('\n \n')[0]
-            section_names.append('last_paragraph')
+        if "\n \n" in sections[-1]:
+            sections.append("\n \n".join(sections[-1].split("\n \n")[1:]))
+            sections[-2] = sections[-2].split("\n \n")[0]
+            section_names.append("last_paragraph")
             section_idx.append(section_idx[-1] + len(sections[-2]))
 
     return sections, section_names, section_idx
@@ -317,60 +294,57 @@ def normalize_section_names(section_names):
         "recommendations": "recommendations",  # 72
         "findings/impression": "impression",  # 47
         "pfi": "history",
-        'recommendation': 'recommendations',
-        'wetread': 'wet read',
-        'ndication': 'impression',  # 1
-        'impresson': 'impression',  # 2
-        'imprression': 'impression',  # 1
-        'imoression': 'impression',  # 1
-        'impressoin': 'impression',  # 1
-        'imprssion': 'impression',  # 1
-        'impresion': 'impression',  # 1
-        'imperssion': 'impression',  # 1
-        'mpression': 'impression',  # 1
-        'impession': 'impression',  # 3
-        'findings/ impression': 'impression',  # ,1
-        'finding': 'findings',  # ,8
-        'findins': 'findings',
-        'findindgs': 'findings',  # ,1
-        'findgings': 'findings',  # ,1
-        'findngs': 'findings',  # ,1
-        'findnings': 'findings',  # ,1
-        'finidngs': 'findings',  # ,2
-        'idication': 'indication',  # ,1
-        'reference findings': 'findings',  # ,1
-        'comparision': 'comparison',  # ,2
-        'comparsion': 'comparison',  # ,1
-        'comparrison': 'comparison',  # ,1
-        'comparisions': 'comparison'  # ,1
+        "recommendation": "recommendations",
+        "wetread": "wet read",
+        "ndication": "impression",  # 1
+        "impresson": "impression",  # 2
+        "imprression": "impression",  # 1
+        "imoression": "impression",  # 1
+        "impressoin": "impression",  # 1
+        "imprssion": "impression",  # 1
+        "impresion": "impression",  # 1
+        "imperssion": "impression",  # 1
+        "mpression": "impression",  # 1
+        "impession": "impression",  # 3
+        "findings/ impression": "impression",  # ,1
+        "finding": "findings",  # ,8
+        "findins": "findings",
+        "findindgs": "findings",  # ,1
+        "findgings": "findings",  # ,1
+        "findngs": "findings",  # ,1
+        "findnings": "findings",  # ,1
+        "finidngs": "findings",  # ,2
+        "idication": "indication",  # ,1
+        "reference findings": "findings",  # ,1
+        "comparision": "comparison",  # ,2
+        "comparsion": "comparison",  # ,1
+        "comparrison": "comparison",  # ,1
+        "comparisions": "comparison",  # ,1
     }
 
     p_findings = [
-        'chest',
-        'portable',
-        'pa and lateral',
-        'lateral and pa',
-        'ap and lateral',
-        'lateral and ap',
-        'frontal and',
-        'two views',
-        'frontal view',
-        'pa view',
-        'ap view',
-        'one view',
-        'lateral view',
-        'bone window',
-        'frontal upright',
-        'frontal semi-upright',
-        'ribs',
-        'pa and lat'
+        "chest",
+        "portable",
+        "pa and lateral",
+        "lateral and pa",
+        "ap and lateral",
+        "lateral and ap",
+        "frontal and",
+        "two views",
+        "frontal view",
+        "pa view",
+        "ap view",
+        "one view",
+        "lateral view",
+        "bone window",
+        "frontal upright",
+        "frontal semi-upright",
+        "ribs",
+        "pa and lat",
     ]
-    p_findings = re.compile('({})'.format('|'.join(p_findings)))
+    p_findings = re.compile("({})".format("|".join(p_findings)))
 
-    main_sections = [
-        'impression', 'findings', 'history', 'comparison',
-        'addendum'
-    ]
+    main_sections = ["impression", "findings", "history", "comparison", "addendum"]
     for i, s in enumerate(section_names):
         if s in frequent_sections:
             section_names[i] = frequent_sections[s]
@@ -387,7 +361,7 @@ def normalize_section_names(section_names):
 
         m = p_findings.search(s)
         if m is not None:
-            section_names[i] = 'findings'
+            section_names[i] = "findings"
 
         # if it looks like it is describing the entire study
         # it's equivalent to findings
@@ -398,68 +372,68 @@ def normalize_section_names(section_names):
 
 def custom_mimic_cxr_rules():
     custom_section_names = {
-        's50913680': 'recommendations',  # files/p11/p11851243/s50913680.txt
-        's59363654': 'examination',  # files/p12/p12128253/s59363654.txt
-        's59279892': 'technique',  # files/p13/p13150370/s59279892.txt
-        's59768032': 'recommendations',  # files/p13/p13249077/s59768032.txt
-        's57936451': 'indication',  # files/p14/p14325424/s57936451.txt
-        's50058765': 'indication',  # files/p14/p14731346/s50058765.txt
-        's53356173': 'examination',  # files/p15/p15898350/s53356173.txt
-        's53202765': 'technique',  # files/p16/p16076182/s53202765.txt
-        's50808053': 'technique',  # files/p16/p16631485/s50808053.txt
-        's51966317': 'indication',  # files/p10/p10817099/s51966317.txt
-        's50743547': 'examination',  # files/p11/p11388341/s50743547.txt
-        's56451190': 'note',  # files/p11/p11842879/s56451190.txt
-        's59067458': 'recommendations',  # files/p11/p11984647/s59067458.txt
-        's59215320': 'examination',  # files/p12/p12408912/s59215320.txt
-        's55124749': 'indication',  # files/p12/p12428492/s55124749.txt
-        's54365831': 'indication',  # files/p13/p13876470/s54365831.txt
-        's59087630': 'recommendations',  # files/p14/p14267880/s59087630.txt
-        's58157373': 'recommendations',  # files/p15/p15032392/s58157373.txt
-        's56482935': 'recommendations',  # files/p15/p15388421/s56482935.txt
-        's58375018': 'recommendations',  # files/p15/p15505556/s58375018.txt
-        's54654948': 'indication',  # files/p17/p17090359/s54654948.txt
-        's55157853': 'examination',  # files/p18/p18975498/s55157853.txt
-        's51491012': 'history',  # files/p19/p19314266/s51491012.txt
-
+        "s50913680": "recommendations",  # files/p11/p11851243/s50913680.txt
+        "s59363654": "examination",  # files/p12/p12128253/s59363654.txt
+        "s59279892": "technique",  # files/p13/p13150370/s59279892.txt
+        "s59768032": "recommendations",  # files/p13/p13249077/s59768032.txt
+        "s57936451": "indication",  # files/p14/p14325424/s57936451.txt
+        "s50058765": "indication",  # files/p14/p14731346/s50058765.txt
+        "s53356173": "examination",  # files/p15/p15898350/s53356173.txt
+        "s53202765": "technique",  # files/p16/p16076182/s53202765.txt
+        "s50808053": "technique",  # files/p16/p16631485/s50808053.txt
+        "s51966317": "indication",  # files/p10/p10817099/s51966317.txt
+        "s50743547": "examination",  # files/p11/p11388341/s50743547.txt
+        "s56451190": "note",  # files/p11/p11842879/s56451190.txt
+        "s59067458": "recommendations",  # files/p11/p11984647/s59067458.txt
+        "s59215320": "examination",  # files/p12/p12408912/s59215320.txt
+        "s55124749": "indication",  # files/p12/p12428492/s55124749.txt
+        "s54365831": "indication",  # files/p13/p13876470/s54365831.txt
+        "s59087630": "recommendations",  # files/p14/p14267880/s59087630.txt
+        "s58157373": "recommendations",  # files/p15/p15032392/s58157373.txt
+        "s56482935": "recommendations",  # files/p15/p15388421/s56482935.txt
+        "s58375018": "recommendations",  # files/p15/p15505556/s58375018.txt
+        "s54654948": "indication",  # files/p17/p17090359/s54654948.txt
+        "s55157853": "examination",  # files/p18/p18975498/s55157853.txt
+        "s51491012": "history",  # files/p19/p19314266/s51491012.txt
     }
 
     custom_indices = {
-        's50525523': [201, 349],  # files/p10/p10602608/s50525523.txt
-        's57564132': [233, 554],  # files/p10/p10637168/s57564132.txt
-        's59982525': [313, 717],  # files/p11/p11989982/s59982525.txt
-        's53488209': [149, 475],  # files/p12/p12458657/s53488209.txt
-        's54875119': [234, 988],  # files/p13/p13687044/s54875119.txt
-        's50196495': [59, 399],  # files/p13/p13894879/s50196495.txt
-        's56579911': [59, 218],  # files/p15/p15394326/s56579911.txt
-        's52648681': [292, 631],  # files/p15/p15666238/s52648681.txt
-        's59889364': [172, 453],  # files/p15/p15835529/s59889364.txt
-        's53514462': [73, 377],  # files/p16/p16297706/s53514462.txt
-        's59505494': [59, 450],  # files/p16/p16730991/s59505494.txt
-        's53182247': [59, 412],  # files/p16/p16770442/s53182247.txt
-        's51410602': [47, 320],  # files/p17/p17069955/s51410602.txt
-        's56412866': [522, 822],  # files/p17/p17612000/s56412866.txt
-        's54986978': [59, 306],  # files/p17/p17912487/s54986978.txt
-        's59003148': [262, 505],  # files/p17/p17916384/s59003148.txt
-        's57150433': [61, 394],  # files/p18/p18335791/s57150433.txt
-        's56760320': [219, 457],  # files/p18/p18418794/s56760320.txt
-        's59562049': [158, 348],  # files/p18/p18502016/s59562049.txt
-        's52674888': [145, 296],  # files/p19/p19381919/s52674888.txt
-        's55258338': [192, 568],  # files/p13/p13719117/s55258338.txt
-        's59330497': [140, 655],  # files/p15/p15479218/s59330497.txt
-        's52119491': [179, 454],  # files/p17/p17959278/s52119491.txt
+        "s50525523": [201, 349],  # files/p10/p10602608/s50525523.txt
+        "s57564132": [233, 554],  # files/p10/p10637168/s57564132.txt
+        "s59982525": [313, 717],  # files/p11/p11989982/s59982525.txt
+        "s53488209": [149, 475],  # files/p12/p12458657/s53488209.txt
+        "s54875119": [234, 988],  # files/p13/p13687044/s54875119.txt
+        "s50196495": [59, 399],  # files/p13/p13894879/s50196495.txt
+        "s56579911": [59, 218],  # files/p15/p15394326/s56579911.txt
+        "s52648681": [292, 631],  # files/p15/p15666238/s52648681.txt
+        "s59889364": [172, 453],  # files/p15/p15835529/s59889364.txt
+        "s53514462": [73, 377],  # files/p16/p16297706/s53514462.txt
+        "s59505494": [59, 450],  # files/p16/p16730991/s59505494.txt
+        "s53182247": [59, 412],  # files/p16/p16770442/s53182247.txt
+        "s51410602": [47, 320],  # files/p17/p17069955/s51410602.txt
+        "s56412866": [522, 822],  # files/p17/p17612000/s56412866.txt
+        "s54986978": [59, 306],  # files/p17/p17912487/s54986978.txt
+        "s59003148": [262, 505],  # files/p17/p17916384/s59003148.txt
+        "s57150433": [61, 394],  # files/p18/p18335791/s57150433.txt
+        "s56760320": [219, 457],  # files/p18/p18418794/s56760320.txt
+        "s59562049": [158, 348],  # files/p18/p18502016/s59562049.txt
+        "s52674888": [145, 296],  # files/p19/p19381919/s52674888.txt
+        "s55258338": [192, 568],  # files/p13/p13719117/s55258338.txt
+        "s59330497": [140, 655],  # files/p15/p15479218/s59330497.txt
+        "s52119491": [179, 454],  # files/p17/p17959278/s52119491.txt
         # below have no findings at all in the entire report
-        's58235663': [0, 0],  # files/p11/p11573679/s58235663.txt
-        's50798377': [0, 0],  # files/p12/p12632853/s50798377.txt
-        's54168089': [0, 0],  # files/p14/p14463099/s54168089.txt
-        's53071062': [0, 0],  # files/p15/p15774521/s53071062.txt
-        's56724958': [0, 0],  # files/p16/p16175671/s56724958.txt
-        's54231141': [0, 0],  # files/p16/p16312859/s54231141.txt
-        's53607029': [0, 0],  # files/p17/p17603668/s53607029.txt
-        's52035334': [0, 0],  # files/p19/p19349312/s52035334.txt
+        "s58235663": [0, 0],  # files/p11/p11573679/s58235663.txt
+        "s50798377": [0, 0],  # files/p12/p12632853/s50798377.txt
+        "s54168089": [0, 0],  # files/p14/p14463099/s54168089.txt
+        "s53071062": [0, 0],  # files/p15/p15774521/s53071062.txt
+        "s56724958": [0, 0],  # files/p16/p16175671/s56724958.txt
+        "s54231141": [0, 0],  # files/p16/p16312859/s54231141.txt
+        "s53607029": [0, 0],  # files/p17/p17603668/s53607029.txt
+        "s52035334": [0, 0],  # files/p19/p19349312/s52035334.txt
     }
 
     return custom_section_names, custom_indices
+
 
 def cleanStr(text: str):
     tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
@@ -469,3 +443,38 @@ def cleanStr(text: str):
 def collate_fn(batch):
     print(batch)
     return tuple(zip(*batch))
+
+
+# def download_file(url, path, username=None, password=None):
+#     local_filename = url.split("/")[-1]
+#     basic = HTTPBasicAuth("user", "pass")
+#     with requests.get(url, stream=True, auth=basic) as r:
+#         with open(path, "wb") as f:
+#             shutil.copyfileobj(r.raw, f)
+
+#     return local_filename
+
+
+def download_file(url: str, fname: str, username=None, password=None):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Cookie": "_gid=GA1.2.234633438.1705845604; csrftoken=nWK6P9n89Ko7PUAeu2agz7gbvPjM1bs8; sessionid=7oj313nw6z5e3p33f2x5gu89nj4l8zkw; _ga_YKC8ZQQ4FF=GS1.1.1706191939.36.1.1706191948.0.0.0; _ga=GA1.1.1850777015.1699194603"
+    }
+    auth = (username, password)
+    chunk_size = 2048
+
+    resp = requests.get(url, stream=True, auth=auth, headers=headers)
+    total = int(resp.headers.get("content-length", 0))
+    with open(fname, "wb") as file, tqdm(
+        desc=fname,
+        total=total,
+        unit="iB",
+        unit_scale=True,
+        unit_divisor=chunk_size,
+    ) as bar:
+        for data in resp.iter_content(chunk_size=chunk_size):
+            size = file.write(data)
+            bar.update(size)
