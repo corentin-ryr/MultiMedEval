@@ -10,6 +10,10 @@ import torch
 import requests
 from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from tqdm import tqdm
+from urllib.request import urlopen
+import re
+from bs4 import BeautifulSoup
+import requests
 
 
 class Benchmark(ABC):
@@ -445,28 +449,21 @@ def collate_fn(batch):
     return tuple(zip(*batch))
 
 
-# def download_file(url, path, username=None, password=None):
-#     local_filename = url.split("/")[-1]
-#     basic = HTTPBasicAuth("user", "pass")
-#     with requests.get(url, stream=True, auth=basic) as r:
-#         with open(path, "wb") as f:
-#             shutil.copyfileobj(r.raw, f)
-
-#     return local_filename
-
 
 def download_file(url: str, fname: str, username=None, password=None):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Accept-Language": "en-US,en;q=0.9,fr-FR;q=0.8,fr;q=0.7",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-        "Cookie": "_gid=GA1.2.234633438.1705845604; csrftoken=nWK6P9n89Ko7PUAeu2agz7gbvPjM1bs8; sessionid=7oj313nw6z5e3p33f2x5gu89nj4l8zkw; _ga_YKC8ZQQ4FF=GS1.1.1706191939.36.1.1706191948.0.0.0; _ga=GA1.1.1850777015.1699194603"
+    header = {
+        "User-Agent": "Wget/1.20.3 (linux-gnu)",
+        "Accept": "*/*",
+        "Accept-Encoding": "identity",
+        "Host": "physionet.org",
+        "Connection": "Keep-Alive",
+        "Proxy-Connection": "Keep-Alive",
+        "Cookie": "testcookie=1",
     }
     auth = (username, password)
-    chunk_size = 2048
+    chunk_size = 1024
 
-    resp = requests.get(url, stream=True, auth=auth, headers=headers)
+    resp = requests.get(url, stream=True, auth=auth, headers=header)
     total = int(resp.headers.get("content-length", 0))
     with open(fname, "wb") as file, tqdm(
         desc=fname,
@@ -478,3 +475,4 @@ def download_file(url: str, fname: str, username=None, password=None):
         for data in resp.iter_content(chunk_size=chunk_size):
             size = file.write(data)
             bar.update(size)
+
