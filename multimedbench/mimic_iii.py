@@ -15,6 +15,8 @@ import dill
 from bert_score import BERTScorer
 import subprocess
 from torch.utils.data import DataLoader
+from multimedbench.utils import download_file
+
 
 def get_final_report(text):
     if "FINAL REPORT" not in text:
@@ -330,19 +332,19 @@ class MIMIC_III(Benchmark):
     
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv")):
-            self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+        if os.path.exists(os.path.join(self.path, "physionet.org", "mimiciii", "NOTEEVENTS.csv")):
+            self.path = os.path.join(self.path, "physionet.org", "mimiciii")
             return
         
-        os.makedirs(self.path, exist_ok=True)
+        os.makedirs(os.path.join(self.path, "mimiciii"), exist_ok=True)
         
         username, password = self.engine.getPhysioNetCredentials()
-        wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz'
-
-        subprocess.run(wget_command, shell=True, check=True)
+        # wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz'
+        # subprocess.run(wget_command, shell=True, check=True)
        
+        download_file("https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz", os.path.join(self.path, "mimiciii", "NOTEEVENTS.csv.gz"), username, password)
         
-        self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+        self.path = os.path.join(self.path, "mimiciii")
         
         # Unzip the NOTEEVENTS file
         file = os.path.join(self.path, "NOTEEVENTS.csv")

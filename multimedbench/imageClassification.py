@@ -322,12 +322,10 @@ class VinDr_Mammo(ImageClassification):
         os.makedirs(self.path, exist_ok=True)    
         
         username, password = self.engine.getPhysioNetCredentials()
-        # wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/vindr-mammo/1.0.0/'
-        wget_command = f'wget -c --user "{username}" --password "{password}" -O "{self.path}vindr_mammo.zip" https://physionet.org/content/vindr-mammo/get-zip/1.0.0/'
+        # wget_command = f'wget -c --user "{username}" --password "{password}" -O "{self.path}vindr_mammo.zip" https://physionet.org/content/vindr-mammo/get-zip/1.0.0/'
+        # subprocess.run(wget_command, shell=True, check=True)
 
-        subprocess.run(wget_command, shell=True, check=True)
-
-        # download_file("https://physionet.org/content/vindr-mammo/get-zip/1.0.0/", os.path.join(self.path, "vindr_mammo.zip"), username, password)
+        download_file("https://physionet.org/content/vindr-mammo/get-zip/1.0.0/", os.path.join(self.path, "vindr_mammo.zip"), username, password)
 
         # Unzip the file
         with ZipFile(os.path.join(self.path, "vindr_mammo.zip"), "r") as zipObj:

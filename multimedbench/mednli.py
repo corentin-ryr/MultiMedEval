@@ -6,6 +6,7 @@ import pandas as pd
 from datasets import Dataset
 from torch.utils.data import DataLoader
 import zipfile
+from multimedbench.utils import download_file
 
 class MedNLI(Benchmark):
 
@@ -110,10 +111,10 @@ class MedNLI(Benchmark):
         os.makedirs(self.path, exist_ok=True)
         
         username, password = self.engine.getPhysioNetCredentials()
-        wget_command = f'wget -c --user "{username}" --password "{password}" -O "{self.path}/mednli.zip"  https://physionet.org/content/mednli/get-zip/1.0.0/'
+        # wget_command = f'wget -d -c --user "{username}" --password "{password}" -O "{self.path}/mednli.zip"  https://physionet.org/content/mednli/get-zip/1.0.0/'
+        # subprocess.run(wget_command, shell=True, check=True)
 
-
-        subprocess.run(wget_command, shell=True, check=True)
+        download_file("https://physionet.org/content/mednli/get-zip/1.0.0/", os.path.join(self.path, "mednli.zip"), username, password)
 
         # Unzip the file
         with zipfile.ZipFile(os.path.join(self.path, "mednli.zip"), "r") as zip_ref:

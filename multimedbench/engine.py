@@ -43,32 +43,32 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 TASKS: dict[str, Benchmark] = {
-    # "MedQA": MedQA,
-    # "PubMedQA": PubMedQA,
-    # "MedMCQA": MedMCQA,
-    # # "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen, # NOT WORKING
-    # "VQA-RAD": VQA_RAD,
-    # "Path-VQA": Path_VQA,
-    # "SLAKE": SLAKE, # NOT WORKING
-    # # "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification, # NOT WORKING
-    "VinDr-Mammo": VinDr_Mammo, # NOT WORKING
-    # "Pad-UFES-20": Pad_UFES_20,
-    # "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
-    # "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
-    "MIMIC-III": MIMIC_III, # NOT WORKING
-    # "MedNLI": MedNLI,
-    # "MNIST-Oct": MNIST_Oct,
-    # "MNIST-Path": MNIST_Path,
-    # "MNIST-Blood": MNIST_Blood,
-    # "MNIST-Breast": MNIST_Breast,
-    # "MNIST-Derma": MNIST_Derma,
-    # # # # "MNIST-OrganA": MNIST_OrganA,
-    # # # # "MNIST-Chest": MNIST_Chest,
-    # "MNIST-OrganC": MNIST_OrganC,
-    # "MNIST-OrganS": MNIST_OrganS,
-    # "MNIST-Pneumonia": MNIST_Pneumonia,
-    # "MNIST-Retina": MNIST_Retina,
-    # "MNIST-Tissue": MNIST_Tissue,
+    "MedQA": MedQA,
+    "PubMedQA": PubMedQA,
+    "MedMCQA": MedMCQA,
+    # "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen, # NOT WORKING
+    "VQA-RAD": VQA_RAD,
+    "Path-VQA": Path_VQA,
+    "SLAKE": SLAKE,
+    # "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification, # NOT WORKING
+    # "VinDr-Mammo": VinDr_Mammo, # NOT WORKING
+    "Pad-UFES-20": Pad_UFES_20,
+    "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
+    "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
+    "MIMIC-III": MIMIC_III,
+    "MedNLI": MedNLI,
+    "MNIST-Oct": MNIST_Oct,
+    "MNIST-Path": MNIST_Path,
+    "MNIST-Blood": MNIST_Blood,
+    "MNIST-Breast": MNIST_Breast,
+    "MNIST-Derma": MNIST_Derma,
+    # # # "MNIST-OrganA": MNIST_OrganA,
+    # # # "MNIST-Chest": MNIST_Chest,
+    "MNIST-OrganC": MNIST_OrganC,
+    "MNIST-OrganS": MNIST_OrganS,
+    "MNIST-Pneumonia": MNIST_Pneumonia,
+    "MNIST-Retina": MNIST_Retina,
+    "MNIST-Tissue": MNIST_Tissue,
 }
 
 TASKS_REQUIREMENTS: dict[str, list[str]] = {
