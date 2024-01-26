@@ -46,12 +46,12 @@ TASKS: dict[str, Benchmark] = {
     "MedQA": MedQA,
     "PubMedQA": PubMedQA,
     "MedMCQA": MedMCQA,
-    # "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen, # NOT WORKING
+    "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen, # NOT WORKING
     "VQA-RAD": VQA_RAD,
     "Path-VQA": Path_VQA,
     "SLAKE": SLAKE,
-    # "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification, # NOT WORKING
-    # "VinDr-Mammo": VinDr_Mammo, # NOT WORKING
+    "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification, # NOT WORKING
+    "VinDr-Mammo": VinDr_Mammo, # NOT WORKING
     "Pad-UFES-20": Pad_UFES_20,
     "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
     "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
