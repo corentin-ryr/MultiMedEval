@@ -1,6 +1,7 @@
 from multimedbench.utils import Benchmark
 import pandas as pd
 from pathlib import Path
+import math
 
 
 class BenchmarkVisualizer:
@@ -137,24 +138,76 @@ class BenchmarkVisualizer:
     def sankeyDiagram(self):
         print("======================= Creating sankey diagram =======================")
         import plotly.graph_objects as go
-
-        # Prepare the data:
+        import plotly.express as px
+        import random
 
         # The labels are the name of the datasets, the name of the tasks and the name of the modalities
         labelToIdx = {}
+        tasks = set()
+        modalities = set()
+        datasetToLength = {}
 
         for dataset in self.datasets:
             # Add the dataset name to the labels
             if dataset.taskName not in labelToIdx:
                 labelToIdx[dataset.taskName] = len(labelToIdx)
+                datasetToLength[dataset.taskName] = len(dataset)
 
             # Add the task name to the labels
             if dataset.task not in labelToIdx:
                 labelToIdx[dataset.task] = len(labelToIdx)
+                tasks.add(dataset.task)
 
             # Add the modality name to the labels
             if dataset.modality not in labelToIdx:
                 labelToIdx[dataset.modality] = len(labelToIdx)
+                modalities.add(dataset.modality)
+        
+
+
+        # Create the colors: strong colors for the tasks and variations of the same color for the dataset with the same task
+
+        # Take colors from the G10 palette
+        indexToColor = {}
+        for idx, task in enumerate(tasks):
+            indexToColor[labelToIdx[task]] = idx / len(tasks)
+
+        for dataset in self.datasets:
+            # Sample a color based on the task of the dataset
+            taskColor = indexToColor[labelToIdx[dataset.task]]
+
+            # Sample small variation of the color for the dataset
+            rangeColor = 1 / len(tasks) / 2
+            datasetColor = (taskColor + random.uniform(-rangeColor, rangeColor)) % 1
+            indexToColor[labelToIdx[dataset.taskName]] = datasetColor
+
+        for idx, modality in enumerate(modalities):
+            # Get all the tasks that have this modality
+            taskColors = []
+            taskWeights = []
+            for dataset in self.datasets:
+                if dataset.modality == modality:
+                    taskColors.append(indexToColor[labelToIdx[dataset.task]])
+                    taskWeights.append(len(dataset))
+
+            # Convert angles to Cartesian coordinates
+            x_coords = [math.cos(angle) for angle in taskColors]
+            y_coords = [math.sin(angle) for angle in taskColors]
+
+            # Calculate the weighted sums
+            weighted_sum_x = sum(w * x for w, x in zip(taskWeights, x_coords))
+            weighted_sum_y = sum(w * y for w, y in zip(taskWeights, y_coords))
+
+            # Calculate the weighted mean angle
+            weighted_mean_angle = math.atan2(weighted_sum_y, weighted_sum_x) % (2 * math.pi)
+
+            indexToColor[labelToIdx[modality]] = weighted_mean_angle
+        
+        # Convert the colors to rgb
+        for idx, color in indexToColor.items():
+            indexToColor[idx] = px.colors.sample_colorscale("mrybm", color)[0]
+
+
 
         # Create the links
         source = []
@@ -172,16 +225,19 @@ class BenchmarkVisualizer:
             target.append(labelToIdx[dataset.modality])
             value.append(len(dataset))
 
+        labels = list(labelToIdx.keys())
+        colors = [indexToColor[labelToIdx[label]] for label in labels]
+
         # Create the figure
         fig = go.Figure(
             data=[
                 go.Sankey(
                     node=dict(
                         pad=15,
-                        thickness=20,
+                        thickness=50,
                         line=dict(color="black", width=0.5),
-                        label=list(labelToIdx.keys()),
-                        # color="blue",
+                        label=labels,
+                        color=colors,
                     ),
                     link=dict(
                         source=source,
@@ -192,7 +248,7 @@ class BenchmarkVisualizer:
             ]
         )
 
-        for x_coordinate, column_name in enumerate(["column 1", "column 2", "column 3"]):
+        for x_coordinate, column_name in enumerate(["Datasets", "Tasks", "Modalities"]):
             fig.add_annotation(
                 x=x_coordinate,
                 y=1.05,
@@ -200,9 +256,23 @@ class BenchmarkVisualizer:
                 yref="paper",
                 text=column_name,
                 showarrow=False,
-                font=dict(family="Courier New, monospace", size=16, color="tomato"),
+                font=dict(family="Courier New, monospace", size=16, color="black"),
                 align="center",
             )
 
-        fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
-        fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=750, height=750)
+        fig.update_layout(
+            xaxis={
+                "showgrid": False,  # thin lines in the background
+                "zeroline": False,  # thick line at x=0
+                "visible": False,  # numbers below
+            },
+            yaxis={
+                "showgrid": False,  # thin lines in the background
+                "zeroline": False,  # thick line at x=0
+                "visible": False,  # numbers below
+            },
+            plot_bgcolor="rgba(0,0,0,0)",
+            font_size=15,
+        )
+
+        fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=1500, height=700)

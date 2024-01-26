@@ -9,14 +9,13 @@ import torch
 from nltk.translate.meteor_score import meteor_score
 from nltk.tokenize import word_tokenize
 from torchmetrics.text import BLEUScore, ROUGEScore
-from zipfile import ZipFile
 from multimedbench.chexbert.label import encode
 import dill
 from bert_score import BERTScorer
-import subprocess
 from torch.utils.data import DataLoader
 from multimedbench.utils import download_file
-
+import gzip
+import shutil
 
 def get_final_report(text):
     if "FINAL REPORT" not in text:
@@ -346,10 +345,14 @@ class MIMIC_III(Benchmark):
         
         self.path = os.path.join(self.path, "physionet.org",  "files", "mimiciii", "1.4")
         
-        # Unzip the NOTEEVENTS file
+         # Unzip the NOTEEVENTS file
         file = os.path.join(self.path, "NOTEEVENTS.csv")
-        with ZipFile(file + ".gz", "r") as zipObj:
-            zipObj.extractall(file)
+        with gzip.open(file + ".gz", "rb") as f_in:
+            with open(file, "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+        # Remove the zip file
+        os.remove(file + ".gz")
 
 
 

@@ -22,11 +22,17 @@ We include 12 tasks representing a range of different imaging modalities.
 | CBIS-DDSM                      | Classification of mammography images into "benign", "malignant" or "benign without callback"      | Mammography    |
 | MIMIC-III                      | Summarization of radiology reports                                                                | Text           |
 
-<p align="center">
+<!-- <p align="center">
     <img src="dataset_stats/modalities.png" alt="modality sunburst graph" style="margin-right: 2.5%;" width="40%">
     <img src="dataset_stats/tasks.png" alt="modality sunburst graph" style="margin-left: 2.5%;" width="40%">
     <br>
     <em>Representation of the modalities and tasks in MultiMedBench</em>
+</p> -->
+
+<p align="center">
+    <img src="dataset_stats/sankey.png" alt="sankey graph">
+    <br>
+    <em>Representation of the modalities, tasks and datasets in MultiMedBench</em>
 </p>
 
 

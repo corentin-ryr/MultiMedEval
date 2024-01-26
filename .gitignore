@@ -10,3 +10,4 @@ benchmarkMistral
 kaggle.json
 *.out
 terminal.txt
+run*/
