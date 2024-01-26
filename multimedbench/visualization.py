@@ -134,7 +134,6 @@ class BenchmarkVisualizer:
         fig.write_image(Path(self.folderName, "image_classification.png"), scale=1.0, width=1920, height=1080)
         # fig.write_html(Path(self.folderName, "image_classification.html"))
 
-
     def sankeyDiagram(self):
         print("======================= Creating sankey diagram =======================")
         import plotly.graph_objects as go
@@ -182,7 +181,7 @@ class BenchmarkVisualizer:
                         thickness=20,
                         line=dict(color="black", width=0.5),
                         label=list(labelToIdx.keys()),
-                        color="blue",
+                        # color="blue",
                     ),
                     link=dict(
                         source=source,
@@ -192,6 +191,18 @@ class BenchmarkVisualizer:
                 )
             ]
         )
+
+        for x_coordinate, column_name in enumerate(["column 1", "column 2", "column 3"]):
+            fig.add_annotation(
+                x=x_coordinate,
+                y=1.05,
+                xref="x",
+                yref="paper",
+                text=column_name,
+                showarrow=False,
+                font=dict(family="Courier New, monospace", size=16, color="tomato"),
+                align="center",
+            )
 
         fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
         fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=750, height=750)
