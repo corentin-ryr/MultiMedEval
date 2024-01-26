@@ -150,6 +150,7 @@ class MMB(object):
             visualizer.sunburstModalities()
             visualizer.sunburstTasks()
             visualizer.tableImageClassification()
+            visualizer.sankeyDiagram()
 
     def eval(self, name: str | list[str]):
         if self.batcher is None:

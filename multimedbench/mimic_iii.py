@@ -344,7 +344,7 @@ class MIMIC_III(Benchmark):
        
         download_file("https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz", os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv.gz"), username, password)
         
-        self.path = os.path.join(self.path, "files", "mimiciii", "1.4")
+        self.path = os.path.join(self.path, "physionet.org",  "files", "mimiciii", "1.4")
         
         # Unzip the NOTEEVENTS file
         file = os.path.join(self.path, "NOTEEVENTS.csv")
