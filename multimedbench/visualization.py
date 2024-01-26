@@ -133,3 +133,65 @@ class BenchmarkVisualizer:
         fig.update_layout(title_text="Image Classification")
         fig.write_image(Path(self.folderName, "image_classification.png"), scale=1.0, width=1920, height=1080)
         # fig.write_html(Path(self.folderName, "image_classification.html"))
+
+
+    def sankeyDiagram(self):
+        print("======================= Creating sankey diagram =======================")
+        import plotly.graph_objects as go
+
+        # Prepare the data:
+
+        # The labels are the name of the datasets, the name of the tasks and the name of the modalities
+        labelToIdx = {}
+
+        for dataset in self.datasets:
+            # Add the dataset name to the labels
+            if dataset.taskName not in labelToIdx:
+                labelToIdx[dataset.taskName] = len(labelToIdx)
+
+            # Add the task name to the labels
+            if dataset.task not in labelToIdx:
+                labelToIdx[dataset.task] = len(labelToIdx)
+
+            # Add the modality name to the labels
+            if dataset.modality not in labelToIdx:
+                labelToIdx[dataset.modality] = len(labelToIdx)
+
+        # Create the links
+        source = []
+        target = []
+        value = []
+
+        for dataset in self.datasets:
+            # Add the link between the dataset and the task
+            source.append(labelToIdx[dataset.taskName])
+            target.append(labelToIdx[dataset.task])
+            value.append(len(dataset))
+
+            # Add the link between the task and the modality
+            source.append(labelToIdx[dataset.task])
+            target.append(labelToIdx[dataset.modality])
+            value.append(len(dataset))
+
+        # Create the figure
+        fig = go.Figure(
+            data=[
+                go.Sankey(
+                    node=dict(
+                        pad=15,
+                        thickness=20,
+                        line=dict(color="black", width=0.5),
+                        label=list(labelToIdx.keys()),
+                        color="blue",
+                    ),
+                    link=dict(
+                        source=source,
+                        target=target,
+                        value=value,
+                    ),
+                )
+            ]
+        )
+
+        fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
+        fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=750, height=750)

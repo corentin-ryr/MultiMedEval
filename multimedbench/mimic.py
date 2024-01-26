@@ -45,7 +45,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.chexbertPath = self.engine.getConfig()["CheXBert"]["dlLocation"]
 
         # Get the dataset ====================================================================
-        self.path = self.engine.getConfig()["physionet"]["path"]
+        self.path = self.engine.getConfig()["mimicCXR"]["path"]
         self._generate_dataset()
 
         # Get the split.csv file in the image directory
@@ -271,8 +271,8 @@ class MIMIC_CXR_reportgen(Benchmark):
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv")):
-            self.path = os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0")
+        if os.path.exists(os.path.join(self.path, "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv")):
+            self.path = os.path.join(self.path, "mimic-cxr-jpg", "2.0.0")
             return
 
         os.makedirs(self.path, exist_ok=True)
@@ -282,7 +282,7 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         subprocess.run(wget_command, shell=True, check=True)
         
-        self.path = os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0")
+        self.path = os.path.join(self.path, "mimic-cxr-jpg", "2.0.0")
 
         # Unzip the mimic-cxr-2.0.0-split file
         file = os.path.join(self.path, "mimic-cxr-2.0.0-split.csv")
