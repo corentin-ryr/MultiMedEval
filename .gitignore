@@ -11,3 +11,5 @@ kaggle.json
 *.out
 terminal.txt
 run*/
+myJob
+runJob.sh

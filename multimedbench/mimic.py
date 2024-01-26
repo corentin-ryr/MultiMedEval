@@ -45,7 +45,11 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.chexbertPath = self.engine.getConfig()["CheXBert"]["dlLocation"]
 
         # Get the dataset ====================================================================
-        self.path = self.engine.getConfig()["mimicCXR"]["path"]
+        self.path = (
+            self.engine.getConfig()["mimicCXR"]["path"]
+            if "mimicCXR" in self.engine.getConfig()
+            else os.path.join(self.engine.getConfig()["physionet"]["path"], "physionet.org/files")
+        )
         self._generate_dataset()
 
         # Get the split.csv file in the image directory
@@ -94,7 +98,9 @@ class MIMIC_CXR_reportgen(Benchmark):
         rougeLScores = []
 
         # Run the batcher for all data split in chunks
-        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
+        dataloader = DataLoader(
+            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
+        )
         for batch in tqdm(
             dataloader,
             desc="Generating reports",
@@ -278,10 +284,10 @@ class MIMIC_CXR_reportgen(Benchmark):
         os.makedirs(self.path, exist_ok=True)
 
         username, password = self.engine.getPhysioNetCredentials()
-        wget_command = f'wget -r -c -np -nc --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/' # Can replace -nc (no clobber) with -N (timestamping)
+        wget_command = f'wget -r -c -np -nc --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/'  # Can replace -nc (no clobber) with -N (timestamping)
 
         subprocess.run(wget_command, shell=True, check=True)
-        
+
         self.path = os.path.join(self.path, "mimic-cxr-jpg", "2.0.0")
 
         # Unzip the mimic-cxr-2.0.0-split file
