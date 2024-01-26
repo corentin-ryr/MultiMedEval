@@ -7,20 +7,32 @@ We include 12 tasks representing a range of different imaging modalities.
 
 ## Tasks
 
-| Task                           | Description                                                                                       | Modality       | Size
-|--------------------------------|---------------------------------------------------------------------------------------------------|----------------|----------
-| MedQA                          | Multiple choice questions on general medical knowledge                                            | Text           |
-| PubMedQA                       | Yes/no/maybe questions based on PubMed paper abstracts                                            | Text           |
-| MedMCQA                        | Multiple choice questions on general medical knowledge                                            | Text           |
-| MIMIC-CXR-ReportGeneration     | Generation of finding sections of radiology reports based on the radiology images                 | Chest X-ray    |
-| VQA-RAD                        | Open ended questions on radiology images                                                          | X-ray          |
-| Path-VQA                       | Open ended questions on pathology images                                                          | Pathology      |
-| SLAKE                          | Open ended questions on radiology images                                                          | X-ray          |
-| MIMIC-CXR-ImageClassification  | Classification of radiology images into 5 diseases                                                | Chest X-ray    |
-| VinDr-Mammo                    | Classification of mammography images into 5 BIRADS levels                                         | Mammography    |
-| Pad-UFES-20                    | Classification of skin lesion images into 7 diseases                                              | Dermatology    |
-| CBIS-DDSM                      | Classification of mammography images into "benign", "malignant" or "benign without callback"      | Mammography    |
-| MIMIC-III                      | Summarization of radiology reports                                                                | Text           |
+| Task                           | Description                                                                                                        | Modality       | Size
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------|----------
+| MedQA                          | Multiple choice questions on general medical knowledge                                                             | Text           |
+| PubMedQA                       | Yes/no/maybe questions based on PubMed paper abstracts                                                             | Text           |
+| MedMCQA                        | Multiple choice questions on general medical knowledge                                                             | Text           |
+| MIMIC-CXR-ReportGeneration     | Generation of finding sections of radiology reports based on the radiology images                                  | Chest X-ray    |
+| VQA-RAD                        | Open ended questions on radiology images                                                                           | X-ray          |
+| Path-VQA                       | Open ended questions on pathology images                                                                           | Pathology      |
+| SLAKE                          | Open ended questions on radiology images                                                                           | X-ray          |
+| MIMIC-CXR-ImageClassification  | Classification of radiology images into 5 diseases                                                                 | Chest X-ray    |
+| VinDr-Mammo                    | Classification of mammography images into 5 BIRADS levels                                                          | Mammography    |
+| Pad-UFES-20                    | Classification of skin lesion images into 7 diseases                                                               | Dermatology    |
+| CBIS-DDSM-Mass                 | Classification of masses in mammography images into "benign", "malignant" or "benign without callback"             | Mammography    |
+| CBIS-DDSM-Calcification        | Classification of calcification in mammography images into "benign", "malignant" or "benign without callback"      | Mammography    |
+| MIMIC-III                      | Summarization of radiology reports                                                                                 | Text           |
+| MedNLI                         | Natural Language Inference on medical sentences.                                                                   | Text           |
+| MNIST-Oct                      |                                                                                                                    | OCT            |
+| MNIST-Path                     |                                                                                                                    | Pathology      |
+| MNIST-Blood                    |                                                                                                                    | Microscopy     |
+| MNIST-Breast                   |                                                                                                                    | Mammography    |
+| MNIST-Derma                    |                                                                                                                    | Dermatology    |
+| MNIST-OrganC                   |                                                                                                                    | CT             |
+| MNIST-OrganS                   |                                                                                                                    | CT             |
+| MNIST-Pneumonia                |                                                                                                                    | X-Ray          |
+| MNIST-Retina                   |                                                                                                                    | Fondus Camera  |
+| MNIST-Tissue                   |                                                                                                                    | Microscopy     |
 
 <!-- <p align="center">
     <img src="dataset_stats/modalities.png" alt="modality sunburst graph" style="margin-right: 2.5%;" width="40%">
@@ -49,10 +61,10 @@ The setup script needs a configuration file containing the destination folder fo
 ```json
 {
   "huggingfaceCacheDir": {"path": ""},
-  "physionet": {"path": ""},
+  "physionet": {"path": "", "username": "", "password": ""},
   "SLAKE": {"path": ""},
-  "MIMIC-CXR": {"path":"/PATH/mimic-cxr-jpg/2.0.0"},
-  "RadGraph": {"dlLocation": ""},
+  "MIMIC-CXR": {"path":"/PATH/TO/DOCUMENTS/"}, // Optional (will download to physionet folder if the line is not present): example if /PATH/TO/DOCUMENTS/mimic-cxr-jpg/2.0.0
+  "SLAKE": {"path": ""},
   "CheXBert": {"dlLocation": ""},
   "Pad-UFES-20": {"path": ""},
   "CBIS-DDSM": {"path": ""},
@@ -70,7 +82,7 @@ from multimedbench import MMB, Params
 engine = MMB()
 ```
 
-During the setup process, the script will ask for a Physionet password to download "VinDr-Mammo", "MIMIC-CXR" and "MIMIC-III".
+During the setup process, the script will need a Physionet username and password to download "VinDr-Mammo", "MIMIC-CXR" and "MIMIC-III".
 You also need to setup Kaggle on your machine before running the setup as the "CBIS-DDSM" is hosted on Kaggle.
 
 At the end of the setup process, you will see a summary of which tasks are ready and which didn't run properly.
@@ -133,7 +145,7 @@ class batcherMistral:
         return answers
 ```
 
-To run the benchmark, call the `eval` method of the `MMB` class.
+To run the benchmark, call the `eval` method of the `MMB` class with the list of tasks to benchmark on. If the list is empty, all the tasks will be benchmarked.
 
 ```python
 from multimedbench import MMB, Params
