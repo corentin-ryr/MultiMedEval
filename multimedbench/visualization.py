@@ -272,7 +272,11 @@ class BenchmarkVisualizer:
                 "visible": False,  # numbers below
             },
             plot_bgcolor="rgba(0,0,0,0)",
-            font_size=15,
+            font_size=20,
         )
+
+        # Reduce margins
+        fig.update_layout(margin=dict(t=1, l=0.5, r=2, b=0))
+        # Increase font size of the labels
 
         fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=1500, height=700)
