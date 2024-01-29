@@ -4,15 +4,15 @@ import torch
 import torch.nn as nn
 import pandas as pd
 import numpy as np
-from  multimedbench.chexbert.utils import generate_attention_masks
-from multimedbench.chexbert.models.bert_labeler import bert_labeler
-from multimedbench.chexbert.models.bert_encoder import bert_encoder
+from  multimedeval.chexbert.utils import generate_attention_masks
+from multimedeval.chexbert.models.bert_labeler import bert_labeler
+from multimedeval.chexbert.models.bert_encoder import bert_encoder
 
-from multimedbench.chexbert.bert_tokenizer import tokenize
+from multimedeval.chexbert.bert_tokenizer import tokenize
 from transformers import BertTokenizer
 from collections import OrderedDict
-from multimedbench.chexbert.datasets.unlabeled_dataset import UnlabeledDataset
-from multimedbench.chexbert.constants import *
+from multimedeval.chexbert.datasets.unlabeled_dataset import UnlabeledDataset
+from multimedeval.chexbert.constants import *
 from tqdm import tqdm
 
 def collate_fn_no_labels(sample_list):

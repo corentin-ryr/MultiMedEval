@@ -1,4 +1,4 @@
-from multimedbench.utils import Benchmark, Params, cleanStr
+from multimedeval.utils import Benchmark, Params, cleanStr
 from tqdm import tqdm
 import math
 from torchmetrics import F1Score, AUROC, Accuracy
@@ -6,7 +6,7 @@ import torch
 import os
 import pandas as pd
 import datasets
-from multimedbench.chexbert.label import label
+from multimedeval.chexbert.label import label
 from PIL import Image
 import pydicom
 import numpy as np
@@ -16,7 +16,7 @@ import shutil
 from torchmetrics.text import BLEUScore
 from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
-from multimedbench.utils import download_file
+from multimedeval.utils import download_file
 from abc import abstractmethod
 from torch.utils.data import DataLoader
 from zipfile import ZipFile
@@ -72,7 +72,7 @@ class ImageClassification(Benchmark):
                 groundTruth.append(gt)
 
                 answersLog.append(
-                    (f"{self.getCorrectAnswer(batch[idx], fullText=True)} (index {gt})", f"{answer} (index {pred})")
+                    (f"{self.getCorrectAnswer(batch[idx], fullText=True)} (index {gt})", f"{answer} (index {pred})", gt == pred)
                 )
 
             # print(predictions)

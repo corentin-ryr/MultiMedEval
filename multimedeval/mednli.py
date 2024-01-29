@@ -1,4 +1,4 @@
-from multimedbench.utils import Benchmark, Params
+from multimedeval.utils import Benchmark, Params
 from tqdm import tqdm
 import os
 import subprocess
@@ -6,7 +6,7 @@ import pandas as pd
 from datasets import Dataset
 from torch.utils.data import DataLoader
 import zipfile
-from multimedbench.utils import download_file
+from multimedeval.utils import download_file
 
 class MedNLI(Benchmark):
 
@@ -75,7 +75,7 @@ class MedNLI(Benchmark):
 
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"Sentence 1: {sample['sentence1']}\nSentence 2: {sample['sentence2']}\n"
-        formattedQuestion += "Determine the logical relationship between these two sentences. Does the second sentence logically follows from the first (entailment), contradicts the first (contradiction), or if there is no clear logical relationship between them (neutral)?"
+        formattedQuestion += "Determine the logical relationship between these two sentences. Does the second sentence logically follow from the first (entailment), contradicts the first (contradiction), or if there is no clear logical relationship between them (neutral)?"
 
         question = [{"role": "user", "content": formattedQuestion}]
         if prompt:

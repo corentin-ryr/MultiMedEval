@@ -1,6 +1,6 @@
 # Results
 
-Here you can find the performance of various models on the MultiMedBench.
+Here you can find the performance of various models on the MultiMedEval.
 
 ## Tasks
 

@@ -7,7 +7,7 @@ import csv
 import datasets
 from tqdm import tqdm
 import math
-from multimedbench.utils import batchSampler, remove_punctuation
+from multimedeval.utils import batchSampler, remove_punctuation
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches

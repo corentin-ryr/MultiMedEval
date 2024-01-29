@@ -1,7 +1,7 @@
-# MultiMedBench
+# MultiMedEval
 
 
-MultiMedBench is a library to evaluate the performance of Vision-Language Models (VLM) on medical domain tasks. The goal is to have a set of benchmark with a unified evaluation scheme to facilitate the development and comparison of medical VLM.
+MultiMedEval is a library to evaluate the performance of Vision-Language Models (VLM) on medical domain tasks. The goal is to have a set of benchmark with a unified evaluation scheme to facilitate the development and comparison of medical VLM.
 We include 12 tasks representing a range of different imaging modalities.
 
 
@@ -34,22 +34,17 @@ We include 12 tasks representing a range of different imaging modalities.
 | MNIST-Retina                   |                                                                                                                    | Fondus Camera  |
 | MNIST-Tissue                   |                                                                                                                    | Microscopy     |
 
-<!-- <p align="center">
-    <img src="dataset_stats/modalities.png" alt="modality sunburst graph" style="margin-right: 2.5%;" width="40%">
-    <img src="dataset_stats/tasks.png" alt="modality sunburst graph" style="margin-left: 2.5%;" width="40%">
-    <br>
-    <em>Representation of the modalities and tasks in MultiMedBench</em>
-</p> -->
+
 
 <p align="center">
     <img src="dataset_stats/sankey.png" alt="sankey graph">
     <br>
-    <em>Representation of the modalities, tasks and datasets in MultiMedBench</em>
+    <em>Representation of the modalities, tasks and datasets in MultiMedEval</em>
 </p>
 
 
 
-## Setup MultiMedBench
+## Setup
 
 To install the library, you can use `pip`
 
@@ -77,9 +72,9 @@ The setup script needs a configuration file containing the destination folder fo
 To download the datasets and prepare the evaluation models, you can instantiate the main "engine" without any parameters. This will run the setup for all tasks but not the evaluation itself.
 
 ```python
-from multimedbench import MMB, Params
+from multimedeval import MultiMedEval, Params
 
-engine = MMB()
+engine = MultiMedEval()
 ```
 
 During the setup process, the script will need a Physionet username and password to download "VinDr-Mammo", "MIMIC-CXR" and "MIMIC-III".
@@ -145,16 +140,16 @@ class batcherMistral:
         return answers
 ```
 
-To run the benchmark, call the `eval` method of the `MMB` class with the list of tasks to benchmark on. If the list is empty, all the tasks will be benchmarked.
+To run the benchmark, call the `eval` method of the `MultiMedEval` class with the list of tasks to benchmark on. If the list is empty, all the tasks will be benchmarked.
 
 ```python
-from multimedbench import MMB, Params
-engine = MMB(params=Params(), batcher=batcherMistral())
+from multimedeval import MultiMedEval, Params
+engine = MultiMedEval(params=Params(), batcher=batcherMistral())
 
 engine.eval(["MedQA", "VQA-RAD", "MIMIC-CXR-ReportGeneration"])
 ```
 
-## MultiMedBench parameters
+## MultiMedEval parameters
 
 The `Params` class takes the following arguments:
 * batch_size: an int initialized as `128` and representing the number of prompt sent to the batcher at once.
