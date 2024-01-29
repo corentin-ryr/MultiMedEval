@@ -151,6 +151,7 @@ class MultiMedEval(object):
             visualizer.sunburstTasks()
             visualizer.tableImageClassification()
             visualizer.sankeyDiagram()
+            visualizer.sankeyD3Blocks()
 
     def eval(self, name: str | list[str]):
         if self.batcher is None:
