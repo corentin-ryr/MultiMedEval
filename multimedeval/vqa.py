@@ -1,9 +1,9 @@
 from datasets import load_dataset
 from torchmetrics.text import BLEUScore
-from multimedbench.utils import Benchmark, Params
+from multimedeval.utils import Benchmark, Params
 from tqdm import tqdm
 import math
-from multimedbench.utils import cleanStr
+from multimedeval.utils import cleanStr
 from abc import abstractmethod
 import json
 import os

@@ -2,7 +2,7 @@ import torch
 import pandas as pd
 import numpy as np
 from transformers import BertTokenizer
-from multimedbench.chexbert import bert_tokenizer
+from multimedeval.chexbert import bert_tokenizer
 from torch.utils.data import Dataset, DataLoader
 
 

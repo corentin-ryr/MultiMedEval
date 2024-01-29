@@ -1,7 +1,7 @@
 from datasets import load_dataset
-from multimedbench.utils import Benchmark, Params
+from multimedeval.utils import Benchmark, Params
 from tqdm import tqdm
-from multimedbench.utils import cleanStr
+from multimedeval.utils import cleanStr
 from abc import abstractmethod
 from torchmetrics.text import BLEUScore
 from torch.utils.data import DataLoader

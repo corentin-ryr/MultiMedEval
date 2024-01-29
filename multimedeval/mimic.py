@@ -1,14 +1,14 @@
 import logging
 import os
-from multimedbench.utils import Benchmark
+from multimedeval.utils import Benchmark
 import pandas as pd
 from tqdm import tqdm
 from PIL import Image
 import datasets
-from multimedbench.chexbert.label import encode
+from multimedeval.chexbert.label import encode
 from bert_score import BERTScorer
 
-from multimedbench.utils import (
+from multimedeval.utils import (
     Benchmark,
     Params,
     remove_punctuation,

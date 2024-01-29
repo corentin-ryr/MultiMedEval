@@ -1,19 +1,19 @@
 from warnings import warn
-from multimedbench.utils import Params, fileWriterFactory, Benchmark
+from multimedeval.utils import Params, fileWriterFactory, Benchmark
 
-from multimedbench.qa import MedQA, PubMedQA, MedMCQA
-from multimedbench.vqa import VQA_RAD, Path_VQA, SLAKE
-from multimedbench.mimic import MIMIC_CXR_reportgen
-from multimedbench.imageClassification import (
+from multimedeval.qa import MedQA, PubMedQA, MedMCQA
+from multimedeval.vqa import VQA_RAD, Path_VQA, SLAKE
+from multimedeval.mimic import MIMIC_CXR_reportgen
+from multimedeval.imageClassification import (
     MIMIC_CXR_ImageClassification,
     VinDr_Mammo,
     Pad_UFES_20,
     CBIS_DDSM_Mass,
     CBIS_DDSM_Calcification,
 )
-from multimedbench.mimic_iii import MIMIC_III
-from multimedbench.mednli import MedNLI
-from multimedbench.mnist import (
+from multimedeval.mimic_iii import MIMIC_III
+from multimedeval.mednli import MedNLI
+from multimedeval.mnist import (
     MNIST_Oct,
     MNIST_Path,
     MNIST_Blood,
@@ -34,7 +34,7 @@ import sys
 from tqdm import tqdm
 import getpass
 import nltk
-from multimedbench.visualization import BenchmarkVisualizer
+from multimedeval.visualization import BenchmarkVisualizer
 from collections.abc import Callable
 from radgraph import RadGraph
 
@@ -46,12 +46,12 @@ TASKS: dict[str, Benchmark] = {
     "MedQA": MedQA,
     "PubMedQA": PubMedQA,
     "MedMCQA": MedMCQA,
-    "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen, # NOT WORKING
+    "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen,  # NOT WORKING
     "VQA-RAD": VQA_RAD,
     "Path-VQA": Path_VQA,
     "SLAKE": SLAKE,
-    "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification, # NOT WORKING
-    "VinDr-Mammo": VinDr_Mammo, # NOT WORKING
+    "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification,  # NOT WORKING
+    "VinDr-Mammo": VinDr_Mammo,  # NOT WORKING
     "Pad-UFES-20": Pad_UFES_20,
     "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
     "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
@@ -77,7 +77,7 @@ TASKS_REQUIREMENTS: dict[str, list[str]] = {
 }
 
 
-class MMB(object):
+class MultiMedEval(object):
     def __init__(self, params: Params = None, batcher: Callable = None, generateVisualization: bool = False):
         self.params = params if params is not None else Params()
         self.batcher = batcher
@@ -170,9 +170,11 @@ class MMB(object):
             return self.results
 
         if name not in TASKS:
-            warn(f"Task {name} not in {list(TASKS.keys())}", )
+            warn(
+                f"Task {name} not in {list(TASKS.keys())}",
+            )
             return None
-        
+
         # Check if the requirements are satisfied
         listRequirements = ([name] + TASKS_REQUIREMENTS[name]) if name in TASKS_REQUIREMENTS else [name]
         for req in listRequirements:
@@ -198,7 +200,6 @@ class MMB(object):
     def _prepare_radgraph(self):
         device = -1 if self.params.device != "cuda" else 0
         self.radgraph = RadGraph(reward_level="partial", cuda=device)
-        
 
     def _prepare_chexbert(self):
         # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9

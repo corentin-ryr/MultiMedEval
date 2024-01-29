@@ -1,7 +1,7 @@
-from multimedbench.imageClassification import ImageClassification
+from multimedeval.imageClassification import ImageClassification
 from medmnist.dataset import OCTMNIST, PathMNIST, PneumoniaMNIST, RetinaMNIST, BloodMNIST, ChestMNIST, OrganAMNIST, OrganCMNIST, DermaMNIST, BreastMNIST, TissueMNIST, OrganSMNIST, MedMNIST2D
 import os
-from multimedbench.utils import cleanStr
+from multimedeval.utils import cleanStr
 
 NAME_TO_MNIST = {
     "OCTMNIST": {"class": OCTMNIST, "modality": "OCT" },

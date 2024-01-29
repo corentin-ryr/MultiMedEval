@@ -4,12 +4,12 @@ import torch.nn as nn
 import pandas as pd
 import numpy as np
 import json
-from multimedbench.chexbert.models.bert_labeler import bert_labeler
-from multimedbench.chexbert.bert_tokenizer import tokenize
+from multimedeval.chexbert.models.bert_labeler import bert_labeler
+from multimedeval.chexbert.bert_tokenizer import tokenize
 from sklearn.metrics import f1_score, confusion_matrix
 from statsmodels.stats.inter_rater import cohens_kappa
 from transformers import BertTokenizer
-from multimedbench.chexbert.constants import *
+from multimedeval.chexbert.constants import *
 
 def get_weighted_f1_weights(train_path_or_csv):
     """Compute weights used to obtain the weighted average of

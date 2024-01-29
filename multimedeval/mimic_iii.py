@@ -1,19 +1,19 @@
-from multimedbench.utils import Benchmark, Params
+from multimedeval.utils import Benchmark, Params
 import os
 import pandas as pd
 from tqdm import tqdm
 import datasets
 import re
-from multimedbench.utils import Benchmark, exact_entity_token_if_rel_exists_reward
+from multimedeval.utils import Benchmark, exact_entity_token_if_rel_exists_reward
 import torch
 from nltk.translate.meteor_score import meteor_score
 from nltk.tokenize import word_tokenize
 from torchmetrics.text import BLEUScore, ROUGEScore
-from multimedbench.chexbert.label import encode
+from multimedeval.chexbert.label import encode
 import dill
 from bert_score import BERTScorer
 from torch.utils.data import DataLoader
-from multimedbench.utils import download_file
+from multimedeval.utils import download_file
 import gzip
 import shutil
 

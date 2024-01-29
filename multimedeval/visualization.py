@@ -1,4 +1,4 @@
-from multimedbench.utils import Benchmark
+from multimedeval.utils import Benchmark
 import pandas as pd
 from pathlib import Path
 import math
@@ -276,7 +276,7 @@ class BenchmarkVisualizer:
         )
 
         # Reduce margins
-        fig.update_layout(margin=dict(t=1, l=0.5, r=2, b=0))
+        fig.update_layout(margin=dict(t=50, l=50, r=50, b=50))
         # Increase font size of the labels
 
         fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=1500, height=700)

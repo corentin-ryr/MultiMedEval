@@ -6,7 +6,7 @@ with open('requirements.txt', 'r') as f:
 
 
 setup(
-    name='MultiMedBench',
+    name='MultiMedEval',
     version='0.1',
     packages=find_packages(),
     install_requires=requirements,
