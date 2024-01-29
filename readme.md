@@ -49,7 +49,7 @@ We include 12 tasks representing a range of different imaging modalities.
 To install the library, you can use `pip`
 
 ```console
-pip install git+https://github.com/corentin-ryr/MultiMedBench.git
+pip install git+https://github.com/corentin-ryr/MultiMedEval.git
 ```
 
 The setup script needs a configuration file containing the destination folder for every dataset. You need to specify this config file manually to fit your system. The config file follows this example:

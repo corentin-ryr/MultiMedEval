@@ -85,7 +85,7 @@ class MultiMedEval(object):
         self._physionet_username = None
         self._physionet_password = None
 
-        print(f"\n\nRunning MultiMedBenchmark with {self.params}")
+        print(f"\n\nRunning MultiMedEval with {self.params}")
 
         if not os.path.exists(params.run_name):
             os.mkdir(params.run_name)
