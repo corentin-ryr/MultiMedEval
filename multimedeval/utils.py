@@ -8,12 +8,10 @@ import re
 from abc import abstractmethod, ABC
 import torch
 import requests
-from requests.auth import HTTPBasicAuth, HTTPDigestAuth
 from tqdm import tqdm
-from urllib.request import urlopen
 import re
-from bs4 import BeautifulSoup
 import requests
+from tensorboardX import SummaryWriter
 
 
 class Benchmark(ABC):
@@ -65,6 +63,7 @@ class Params:
     fewshot: bool = False
     num_workers: int = 0
     device: str = "cuda"
+    tensorBoardWriter: SummaryWriter = None
 
     def __post_init__(self):
         if self.device != "cpu":
