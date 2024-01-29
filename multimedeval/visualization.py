@@ -14,6 +14,7 @@ class BenchmarkVisualizer:
         Path(self.folderName).mkdir(parents=True, exist_ok=True)
 
     def sunburstModalities(self):
+        self._importPlotly()
         print("======================= Creating sunburst modalities =======================")
         import plotly.express as px
 
@@ -44,6 +45,7 @@ class BenchmarkVisualizer:
         # fig.write_html(Path(self.folderName, "modalities.html"))
 
     def sunburstTasks(self):
+        self._importPlotly()
         print("======================= Creating sunburst tasks =======================")
         import plotly.express as px
 
@@ -75,6 +77,7 @@ class BenchmarkVisualizer:
         # fig.write_html(Path(self.folderName, "tasks.html"))
 
     def tableImageClassification(self):
+        self._importPlotly()
         print("======================= Creating table image classification =======================")
         import plotly.graph_objects as go
 
@@ -136,6 +139,7 @@ class BenchmarkVisualizer:
         # fig.write_html(Path(self.folderName, "image_classification.html"))
 
     def sankeyDiagram(self):
+        self._importPlotly()
         print("======================= Creating sankey diagram =======================")
         import plotly.graph_objects as go
         import plotly.express as px
@@ -162,8 +166,6 @@ class BenchmarkVisualizer:
             if dataset.modality not in labelToIdx:
                 labelToIdx[dataset.modality] = len(labelToIdx)
                 modalities.add(dataset.modality)
-        
-
 
         # Create the colors: strong colors for the tasks and variations of the same color for the dataset with the same task
 
@@ -202,28 +204,29 @@ class BenchmarkVisualizer:
             weighted_mean_angle = math.atan2(weighted_sum_y, weighted_sum_x) % (2 * math.pi)
 
             indexToColor[labelToIdx[modality]] = weighted_mean_angle
-        
+
         # Convert the colors to rgb
         for idx, color in indexToColor.items():
             indexToColor[idx] = px.colors.sample_colorscale("mrybm", color)[0]
-
-
 
         # Create the links
         source = []
         target = []
         value = []
+        color = []
 
         for dataset in self.datasets:
             # Add the link between the dataset and the task
             source.append(labelToIdx[dataset.taskName])
             target.append(labelToIdx[dataset.task])
             value.append(len(dataset))
+            color.append(indexToColor[labelToIdx[dataset.taskName]] + indexToColor[labelToIdx[dataset.task]])
 
             # Add the link between the task and the modality
             source.append(labelToIdx[dataset.task])
             target.append(labelToIdx[dataset.modality])
             value.append(len(dataset))
+            color.append(indexToColor[labelToIdx[dataset.task]] + indexToColor[labelToIdx[dataset.modality]])
 
         labels = list(labelToIdx.keys())
         colors = [indexToColor[labelToIdx[label]] for label in labels]
@@ -280,3 +283,10 @@ class BenchmarkVisualizer:
         # Increase font size of the labels
 
         fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=1500, height=700)
+
+    def _importPlotly(self):
+        try:
+            import plotly
+        except ImportError:
+            print("Plotly is not installed. Please install it with `pip install plotly`")
+            exit(1)

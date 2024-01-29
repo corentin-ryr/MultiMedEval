@@ -191,6 +191,7 @@ class MultiMedEval(object):
         for result in taskResult:
             if result["type"] == "json":
                 print(result["value"])
+                self._writeTotensorboard(result)
             fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
 
         print(f"Done task {name}")
@@ -235,3 +236,18 @@ class MultiMedEval(object):
             self._config = json.load(open("MedMD_config.json", "r"))
 
         return self._config
+
+    def _writeTotensorboard(self, results):
+        writer = self.params.tensorBoardWriter
+        if writer is None:
+            return
+        
+        runName = self.params.run_name
+        taskName = results["name"]
+
+
+        metrics = results["value"]
+        for metric in metrics:
+            metricValue = metrics[metric]
+            writer.add_scalar(f"{runName}/{taskName}/{metric}", metricValue)
+
