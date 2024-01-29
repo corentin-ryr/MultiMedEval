@@ -76,7 +76,7 @@ class MIMIC_III(Benchmark):
         super().__init__(**kwargs)
         self.taskName = "MIMIC-III"
         self.modality = "Radiology"
-        self.task = "Report Generation"
+        self.task = "Report Summarization"
 
         self.bleu_1 = BLEUScore(n_gram=1)
         self.bleu_2 = BLEUScore(n_gram=2)

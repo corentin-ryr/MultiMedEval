@@ -128,7 +128,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         if not self.engine.tasksReady["Chexbert"]["ready"]:
             raise Exception("Chexbert is needed for the Image classification task on MIMIC-CXR but it is not ready.")
 
-        self.taskName = "MIMIC Image Classification"
+        self.taskName = "MIMIC-CXR"
         self.modality = "X-Ray"
         self.scoringType = "multilabel"
 
@@ -338,7 +338,7 @@ class Pad_UFES_20(ImageClassification):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        self.taskName = "Pad UFES 20 Image Classification"
+        self.taskName = "Pad UFES 20"
         self.modality = "Dermatology"
 
         self.num_classes = 7

@@ -6,7 +6,7 @@ def batcher(prompts):
     print(prompts[0])
     return ["entailment" for _ in range(len(prompts))]
 
-writer = SummaryWriter("testTensorboard")
+writer = None # SummaryWriter("testTensorboard")
 
 engine = MultiMedEval(
     params=Params(batch_size=64, fewshot=True, num_workers=8, tensorBoardWriter=writer), batcher=batcher, generateVisualization=True

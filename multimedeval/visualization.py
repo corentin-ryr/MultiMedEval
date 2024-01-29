@@ -144,6 +144,7 @@ class BenchmarkVisualizer:
         import plotly.graph_objects as go
         import plotly.express as px
         import random
+        from colour import Color
 
         # The labels are the name of the datasets, the name of the tasks and the name of the modalities
         labelToIdx = {}
@@ -167,69 +168,61 @@ class BenchmarkVisualizer:
                 labelToIdx[dataset.modality] = len(labelToIdx)
                 modalities.add(dataset.modality)
 
-        # Create the colors: strong colors for the tasks and variations of the same color for the dataset with the same task
 
-        # Take colors from the G10 palette
-        indexToColor = {}
+        indexToColor:dict[int, Color] = {}
+        mainColors = ["#D6B656", "#6C8EBF", "#B85450", "#82B366", "#9673A6", "#D79B00"]
         for idx, task in enumerate(tasks):
-            indexToColor[labelToIdx[task]] = idx / len(tasks)
+            indexToColor[labelToIdx[task]] = Color(mainColors[idx])
 
         for dataset in self.datasets:
             # Sample a color based on the task of the dataset
-            taskColor = indexToColor[labelToIdx[dataset.task]]
+            taskColor:Color = indexToColor[labelToIdx[dataset.task]]
 
             # Sample small variation of the color for the dataset
-            rangeColor = 1 / len(tasks) / 2
-            datasetColor = (taskColor + random.uniform(-rangeColor, rangeColor)) % 1
+            rangeColor = 1 / len(tasks) / 4
+            datasetColor = Color(taskColor, hue=taskColor.get_hue() + random.uniform(-rangeColor, rangeColor) % 1)
             indexToColor[labelToIdx[dataset.taskName]] = datasetColor
 
         for idx, modality in enumerate(modalities):
             # Get all the tasks that have this modality
             taskColors = []
             taskWeights = []
+            baseColor = None
             for dataset in self.datasets:
                 if dataset.modality == modality:
-                    taskColors.append(indexToColor[labelToIdx[dataset.task]])
+                    taskColors.append(indexToColor[labelToIdx[dataset.task]].get_hue())
                     taskWeights.append(len(dataset))
+                    baseColor = indexToColor[labelToIdx[dataset.task]]
 
-            # Convert angles to Cartesian coordinates
-            x_coords = [math.cos(angle) for angle in taskColors]
-            y_coords = [math.sin(angle) for angle in taskColors]
-
-            # Calculate the weighted sums
-            weighted_sum_x = sum(w * x for w, x in zip(taskWeights, x_coords))
-            weighted_sum_y = sum(w * y for w, y in zip(taskWeights, y_coords))
-
-            # Calculate the weighted mean angle
-            weighted_mean_angle = math.atan2(weighted_sum_y, weighted_sum_x) % (2 * math.pi)
-
-            indexToColor[labelToIdx[modality]] = weighted_mean_angle
-
-        # Convert the colors to rgb
-        for idx, color in indexToColor.items():
-            indexToColor[idx] = px.colors.sample_colorscale("mrybm", color)[0]
+            weighted_mean_hue = self._averageCircular(taskColors, taskWeights)
+            indexToColor[labelToIdx[modality]] = Color(baseColor, hue=weighted_mean_hue)
 
         # Create the links
         source = []
         target = []
         value = []
-        color = []
+        linksColor = []
 
         for dataset in self.datasets:
             # Add the link between the dataset and the task
             source.append(labelToIdx[dataset.taskName])
             target.append(labelToIdx[dataset.task])
             value.append(len(dataset))
-            color.append(indexToColor[labelToIdx[dataset.taskName]] + indexToColor[labelToIdx[dataset.task]])
+            linksColor.append(self._averageCircular([indexToColor[labelToIdx[dataset.taskName]].get_hue(), indexToColor[labelToIdx[dataset.task]].get_hue()]))
 
             # Add the link between the task and the modality
             source.append(labelToIdx[dataset.task])
             target.append(labelToIdx[dataset.modality])
             value.append(len(dataset))
-            color.append(indexToColor[labelToIdx[dataset.task]] + indexToColor[labelToIdx[dataset.modality]])
+            linksColor.append(self._averageCircular([indexToColor[labelToIdx[dataset.task]].get_hue(), indexToColor[labelToIdx[dataset.modality]].get_hue()]))
+
+        for idx in range(len(linksColor)):
+            tempColor = Color(hsl=(linksColor[idx], 0.5, 0.7)).rgb
+            linksColor[idx] = f"rgb({tempColor[0] * 255}, {tempColor[1] * 255}, {tempColor[2] * 255})"
 
         labels = list(labelToIdx.keys())
-        colors = [indexToColor[labelToIdx[label]] for label in labels]
+        colors = [indexToColor[labelToIdx[label]].rgb for label in labels]
+        colors = [f"rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})" for color in colors]
 
         # Create the figure
         fig = go.Figure(
@@ -246,6 +239,7 @@ class BenchmarkVisualizer:
                         source=source,
                         target=target,
                         value=value,
+                        color=linksColor,
                     ),
                 )
             ]
@@ -259,7 +253,7 @@ class BenchmarkVisualizer:
                 yref="paper",
                 text=column_name,
                 showarrow=False,
-                font=dict(family="Courier New, monospace", size=16, color="black"),
+                font=dict(family="Helvetica", size=20, color="black"),
                 align="center",
             )
 
@@ -275,14 +269,81 @@ class BenchmarkVisualizer:
                 "visible": False,  # numbers below
             },
             plot_bgcolor="rgba(0,0,0,0)",
-            font_size=20,
+            font_size=16,
+            font_family="Helvetica",
         )
 
         # Reduce margins
-        fig.update_layout(margin=dict(t=50, l=50, r=50, b=50))
+        fig.update_layout(margin=dict(t=50, l=20, r=20, b=20))
         # Increase font size of the labels
 
         fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=1500, height=700)
+
+    def sankeyD3Blocks(self):
+        from d3blocks import D3Blocks
+        import random
+        from colour import Color
+
+        print("======================= Creating sankey diagram with D3Blocks =======================")
+
+        dfAsList = []
+        tasks = set()
+        modalities = set()
+
+        for dataset in self.datasets:
+            task = dataset.task.replace("_", " ")
+            # Add the link between the dataset and the task
+            dfAsList.append((dataset.taskName, task, len(dataset)))
+
+            # Add the link between the task and the modality
+            dfAsList.append((task, dataset.modality, len(dataset)))
+
+            tasks.add(task)
+            modalities.add(dataset.modality)
+
+        # Take colors from the G10 palette
+        nameToColor = {}
+        for idx, task in enumerate(tasks):
+            nameToColor[task] = (idx / len(tasks) + 0.5) % 1
+
+        for dataset in self.datasets:
+            # Sample a color based on the task of the dataset
+            taskColor = nameToColor[dataset.task.replace("_", " ")]
+
+            # Sample small variation of the color for the dataset
+            rangeColor = 1 / len(tasks) / 4
+            datasetColor = (taskColor + random.uniform(-rangeColor, rangeColor)) % 1
+            nameToColor[dataset.taskName] = datasetColor
+
+        for idx, modality in enumerate(modalities):
+            # Get all the tasks that have this modality
+            taskColors = []
+            taskWeights = []
+            for dataset in self.datasets:
+                if dataset.modality == modality:
+                    taskColors.append(nameToColor[dataset.task])
+                    taskWeights.append(len(dataset))
+
+            weighted_mean_angle = self._averageCircular(taskColors, taskWeights)
+
+            nameToColor[modality] = weighted_mean_angle
+
+        # Convert every color to hex
+        for name, color in nameToColor.items():
+            tempColor = Color(hsl=(color, 0.5, 0.4)).hex
+            nameToColor[name] = tempColor
+
+        df = pd.DataFrame(dfAsList, columns=["source", "target", "weight"])
+        print(df)
+
+        d3 = D3Blocks(chart="Sankey", frame=True)
+        
+        # Change the font
+        d3.set_node_properties(df, width=30, color=nameToColor)
+
+        d3.set_edge_properties(df, color="source-target", opacity=0.8)
+
+        d3.show(filepath="tempSankey.html", figsize=(1000, 700))
 
     def _importPlotly(self):
         try:
@@ -290,3 +351,21 @@ class BenchmarkVisualizer:
         except ImportError:
             print("Plotly is not installed. Please install it with `pip install plotly`")
             exit(1)
+
+    def _averageCircular(self, angles, weights=None):
+        # Convert angles to Cartesian coordinates
+        x_coords = [math.cos(angle * 2 * math.pi) for angle in angles]
+        y_coords = [math.sin(angle * 2 * math.pi) for angle in angles]
+
+        # Calculate the weighted sums
+        if weights is None:
+            weights = [1] * len(x_coords)
+            
+        weighted_sum_x = sum(w * x for w, x in zip(weights, x_coords))
+        weighted_sum_y = sum(w * y for w, y in zip(weights, y_coords))
+
+        # Calculate the weighted mean angle
+        weightedAngle = math.atan2(weighted_sum_y, weighted_sum_x) % (2 * math.pi)
+
+        # Convert to [0, 1] range
+        return weightedAngle / (2 * math.pi)

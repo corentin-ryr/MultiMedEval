@@ -33,9 +33,9 @@ class MIMIC_CXR_reportgen(Benchmark):
         super().__init__(**kwargs)
         logging.debug("***** Transfer task : MIMIC_CXR *****\n\n")
 
-        self.taskName = "MIMIC_CXR report generation"
+        self.taskName = "MIMIC-CXR"
         self.modality = "X-Ray"
-        self.task = "Report generation"
+        self.task = "Report Generation"
 
         self.bleu_1 = BLEUScore(n_gram=1)
         self.bleu_2 = BLEUScore(n_gram=2)
