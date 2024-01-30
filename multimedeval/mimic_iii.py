@@ -6,16 +6,12 @@ import datasets
 import re
 from multimedeval.utils import Benchmark, exact_entity_token_if_rel_exists_reward
 import torch
-from nltk.translate.meteor_score import meteor_score
-from nltk.tokenize import word_tokenize
 from torchmetrics.text import BLEUScore, ROUGEScore
-from multimedeval.chexbert.label import encode
-import dill
-from bert_score import BERTScorer
 from torch.utils.data import DataLoader
 from multimedeval.utils import download_file
 import gzip
 import shutil
+from multimedeval.mimic import compute_bertscore, compute_meteor, compute_composite
 
 def get_final_report(text):
     if "FINAL REPORT" not in text:
@@ -84,7 +80,7 @@ class MIMIC_III(Benchmark):
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
         self.path = self.engine.getConfig()["physionet"]["path"]
-        self.chexbertPath = self.engine.getConfig()["CheXBert"]["dlLocation"]
+        
 
         self._generate_dataset()
 
@@ -161,7 +157,6 @@ class MIMIC_III(Benchmark):
 
             expToReport[EXP] = {"impression": impressions_list_clean, "findings": findings_list_clean, "ids": ids_list}
 
-
         # Open the split csv
         split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mimiciiisplit.csv"))
         split = split[split["split"] == "test"]
@@ -188,7 +183,6 @@ class MIMIC_III(Benchmark):
 
         self.dataset = datasets.Dataset.from_list(datasetTest)
 
-
     def run(self, params: Params, batcher):
         print(f"***** Benchmarking : {self.taskName} *****")
         refReports = []
@@ -198,7 +192,9 @@ class MIMIC_III(Benchmark):
         rougeLScores = []
 
         # Run the batcher for all data split in chunks
-        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
+        dataloader = DataLoader(
+            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
+        )
         for batch in tqdm(
             dataloader,
             desc="Generating reports",
@@ -214,9 +210,9 @@ class MIMIC_III(Benchmark):
                 bleu1Scores.append(self.bleu_1([hyp], [[ref]]).item())
                 bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
                 rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
-            
 
-        f1_bertscore = self.compute_bertscore(hypReports, refReports)
+        f1_bertscore = compute_bertscore(hypReports, refReports)
+        f1_bertscore_unscaled = compute_bertscore(hypReports, refReports, rescale=False)
 
         chexbert_similarity = self.compute_chexbert(hypReports, refReports)
 
@@ -226,9 +222,9 @@ class MIMIC_III(Benchmark):
             [self.bleu_1([candidate], [[reference]]).item() for reference, candidate in zip(refReports, hypReports)]
         )
 
-        radcliq_v0_scores = self.compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
+        radcliq_v0_scores = compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
 
-        meteor_scores = self.compute_meteor(hypReports, refReports)
+        meteor_scores = compute_meteor(hypReports, refReports)
 
         rougeScores = self.rougeL.compute()
         rougeScores = {key: value.item() for key, value in rougeScores.items()}
@@ -238,7 +234,7 @@ class MIMIC_III(Benchmark):
             "bleu4": self.bleu_4.compute().item(),
             "f1-radgraph": f1_radgraph.mean().item(),
             "CheXBert vector similarity": chexbert_similarity.mean().item(),
-            "f1-bertscore": f1_bertscore.mean().item(),
+            "f1-bertscore": f1_bertscore_unscaled.mean().item(),
             "radcliq": sum(radcliq_v0_scores) / len(radcliq_v0_scores),
             "meteor": sum(meteor_scores) / len(meteor_scores),
         }
@@ -248,15 +244,13 @@ class MIMIC_III(Benchmark):
         # Add a header to the log
         answersLog = [("ref", "hyp", "bleu1", "bleu4", "rougeL")] + list(answersLog)
 
-
         return [
             {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
-    
+
     def getCorrectAnswer(self, sample, fullText=False):
         return sample["impression"]
-
 
     def format_question(self, sample):
         question = sample["findings"]
@@ -268,56 +262,17 @@ class MIMIC_III(Benchmark):
             }
         ]
         return (formattedText, [])
-    
+
     def compute_chexbert(self, hypReports, refReports):
         df = pd.DataFrame(columns=["Report Impression"], data=refReports)
-        labelsReference = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+        labelsReference = self.engine.encoder(df)
 
         df = pd.DataFrame(columns=["Report Impression"], data=hypReports)
-        labelsHypothesis = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+        labelsHypothesis = self.engine.encoder(df)
 
         # Compute the vector similarity between the reference and the geenrated reports
         return torch.cosine_similarity(labelsReference, labelsHypothesis)
 
-    def compute_meteor(self, hypReports, refReports):
-        meteor_scores = []
-        for ref, hyp in zip(refReports, hypReports):
-            # Tokenize the reference and hypothesis
-            ref_tokens = word_tokenize(ref)
-            hyp_tokens = word_tokenize(hyp)
-
-            # Compute the meteor score
-            meteor_scores.append(meteor_score([ref_tokens], hyp_tokens))
-
-        return meteor_scores
-
-    def compute_composite(self, bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph):
-        # Get the current path to the module
-        module_path = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(module_path, "composite_metric_model_dill.pkl"), "rb") as f:
-            composite_metric_v0_model = dill.load(f)
-
-        with open(os.path.join(module_path, "normalizer_dill.pkl"), "rb") as f:
-            normalizer = dill.load(f)
-
-        # The column need to be in the order [bleu, bertscore, chexbert, radgraph]
-        input_data = torch.stack([bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph], dim=1)
-
-        norm_input_data = normalizer.transform(input_data)
-        return composite_metric_v0_model.predict(norm_input_data)
-
-    def compute_bertscore(self, hypReports, refReports):
-        scorer = BERTScorer(
-            model_type="distilroberta-base",
-            batch_size=256,
-            lang="en",
-            rescale_with_baseline=True,
-            idf=True,
-            idf_sents=hypReports,
-        )
-
-        P, R, f1_bertscore = scorer.score(hypReports, refReports)
-        return f1_bertscore
 
     def compute_radgraph(self, hypReports, refReports):
         f1_radgraph = []
@@ -327,25 +282,31 @@ class MIMIC_III(Benchmark):
             f1_radgraph.append(
                 exact_entity_token_if_rel_exists_reward(hyp_annotation_lists[0], ref_annotation_lists[0])
             )
+
         return torch.tensor(f1_radgraph)
-    
+
     def _generate_dataset(self):
         # Check if the path already exists and if so return
         if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv")):
             self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
             return
-        
+
         os.makedirs(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4"), exist_ok=True)
-        
+
         username, password = self.engine.getPhysioNetCredentials()
         # wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz'
         # subprocess.run(wget_command, shell=True, check=True)
-       
-        download_file("https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz", os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv.gz"), username, password)
-        
-        self.path = os.path.join(self.path, "physionet.org",  "files", "mimiciii", "1.4")
-        
-         # Unzip the NOTEEVENTS file
+
+        download_file(
+            "https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz",
+            os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv.gz"),
+            username,
+            password,
+        )
+
+        self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+
+        # Unzip the NOTEEVENTS file
         file = os.path.join(self.path, "NOTEEVENTS.csv")
         with gzip.open(file + ".gz", "rb") as f_in:
             with open(file, "wb") as f_out:
@@ -353,8 +314,6 @@ class MIMIC_III(Benchmark):
 
         # Remove the zip file
         os.remove(file + ".gz")
-
-
 
 
 # which reports go into the given modality_anatomy pair

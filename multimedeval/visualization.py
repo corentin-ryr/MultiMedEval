@@ -8,7 +8,7 @@ class BenchmarkVisualizer:
     def __init__(self, datasets: list[Benchmark]) -> None:
         self.datasets = datasets
 
-        self.folderName = "dataset_stats"
+        self.folderName = "figures"
 
         # Create the folder if it doesn't exist
         Path(self.folderName).mkdir(parents=True, exist_ok=True)
@@ -103,7 +103,7 @@ class BenchmarkVisualizer:
         df = pd.DataFrame(columns=["modality", "task", "task type", "dataset", "size"], data=data)
 
         # Only keep the image classification task datasets
-        df = df[df["task"] == "Image Classification"]
+        # df = df[df["task"] == "Image Classification"]
 
         # Only keep the columns "modality", "dataset" and "size"
         mdDf = df[["modality", "task type", "dataset", "size"]]
