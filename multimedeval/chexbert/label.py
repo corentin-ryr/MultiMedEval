@@ -8,8 +8,6 @@ from multimedeval.chexbert.utils import generate_attention_masks
 from multimedeval.chexbert.models.bert_labeler import bert_labeler
 from multimedeval.chexbert.models.bert_encoder import bert_encoder
 
-from multimedeval.chexbert.bert_tokenizer import tokenize
-from transformers import BertTokenizer
 from collections import OrderedDict
 from multimedeval.chexbert.datasets.unlabeled_dataset import UnlabeledDataset
 from multimedeval.chexbert.constants import *

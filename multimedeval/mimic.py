@@ -107,7 +107,7 @@ class MIMIC_CXR_reportgen(Benchmark):
                 bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
                 rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
 
-            break
+            # break
 
         f1_bertscore = compute_bertscore(hypReports, refReports)
         f1_bertscore_unscaled = compute_bertscore(hypReports, refReports, rescale=False)

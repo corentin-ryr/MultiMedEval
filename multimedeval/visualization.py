@@ -348,9 +348,13 @@ class BenchmarkVisualizer:
     def _importPlotly(self):
         try:
             import plotly
+            import kaleido
+            import tabulate
         except ImportError:
-            print("Plotly is not installed. Please install it with `pip install plotly`")
+            print("Please install plotly and kaleido with `pip install plotly kaleido tabulate` to generate the visualizations.")
+            
             exit(1)
+
 
     def _averageCircular(self, angles, weights=None):
         # Convert angles to Cartesian coordinates

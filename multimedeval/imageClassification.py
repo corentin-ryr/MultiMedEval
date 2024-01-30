@@ -129,14 +129,18 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         self.scoringType = "multilabel"
 
         self.num_classes = 5
-        self.path = self.engine.getConfig()["physionet"]["path"]
+        self.path = (
+            self.engine.getConfig()["mimicCXR"]["path"]
+            if "mimicCXR" in self.engine.getConfig()
+            else os.path.join(self.engine.getConfig()["physionet"]["path"], "physionet.org/files")
+        )
         self._generate_dataset()
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
-        testSplit = split[split.split == "test"]
-
         chexbertMimic = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-chexpert.csv"))
+
+        testSplit = split[split.split == "test"]
         chexbertMimicTest = chexbertMimic[chexbertMimic.study_id.isin(testSplit.study_id)]
         chexbertMimicTest = chexbertMimicTest.merge(testSplit, on=["study_id", "subject_id"])
         self.dataset = datasets.Dataset.from_pandas(chexbertMimicTest)
@@ -212,18 +216,18 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv")):
-            self.path = os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0")
+        if os.path.exists(os.path.join(self.path, "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv")):
+            self.path = os.path.join(self.path, "mimic-cxr-jpg", "2.0.0")
             return
 
         os.makedirs(self.path, exist_ok=True)
 
         username, password = self.engine.getPhysioNetCredentials()
-        wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/'
+        wget_command = f'wget -r -c -np -nc --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/'  # Can replace -nc (no clobber) with -N (timestamping)
 
         subprocess.run(wget_command, shell=True, check=True)
-        
-        self.path = os.path.join(self.path, "physionet.org", "files", "mimic-cxr-jpg", "2.0.0")
+
+        self.path = os.path.join(self.path, "mimic-cxr-jpg", "2.0.0")
 
         # Unzip the mimic-cxr-2.0.0-split file
         file = os.path.join(self.path, "mimic-cxr-2.0.0-split.csv")

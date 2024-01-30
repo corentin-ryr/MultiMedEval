@@ -1,22 +1,14 @@
 torch
 transformers
 datasets>=2.16
-protobuf
 nltk
 torchmetrics
-spacy
-overrides==3.1.0
 gdown
-scikit-learn
+scikit-learn==1.3.2 # For pickling warning messages
 statsmodels
 bert_score
 pydicom
 kaggle
-kaleido
-boto3 # For MedQA
-jsonpickle # For RadGraph
-h5py # For RadGraph
-tensorboardX # For RadGraph
+tensorboardX
 medmnist
 radgraph==0.0.8
-tabulate
