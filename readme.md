@@ -37,7 +37,7 @@ We include 12 tasks representing a range of different imaging modalities.
 
 
 <p align="center">
-    <img src="dataset_stats/sankey.png" alt="sankey graph">
+    <img src="figures/sankey.png" alt="sankey graph">
     <br>
     <em>Representation of the modalities, tasks and datasets in MultiMedEval</em>
 </p>

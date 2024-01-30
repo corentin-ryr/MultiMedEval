@@ -8,8 +8,8 @@ from transformers import (
     LlamaTokenizer,
     GenerationConfig,
 )
-from multimedeval import MultiMedEval, Params
 import time
+from multimedeval import MultiMedEval, Params
 
 
 class batcherMistral:
@@ -196,12 +196,12 @@ class batcherPMCLlama(batcherLlama):
 
 
 if __name__ == "__main__":
-    params = Params(batch_size=8, run_name="benchmarkMedAlpaca")
+    params = Params(batch_size=32, run_name="benchmarkMedAlpaca")
 
     device = "cuda:0"
     batcher = batcherMedAlpaca(device=device)
 
     engine = MultiMedEval(params, batcher)
 
-    results = engine.eval(["PubMedQA", "MedMCQA", "MedQA"])
+    results = engine.eval(["PubMedQA", "MedMCQA", "MedQA", "MedNLI", "MIMIC-III"])
     print(f"Everything is done, see the {params.run_name} folder for detailed results.")

@@ -124,19 +124,13 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        # Check if chexbert is ready in engine
-        if not self.engine.tasksReady["Chexbert"]["ready"]:
-            raise Exception("Chexbert is needed for the Image classification task on MIMIC-CXR but it is not ready.")
-
-        self.taskName = "MIMIC-CXR"
+        self.taskName = "MIMIC-CXR Image Classficication"
         self.modality = "X-Ray"
         self.scoringType = "multilabel"
 
         self.num_classes = 5
         self.path = self.engine.getConfig()["physionet"]["path"]
         self._generate_dataset()
-
-        self.chexbertPath = os.path.join(self.engine.getConfig()["CheXBert"]["dlLocation"], "chexbert.pth")
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
@@ -177,7 +171,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
             "Pleural Effusion",
         ]
 
-        self.labeler = label(self.chexbertPath, verbose=False)
+        
 
     def format_question(self, sample, prompt=False):
         samplePath = os.path.join(
@@ -200,7 +194,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
     def getPredictedAnswer(self, answer: str) -> int:
         df = pd.DataFrame(columns=["Report Impression"], data=[answer])
-        labels = [element[0] == 1 for element in self.labeler(df)]
+        labels = [element[0] == 1 for element in self.engine.labeler(df)]
         labels = [int(labels[self.labelNames.index(condition)]) for condition in self.conditions]
 
         return labels

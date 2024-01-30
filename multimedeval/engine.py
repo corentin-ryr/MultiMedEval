@@ -19,8 +19,7 @@ from multimedeval.mnist import (
     MNIST_Blood,
     MNIST_Breast,
     MNIST_Derma,
-    MNIST_OrganA,
-    MNIST_Chest,
+
     MNIST_OrganC,
     MNIST_OrganS,
     MNIST_Pneumonia,
@@ -30,13 +29,14 @@ from multimedeval.mnist import (
 import json
 import os
 import gdown
-import sys
 from tqdm import tqdm
 import getpass
 import nltk
 from multimedeval.visualization import BenchmarkVisualizer
 from collections.abc import Callable
-from radgraph import RadGraph
+from radgraph import F1RadGraph
+from multimedeval.chexbert.label import encode, encode, label
+
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -46,12 +46,12 @@ TASKS: dict[str, Benchmark] = {
     "MedQA": MedQA,
     "PubMedQA": PubMedQA,
     "MedMCQA": MedMCQA,
-    "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen,  # NOT WORKING
+    "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen,  # Setup not tested
     "VQA-RAD": VQA_RAD,
     "Path-VQA": Path_VQA,
     "SLAKE": SLAKE,
-    "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification,  # NOT WORKING
-    "VinDr-Mammo": VinDr_Mammo,  # NOT WORKING
+    "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification,  # Setup not tested
+    "VinDr-Mammo": VinDr_Mammo,  # Setup not tested
     "Pad-UFES-20": Pad_UFES_20,
     "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
     "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
@@ -73,6 +73,7 @@ TASKS: dict[str, Benchmark] = {
 
 TASKS_REQUIREMENTS: dict[str, list[str]] = {
     "MIMIC-CXR-ReportGeneration": ["RadGraph", "Chexbert"],
+    "MIMIC-CXR-ImageClassification": ["Chexbert"],
     "MIMIC-III": ["RadGraph", "Chexbert"],
 }
 
@@ -147,11 +148,11 @@ class MultiMedEval(object):
                 if (self.tasksReady[x]["ready"] and "task" in self.tasksReady[x])
             ]
             visualizer = BenchmarkVisualizer(benchmarks)
-            visualizer.sunburstModalities()
-            visualizer.sunburstTasks()
+            # visualizer.sunburstModalities()
+            # visualizer.sunburstTasks()
             visualizer.tableImageClassification()
-            visualizer.sankeyDiagram()
-            visualizer.sankeyD3Blocks()
+            # visualizer.sankeyDiagram()
+            # visualizer.sankeyD3Blocks()
 
     def eval(self, name: str | list[str]):
         if self.batcher is None:
@@ -201,7 +202,8 @@ class MultiMedEval(object):
 
     def _prepare_radgraph(self):
         device = -1 if self.params.device != "cuda" else 0
-        self.radgraph = RadGraph(reward_level="partial", cuda=device)
+        self.radgraph = F1RadGraph(reward_level="partial", cuda=device)
+
 
     def _prepare_chexbert(self):
         # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
@@ -216,6 +218,11 @@ class MultiMedEval(object):
             )
         # else:
         #     print("Chexbert already downloaded")
+        
+        chexbertPath = os.path.join(self.getConfig()["CheXBert"]["dlLocation"], "chexbert.pth")
+        self.encoder = encode(chexbertPath)
+
+        self.labeler = label(chexbertPath, verbose=False)
 
     def getPhysioNetCredentials(self):
         if self._physionet_password is None or self._physionet_username is None:

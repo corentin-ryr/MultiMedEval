@@ -1,11 +1,9 @@
-import logging
 import os
 from multimedeval.utils import Benchmark
 import pandas as pd
 from tqdm import tqdm
 from PIL import Image
 import datasets
-from multimedeval.chexbert.label import encode
 from bert_score import BERTScorer
 
 from multimedeval.utils import (
@@ -22,8 +20,6 @@ import dill
 from nltk.translate.meteor_score import meteor_score
 from nltk.tokenize import word_tokenize
 from zipfile import ZipFile
-import requests
-from requests.auth import HTTPBasicAuth
 from torch.utils.data import DataLoader
 import subprocess
 
@@ -31,9 +27,8 @@ import subprocess
 class MIMIC_CXR_reportgen(Benchmark):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        logging.debug("***** Transfer task : MIMIC_CXR *****\n\n")
 
-        self.taskName = "MIMIC-CXR"
+        self.taskName = "MIMIC-CXR Report Generation"
         self.modality = "X-Ray"
         self.task = "Report Generation"
 
@@ -41,8 +36,6 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.bleu_2 = BLEUScore(n_gram=2)
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
-
-        self.chexbertPath = self.engine.getConfig()["CheXBert"]["dlLocation"]
 
         # Get the dataset ====================================================================
         self.path = (
@@ -83,10 +76,7 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         # Convert the dataset to a pandas dataframe
         self.dataset = pd.DataFrame(columns=["subject_id", "study_id", "findings", "indications"], data=self.dataset)
-
-        # Remove the duplicates
         self.dataset = self.dataset.drop_duplicates()
-
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
     def run(self, params: Params, batcher):
@@ -117,9 +107,10 @@ class MIMIC_CXR_reportgen(Benchmark):
                 bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
                 rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
 
-            # break
+            break
 
-        f1_bertscore = self.compute_bertscore(hypReports, refReports)
+        f1_bertscore = compute_bertscore(hypReports, refReports)
+        f1_bertscore_unscaled = compute_bertscore(hypReports, refReports, rescale=False)
 
         chexbert_similarity = self.compute_chexbert(hypReports, refReports)
 
@@ -129,9 +120,9 @@ class MIMIC_CXR_reportgen(Benchmark):
             [self.bleu_1([candidate], [[reference]]).item() for reference, candidate in zip(refReports, hypReports)]
         )
 
-        radcliq_v0_scores = self.compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
+        radcliq_v0_scores = compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
 
-        meteor_scores = self.compute_meteor(hypReports, refReports)
+        meteor_scores = compute_meteor(hypReports, refReports)
 
         rougeScores = self.rougeL.compute()
         rougeScores = {key: value.item() for key, value in rougeScores.items()}
@@ -141,7 +132,7 @@ class MIMIC_CXR_reportgen(Benchmark):
             "bleu4": self.bleu_4.compute().item(),
             "f1-radgraph": f1_radgraph.mean().item(),
             "CheXBert vector similarity": chexbert_similarity.mean().item(),
-            "f1-bertscore": f1_bertscore.mean().item(),
+            "f1-bertscore": f1_bertscore_unscaled.mean().item(),
             "radcliq": sum(radcliq_v0_scores) / len(radcliq_v0_scores),
             "meteor": sum(meteor_scores) / len(meteor_scores),
         }
@@ -217,53 +208,13 @@ class MIMIC_CXR_reportgen(Benchmark):
 
     def compute_chexbert(self, hypReports, refReports):
         df = pd.DataFrame(columns=["Report Impression"], data=refReports)
-        labelsReference = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+        labelsReference = self.engine.encoder(df)
 
         df = pd.DataFrame(columns=["Report Impression"], data=hypReports)
-        labelsHypothesis = encode(os.path.join(self.chexbertPath, "chexbert.pth"), df)
+        labelsHypothesis = self.engine.encoder(df)
 
         # Compute the vector similarity between the reference and the geenrated reports
         return torch.cosine_similarity(labelsReference, labelsHypothesis)
-
-    def compute_meteor(self, hypReports, refReports):
-        meteor_scores = []
-        for ref, hyp in zip(refReports, hypReports):
-            # Tokenize the reference and hypothesis
-            ref_tokens = word_tokenize(ref)
-            hyp_tokens = word_tokenize(hyp)
-
-            # Compute the meteor score
-            meteor_scores.append(meteor_score([ref_tokens], hyp_tokens))
-
-        return meteor_scores
-
-    def compute_composite(self, bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph):
-        # Get the current path to the module
-        module_path = os.path.dirname(os.path.abspath(__file__))
-        with open(os.path.join(module_path, "composite_metric_model_dill.pkl"), "rb") as f:
-            composite_metric_v0_model = dill.load(f)
-
-        with open(os.path.join(module_path, "normalizer_dill.pkl"), "rb") as f:
-            normalizer = dill.load(f)
-
-        # The column need to be in the order [bleu, bertscore, chexbert, radgraph]
-        input_data = torch.stack([bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph], dim=1)
-
-        norm_input_data = normalizer.transform(input_data)
-        return composite_metric_v0_model.predict(norm_input_data)
-
-    def compute_bertscore(self, hypReports, refReports):
-        scorer = BERTScorer(
-            model_type="distilroberta-base",
-            batch_size=256,
-            lang="en",
-            rescale_with_baseline=True,
-            idf=True,
-            idf_sents=hypReports,
-        )
-
-        P, R, f1_bertscore = scorer.score(hypReports, refReports)
-        return f1_bertscore
 
     def compute_radgraph(self, hypReports, refReports):
         f1_radgraph = []
@@ -294,3 +245,46 @@ class MIMIC_CXR_reportgen(Benchmark):
         file = os.path.join(self.path, "mimic-cxr-2.0.0-split.csv")
         with ZipFile(file + ".gz", "r") as zipObj:
             zipObj.extractall(file)
+
+
+def compute_bertscore(hypReports, refReports, rescale=True):
+    scorer = BERTScorer(
+        model_type="distilroberta-base",
+        batch_size=256,
+        lang="en",
+        rescale_with_baseline=rescale,
+        idf=True,
+        idf_sents=hypReports,
+    )
+
+    P, R, f1_bertscore = scorer.score(hypReports, refReports)
+    return f1_bertscore
+
+
+def compute_meteor(hypReports, refReports):
+    meteor_scores = []
+    for ref, hyp in zip(refReports, hypReports):
+        # Tokenize the reference and hypothesis
+        ref_tokens = word_tokenize(ref)
+        hyp_tokens = word_tokenize(hyp)
+
+        # Compute the meteor score
+        meteor_scores.append(meteor_score([ref_tokens], hyp_tokens))
+
+    return meteor_scores
+
+
+def compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph):
+    # Get the current path to the module
+    module_path = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(module_path, "composite_metric_model_dill.pkl"), "rb") as f:
+        composite_metric_v0_model = dill.load(f)
+
+    with open(os.path.join(module_path, "normalizer_dill.pkl"), "rb") as f:
+        normalizer = dill.load(f)
+
+    # The column need to be in the order [bleu, bertscore, chexbert, radgraph]
+    input_data = torch.stack([bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph], dim=1)
+
+    norm_input_data = normalizer.transform(input_data)
+    return composite_metric_v0_model.predict(norm_input_data)
