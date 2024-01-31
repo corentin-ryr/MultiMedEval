@@ -220,7 +220,7 @@ class MultiMedEval(object):
         #     print("Chexbert already downloaded")
         
         chexbertPath = os.path.join(self.getConfig()["CheXBert"]["dlLocation"], "chexbert.pth")
-        self.encoder = encode(chexbertPath)
+        self.encoder = encode(chexbertPath, verbose=False)
 
         self.labeler = label(chexbertPath, verbose=False)
 

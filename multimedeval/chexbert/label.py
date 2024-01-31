@@ -70,7 +70,7 @@ class label:
             for k, v in checkpoint["model_state_dict"].items():
                 name = k[7:]  # remove `module.`
                 new_state_dict[name] = v
-            model.load_state_dict(new_state_dict)
+            model.load_state_dict(new_state_dict, strict=False)
 
         model.eval()
         self.model = model
@@ -117,14 +117,14 @@ class encode:
             model = nn.DataParallel(model)  # to utilize multiple GPU's
             model = model.to(device)
             checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint["model_state_dict"])  # TODO check if it works
+            model.load_state_dict(checkpoint["model_state_dict"], strict=False)  # TODO check if it works
         else:
             checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
             new_state_dict = OrderedDict()
             for k, v in checkpoint["model_state_dict"].items():
                 name = k[7:]  # remove `module.`
                 new_state_dict[name] = v
-            model.load_state_dict(new_state_dict)
+            model.load_state_dict(new_state_dict, strict=False)
 
         model.eval()
         self.model = model
