@@ -58,7 +58,7 @@ The setup script needs a configuration file containing the destination folder fo
   "huggingfaceCacheDir": {"path": ""},
   "physionet": {"path": "", "username": "", "password": ""},
   "SLAKE": {"path": ""},
-  "MIMIC-CXR": {"path":"/PATH/TO/DOCUMENTS/"}, // Optional (will download to physionet folder if the line is not present): example if /PATH/TO/DOCUMENTS/mimic-cxr-jpg/2.0.0
+  "mimicCXR": {"path":"/PATH/TO/DOCUMENTS/"}, // Optional (will download to physionet folder if the line is not present): example if /PATH/TO/DOCUMENTS/mimic-cxr-jpg/2.0.0
   "SLAKE": {"path": ""},
   "CheXBert": {"dlLocation": ""},
   "Pad-UFES-20": {"path": ""},
