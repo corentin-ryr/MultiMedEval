@@ -45,6 +45,9 @@ class MNIST(ImageClassification):
 
         self.dataset = NAME_TO_MNIST[mnistName]["class"](split="test", download=True, root=self.cacheDir)
         self.options:dict[str, str] = self.dataset.info["label"]
+        # Add 1 to the key of the options
+        self.options = {str(int(key) + 1): value for key, value in self.options.items()}
+
         self.num_classes = len(self.options)
         self.scoringType = self.dataset.info["task"].split(",")[0].replace("-", "")
         if self.scoringType in ["binaryclass", "ordinalregression"]:
@@ -60,7 +63,7 @@ class MNIST(ImageClassification):
         label = sample["label"].tolist()
         
         if fullText:
-            return ",".join([self.options[str(label)] for label in label])
+            return ",".join([self.options[str(label + 1)] for label in label])
         
         if len(label) == 1:
             label = label[0]
@@ -69,9 +72,9 @@ class MNIST(ImageClassification):
 
     def format_question(self, sample, prompt=False):
         # print(sample)
-        question = "<img> Options:\n"
-        question += "\n".join([f"{option}: {self.options[option]}" for option in self.options])
-        question += "\nWhich options correspond to the image?"
+        question = "<img> Options: \n "
+        question += " \n ".join([f"{option}: {self.options[option]}" for option in self.options])
+        question += " \n Which options correspond to the image?"
 
         formattedText = [
             {
