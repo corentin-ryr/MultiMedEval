@@ -72,7 +72,7 @@ class MNIST(ImageClassification):
 
     def format_question(self, sample, prompt=False):
         # print(sample)
-        question = "<img> Options: \n "
+        question = "<img> Options:\n"
         question += " \n ".join([f"{option}: {self.options[option]}" for option in self.options])
         question += " \n Which options correspond to the image?"
 
