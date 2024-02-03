@@ -1,5 +1,5 @@
 from multimedeval.utils import cleanStr
-from tqdm import tqdm
+from multimedeval.tqdm_loggable import tqdm_logging
 import os
 import pandas as pd
 import datasets
@@ -309,7 +309,7 @@ class Pad_UFES_20(ImageClassification):
         # Download the file
         self.logger.info("Downloading the dataset...")
         url = "https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/zr7vgbcyr2-1.zip"
-        with tqdm(unit="B", unit_scale=True, unit_divisor=1024, miniters=1, desc=url.split("/")[-1]) as t:
+        with tqdm_logging(logger=self.logger, unit="B", unit_scale=True, unit_divisor=1024, miniters=1, desc=url.split("/")[-1]) as t:
             os.makedirs(dataFolder, exist_ok=True)
             urllib.request.urlretrieve(
                 url, os.path.join(dataFolder, "pad_ufes_20.zip"), reporthook=lambda x, y, z: t.update(y)

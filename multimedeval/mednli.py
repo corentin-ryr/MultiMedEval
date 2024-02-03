@@ -1,5 +1,5 @@
 from multimedeval.utils import Benchmark, EvalParams
-from tqdm import tqdm
+from multimedeval.tqdm_loggable import tqdm_logging
 import os
 import pandas as pd
 from datasets import Dataset
@@ -41,10 +41,7 @@ class MedNLI(Benchmark):
         dataloader = DataLoader(
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
-        for batch in tqdm(
-            dataloader,
-            desc="Running inference",
-        ):
+        for batch in tqdm_logging(self.logger, dataloader, desc="Running inference"):
             batchPrompts = []
             for sample in batch:
                 text, img = self.format_question(sample)

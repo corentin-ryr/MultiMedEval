@@ -147,16 +147,17 @@ class tqdm_logging(tqdm_auto):
             "remaining": remaining,
         }
 
+
         self.logger.log(
             self.log_level,
-            "Progress on:%s %s/%s rate:%s remaining:%s elapsed:%s postfix:%s",
-            name,
-            n_formatted,
-            total_formatted,
-            rate_formatted,
-            remaining_str,
-            elapsed_str,
-            postfix_str,
+            self.__str__(),
+            # name,
+            # n_formatted,
+            # total_formatted,
+            # rate_formatted,
+            # remaining_str,
+            # elapsed_str,
+            # postfix_str,
             extra=structured_logs,
         )
 

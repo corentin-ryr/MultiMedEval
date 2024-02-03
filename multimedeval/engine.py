@@ -27,7 +27,6 @@ from multimedeval.mnist import (
 )
 import os
 import gdown
-from tqdm import tqdm
 from multimedeval.tqdm_loggable import tqdm_logging
 import getpass
 import nltk
