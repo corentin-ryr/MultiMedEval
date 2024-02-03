@@ -1,4 +1,4 @@
-from multimedeval.imageClassification import ImageClassification
+from multimedeval.taskFamilies import ImageClassification
 from medmnist.dataset import OCTMNIST, PathMNIST, PneumoniaMNIST, RetinaMNIST, BloodMNIST, ChestMNIST, OrganAMNIST, OrganCMNIST, DermaMNIST, BreastMNIST, TissueMNIST, OrganSMNIST, MedMNIST2D
 import os
 from multimedeval.utils import cleanStr
@@ -34,16 +34,17 @@ class wrapperGenerator():
 class MNIST(ImageClassification):
     def __init__(self, mnistName, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.question = None
-
         self.taskName = mnistName
         self.modality = NAME_TO_MNIST[mnistName]["modality"]
 
-        self.cacheDir = self.engine.getConfig()["MedMNISTCacheDir"]["path"]
+        self.question = None
+
+    def setup(self):
+        self.cacheDir = self.engine.getConfig()[self.cachedirName]
         if not os.path.exists(self.cacheDir):
             os.makedirs(self.cacheDir, exist_ok=True)
 
-        self.dataset = NAME_TO_MNIST[mnistName]["class"](split="test", download=True, root=self.cacheDir)
+        self.dataset = NAME_TO_MNIST[self.taskName]["class"](split="test", download=True, root=self.cacheDir)
         self.options:dict[str, str] = self.dataset.info["label"]
         # Add 1 to the key of the options
         self.options = {str(int(key) + 1): value for key, value in self.options.items()}
@@ -55,9 +56,8 @@ class MNIST(ImageClassification):
         
         self.dataset = wrapperGenerator(self.dataset)
 
-        if self.fewshot:
-            self.trainDataset = NAME_TO_MNIST[mnistName]["class"](split="train", download=True, root=self.cacheDir)
-            self.trainDataset = wrapperGenerator(self.trainDataset)
+        self.trainDataset = NAME_TO_MNIST[self.taskName]["class"](split="train", download=True, root=self.cacheDir)
+        self.trainDataset = wrapperGenerator(self.trainDataset)
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
         label = sample["label"].tolist()
@@ -71,7 +71,6 @@ class MNIST(ImageClassification):
         return label
 
     def format_question(self, sample, prompt=False):
-        # print(sample)
         question = "<img> Options:\n"
         question += " \n ".join([f"{option}: {self.options[option]}" for option in self.options])
         question += " \n Which options correspond to the image?"
@@ -114,56 +113,73 @@ class MNIST_Oct(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("OCTMNIST", **kwargs)
         self.question = "Diagnose this retina OCT."
+        self.cachedirName = "MNIST_Oct_dir"
+
 
 class MNIST_Path(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("PathMNIST", **kwargs)
         self.question = "Which kind of tissue is represented in the image?"
+        self.cachedirName = "MNIST_Path_dir"
+
 
 class MNIST_Pneumonia(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("PneumoniaMNIST", **kwargs)
         self.question = "Diagnose this chest X-Ray."
+        self.cachedirName = "MNIST_Pneumonia_dir"
+
 
 class MNIST_Retina(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("RetinaMNIST", **kwargs)
         self.question = "Grade this diabetic retinopathy following the international clinical DR severity scale."
+        self.cachedirName = "MNIST_Retina_dir"
+
 
 class MNIST_Blood(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("BloodMNIST", **kwargs)
         self.question = "What kind of peripheral blood cells is shown in the image?"
+        self.cachedirName = "MNIST_Blood_dir"
 
-class MNIST_Chest(MNIST):
-    def __init__(self, **kwargs) -> None:
-        super().__init__("ChestMNIST", **kwargs)
-        self.question = "Which thoracic diseases can be seen in this chest X-Ray?"
 
-class MNIST_OrganA(MNIST):
-    def __init__(self, **kwargs) -> None:
-        super().__init__("OrganAMNIST", **kwargs)
-        self.question = "Which organ is present in the image?"
+# class MNIST_Chest(MNIST):
+#     def __init__(self, **kwargs) -> None:
+#         super().__init__("ChestMNIST", **kwargs)
+#         self.question = "Which thoracic diseases can be seen in this chest X-Ray?"
+#         self.cachedirName = "MedMNIST_dir"]
+
+
+# class MNIST_OrganA(MNIST):
+#     def __init__(self, **kwargs) -> None:
+#         super().__init__("OrganAMNIST", **kwargs)
+#         self.question = "Which organ is present in the image?"
+#         self.cachedirName = "MedMNIST_dir"]
 
 class MNIST_OrganC(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("OrganCMNIST", **kwargs)
         self.question = "Which organ is present in the image?"
+        self.cachedirName = "MNIST_OrganC_dir"
 
 class MNIST_Derma(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("DermaMNIST", **kwargs)
         self.question = "Which skin disease is present in the image?"
+        self.cachedirName = "MNIST_Derma_dir"
 
 class MNIST_Breast(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("BreastMNIST", **kwargs)
         self.question = "Does this breast ultrasound show sign of malignant tumor or is it benign?"
+        self.cachedirName = "MNIST_Breast_dir"
 
 class MNIST_Tissue(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("TissueMNIST", **kwargs)
         self.question = "What kind of tissue is represented in the image?"
+        self.cachedirName = "MNIST_Tissue_dir"
     
     def __len__(self):
         return super().__len__() // 4
@@ -172,6 +188,7 @@ class MNIST_OrganS(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("OrganSMNIST", **kwargs)
         self.question = "Which organ is present in the image?"
+        self.cachedirName = "MNIST_OrganS_dir"
 
 
     

@@ -1,4 +1,4 @@
-from multimedeval.utils import Benchmark, Params
+from multimedeval.utils import Benchmark, EvalParams
 import os
 import pandas as pd
 from tqdm import tqdm
@@ -12,6 +12,7 @@ from multimedeval.utils import download_file
 import gzip
 import shutil
 from multimedeval.mimic import compute_bertscore, compute_meteor, compute_composite
+
 
 def get_final_report(text):
     if "FINAL REPORT" not in text:
@@ -79,8 +80,8 @@ class MIMIC_III(Benchmark):
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
-        self.path = self.engine.getConfig()["physionet"]["path"]
-        
+    def setup(self):
+        self.path = self.engine.getConfig()["MIMIC_III_dir"]
 
         self._generate_dataset()
 
@@ -183,8 +184,8 @@ class MIMIC_III(Benchmark):
 
         self.dataset = datasets.Dataset.from_list(datasetTest)
 
-    def run(self, params: Params, batcher):
-        print(f"***** Benchmarking : {self.taskName} *****")
+    def run(self, params: EvalParams, batcher):
+        self.logger.info(f"***** Benchmarking : {self.taskName} *****")
         refReports = []
         hypReports = []
         bleu1Scores = []
@@ -272,7 +273,6 @@ class MIMIC_III(Benchmark):
 
         # Compute the vector similarity between the reference and the geenrated reports
         return torch.cosine_similarity(labelsReference, labelsHypothesis)
-
 
     def compute_radgraph(self, hypReports, refReports):
         f1_radgraph = []

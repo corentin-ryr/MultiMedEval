@@ -11,22 +11,24 @@ import requests
 from tqdm import tqdm
 import re
 import requests
-from tensorboardX import SummaryWriter
-
+import os
+from typing import Optional
+from typing import Any
+import logging
 
 class Benchmark(ABC):
-    def __init__(self, engine, fewshot=False) -> None:
-        self.taskName = "None"
+    def __init__(self, engine, logger) -> None:
+        self.taskName:str = "None"
         self.engine = engine
-        self.fewshot = fewshot
-        self.modality = "None"
-        self.task = "None"
+        self.modality:str = "None"
+        self.task:str = "None"
         self._prompt = None
         self.trainDataset = None
         self.dataset = None
+        self.logger:logging.Logger = logger
 
     def getPrompt(self):
-        if not self.fewshot or not self.trainDataset:
+        if not self.trainDataset:
             return None
 
         if self._prompt is None:
@@ -55,15 +57,100 @@ class Benchmark(ABC):
     def format_question(self, sample, prompt=False):
         pass
 
+    @abstractmethod
+    def setup(self):
+        pass
+
 
 @dataclass
-class Params:
-    batch_size: int = 128
-    run_name: str = f"run {datetime.now()}"
-    fewshot: bool = False
-    num_workers: int = 0
-    device: str = "cuda"
-    tensorBoardWriter: SummaryWriter = None
+class EvalParams:
+    """Dataclass defining the parameters for evaluation.
+
+    Args:
+        batch_size: The soze of the batches sent to the user's batcher Callable. 
+        run_name: The name to use for the folder where the output will be stored.
+        fewshot: A boolean indicating whether the evaluation is few-shot.
+        num_workers: The number of workers for the dataloader.
+        device: The device to run the evaluation on.
+        tensorBoardWriter: The tensorboard writer to use for logging.
+        tensorboardStep: The global step for logging to tensorboard.
+    Raises:
+        ImportError: raises an import error if tensorboard is not installed.
+    """
+    batch_size: Optional[int] = 128
+    run_name: Optional[str] = f"run {datetime.now()}"
+    fewshot: Optional[bool] = False
+    num_workers: Optional[int] = 0
+    tensorboardWriter:Optional[Any] = None
+    tensorboardStep: Optional[int] = 0
+
+    def __post_init__(self):
+        if self.tensorboardWriter is not None:
+            try:
+                from torch.utils.tensorboard import SummaryWriter
+            except ImportError:
+                raise ImportError("Please install tensorboard using `pip install tensorboard`")
+
+@dataclass
+class SetupParams:
+    """Parameter dataclass for setting up the benchmark.
+
+    Args:
+        MedQA_dir: The path to the MedQA dataset.
+        PubMedQA_dir: The path to the PubMedQA dataset.
+        MedMCQA_dir: The path to the MedMCQA dataset.
+        VQA_RAD_dir: The path to the VQA-RAD dataset.
+        Path_VQA_dir: The path to the Path-VQA dataset.
+        SLAKE_dir: The path to the SLAKE dataset.
+        MIMIC_III_dir: The path to the MIMIC-III dataset.
+        MedNLI_dir: The path to the MedNLI dataset.
+        MIMIC_CXR_dir: The path to the MIMIC-CXR dataset.
+        VinDr_Mammo_dir: The path to the VinDr-Mammo dataset.
+        Pad_UFES_20_dir: The path to the PadChest dataset.
+        CBIS_DDSM_dir: The path to the CBIS-DDSM dataset.
+        MNIST_Oct_dir: The path to the MNIST-OCT dataset.
+        MNIST_Path_dir: The path to the MNIST-Path dataset.
+        MNIST_Blood_dir: The path to the MNIST-Blood dataset.
+        MNIST_Breast_dir: The path to the MNIST-Breast dataset.
+        MNIST_Derma_dir: The path to the MNIST-Derma dataset.
+        MNIST_OrganC_dir: The path to the MNIST-OrganC dataset.
+        MNIST_OrganS_dir: The path to the MNIST-OrganS dataset.
+        MNIST_Pneumonia_dir: The path to the MNIST-Pneumonia dataset.
+        MNIST_Retina_dir: The path to the MNIST-Retina dataset.
+        MNIST_Tissue_dir: The path to the MNIST-Tissue dataset.
+        CheXBert_dir: The path to the CheXpert dataset.
+        physionet_username: The username for the physionet dataset.
+        physionet_password: The password for the physionet dataset.
+        
+    """
+
+
+    MedQA_dir: Optional[str|os.PathLike]
+    PubMedQA_dir: Optional[str|os.PathLike]
+    MedMCQA_dir: Optional[str|os.PathLike]
+    VQA_RAD_dir: Optional[str|os.PathLike]
+    Path_VQA_dir: Optional[str|os.PathLike]
+    SLAKE_dir: Optional[str|os.PathLike]
+    MIMIC_III_dir: Optional[str|os.PathLike]
+    MedNLI_dir: Optional[str|os.PathLike]
+    MIMIC_CXR_dir: Optional[str|os.PathLike]
+    VinDr_Mammo_dir: Optional[str|os.PathLike]
+    Pad_UFES_20_dir: Optional[str|os.PathLike]
+    CBIS_DDSM_dir: Optional[str|os.PathLike]
+    MNIST_Oct_dir: Optional[str|os.PathLike]
+    MNIST_Path_dir: Optional[str|os.PathLike]
+    MNIST_Blood_dir: Optional[str|os.PathLike]
+    MNIST_Breast_dir: Optional[str|os.PathLike]
+    MNIST_Derma_dir: Optional[str|os.PathLike]
+    MNIST_OrganC_dir: Optional[str|os.PathLike]
+    MNIST_OrganS_dir: Optional[str|os.PathLike]
+    MNIST_Pneumonia_dir: Optional[str|os.PathLike]
+    MNIST_Retina_dir: Optional[str|os.PathLike]
+    MNIST_Tissue_dir: Optional[str|os.PathLike]
+    CheXBert_dir:Optional[str|os.PathLike]
+    physionet_username: Optional[str] = None
+    physionet_password: Optional[str] = None
+    device: Optional[str] = "cuda"
 
     def __post_init__(self):
         if self.device != "cpu":
@@ -122,8 +209,6 @@ def exact_entity_token_if_rel_exists_reward(hypothesis_annotation_list, referenc
         candidates.append(candidate)
 
     hypothesis_relation_token_list, reference_relation_token_list = candidates
-    # print(hypothesis_relation_token_list)
-    # print(reference_relation_token_list)
 
     precision = (
         sum([1 for x in hypothesis_relation_token_list if (x in reference_relation_token_list)])
@@ -441,11 +526,6 @@ def custom_mimic_cxr_rules():
 def cleanStr(text: str):
     tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
     return re.sub(" +", " ", tempStr)
-
-
-def collate_fn(batch):
-    print(batch)
-    return tuple(zip(*batch))
 
 
 

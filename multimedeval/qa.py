@@ -1,64 +1,7 @@
 from datasets import load_dataset
-from multimedeval.utils import Benchmark, Params
-from tqdm import tqdm
 from multimedeval.utils import cleanStr
-from abc import abstractmethod
 from torchmetrics.text import BLEUScore
-from torch.utils.data import DataLoader
-
-
-class QA(Benchmark):
-    def run(self, params: Params, batcher):
-        print(f"***** Benchmarking : {self.taskName} *****")
-
-        correct_answers = 0
-        total_answers = 0
-
-        answersLog = []
-
-        # Run the batcher for all data split in chunks
-        dataloader = DataLoader(self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x)
-        for batch in tqdm(
-            dataloader,
-            desc="Running inference",
-        ):
-            batchPrompts = []
-            for sample in batch:
-                text, img = self.format_question(sample)
-                if self.fewshot:
-                    batchPrompts.append((self.getPrompt()[0] + text, self.getPrompt()[1] + img))
-                else:
-                    batchPrompts.append((text, img))
-
-            answers = batcher(batchPrompts)
-
-            for idx, answer in enumerate(answers):
-                gold = self.getCorrectAnswer(batch[idx])
-                pred = self.getPredictedAnswer(answer, batch[idx])
-                if pred == gold:
-                    correct_answers += 1
-                total_answers += 1
-
-                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, pred, gold, pred == gold))
-            
-            # break
-
-        # TODO: add others metrics such as AUC, F1...
-        metrics = {"accuracy": correct_answers / total_answers}
-
-        # Compute the scores
-        return [
-            {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
-            {"type": "csv", "name": self.taskName, "value": answersLog},
-        ]
-
-    @abstractmethod
-    def getCorrectAnswer(self, sample, fullText=False):
-        pass
-
-    @abstractmethod
-    def getPredictedAnswer(self, pred: str, sample):
-        pass
+from multimedeval.taskFamilies import QA
 
 
 class MedQA(QA):
@@ -66,18 +9,17 @@ class MedQA(QA):
         super().__init__(**kwargs)
         self.taskName = "MedQA"
         self.modality = "General medicine"
-        self.task = "QA"
 
-        cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
+    def setup(self):
+        cacheDir = self.engine.getConfig()["MedQA_dir"]
 
         self.dataset = load_dataset(
             "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=cacheDir, trust_remote_code=True
         )
 
-        if self.fewshot:
-            self.trainDataset = load_dataset(
-                "bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True
-            )
+        self.trainDataset = load_dataset(
+            "bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True
+        )
 
         self.bleuScorer = BLEUScore(n_gram=1)
 
@@ -129,24 +71,24 @@ class PubMedQA(QA):
         self.modality = "General medicine"
         self.task = "QA"
 
-        cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
+    def setup(self):
+        cacheDir = self.engine.getConfig()["PubMedQA_dir"]
 
         self.dataset = load_dataset(
             "bigbio/pubmed_qa",
             name="pubmed_qa_labeled_fold1_bigbio_qa",
             split="test",
             cache_dir=cacheDir,
-            trust_remote_code=True
+            trust_remote_code=True,
         )
 
-        if self.fewshot:
-            self.trainDataset = load_dataset(
-                "bigbio/pubmed_qa",
-                name="pubmed_qa_labeled_fold1_bigbio_qa",
-                split="train",
-                cache_dir=cacheDir,
-                trust_remote_code=True
-            )
+        self.trainDataset = load_dataset(
+            "bigbio/pubmed_qa",
+            name="pubmed_qa_labeled_fold1_bigbio_qa",
+            split="train",
+            cache_dir=cacheDir,
+            trust_remote_code=True,
+        )
 
     def getCorrectAnswer(self, sample, fullText=False):
         return sample["answer"][0]
@@ -194,20 +136,12 @@ class MedMCQA(QA):
         self.modality = "General medicine"
         self.task = "QA"
 
-        cacheDir = self.engine.getConfig()["huggingfaceCacheDir"]["path"]
+    def setup(self):
+        cacheDir = self.engine.getConfig()["MedMCQA_dir"]
 
-        self.dataset = load_dataset(
-            "medmcqa",
-            split="validation",
-            cache_dir=cacheDir,
-        )
+        self.dataset = load_dataset("medmcqa", split="validation", cache_dir=cacheDir)
 
-        if self.fewshot:
-            self.trainDataset = load_dataset(
-                "medmcqa",
-                split="train",
-                cache_dir=cacheDir,
-            )
+        self.trainDataset = load_dataset("medmcqa", split="train", cache_dir=cacheDir)
 
         self.bleuScorer = BLEUScore(n_gram=1)
 
