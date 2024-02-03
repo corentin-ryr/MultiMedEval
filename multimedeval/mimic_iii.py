@@ -1,7 +1,7 @@
 from multimedeval.utils import Benchmark, EvalParams
 import os
 import pandas as pd
-from tqdm import tqdm
+from multimedeval.tqdm_loggable import tqdm_logging
 import datasets
 import re
 from multimedeval.utils import Benchmark, exact_entity_token_if_rel_exists_reward
@@ -94,7 +94,7 @@ class MIMIC_III(Benchmark):
         reports_csv = reports_csv.fillna(-1)
 
         expToReport = {}
-        for EXP in tqdm(mapping.keys(), desc="Extracting reports"):
+        for EXP in tqdm_logging(self.logger, mapping.keys(), desc="Extracting reports"):
             filter_reports = reports_csv[reports_csv["DESCRIPTION"].isin(mapping[EXP])]
             reports_list = filter_reports["TEXT"].tolist()
             reports_ids = filter_reports["ROW_ID"].tolist()
@@ -196,10 +196,7 @@ class MIMIC_III(Benchmark):
         dataloader = DataLoader(
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
-        for batch in tqdm(
-            dataloader,
-            desc="Generating reports",
-        ):
+        for batch in tqdm_logging(self.logger, dataloader, desc="Generating reports"):
             batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
             batcherHyp = batcher([self.format_question(sample) for sample in batch])
             batcherHyp = [h if h != "" else "Invalid Response" for h in batcherHyp]

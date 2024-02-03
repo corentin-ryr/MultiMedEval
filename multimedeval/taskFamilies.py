@@ -1,13 +1,11 @@
-
 from multimedeval.utils import Benchmark, EvalParams, cleanStr
 from torchmetrics.text import BLEUScore
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+from multimedeval.tqdm_loggable import tqdm_logging
 from abc import abstractmethod
 from nltk.stem import WordNetLemmatizer
 from torchmetrics import F1Score, AUROC, Accuracy
 import torch
-
 
 
 class QA(Benchmark):
@@ -27,10 +25,7 @@ class QA(Benchmark):
         dataloader = DataLoader(
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
-        for batch in tqdm(
-            dataloader,
-            desc="Running inference",
-        ):
+        for batch in tqdm_logging(self.logger, dataloader, desc="Running inference"):
             batchPrompts = []
             for sample in batch:
                 text, img = self.format_question(sample)
@@ -70,7 +65,6 @@ class QA(Benchmark):
         pass
 
 
-
 class VQA(Benchmark):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -91,7 +85,8 @@ class VQA(Benchmark):
         dataloader = DataLoader(
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
-        for batch in tqdm(
+        for batch in tqdm_logging(
+            self.logger,
             dataloader,
             desc="Running inference",
         ):
@@ -199,7 +194,8 @@ class ImageClassification(Benchmark):
         dataloader = DataLoader(
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
-        for batch in tqdm(
+        for batch in tqdm_logging(
+            self.logger,
             dataloader,
             desc="Running inference",
         ):

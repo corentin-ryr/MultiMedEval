@@ -1,7 +1,7 @@
 import os
 from multimedeval.utils import Benchmark
 import pandas as pd
-from tqdm import tqdm
+from multimedeval.tqdm_loggable import tqdm_logging
 from PIL import Image
 import datasets
 from bert_score import BERTScorer
@@ -40,7 +40,7 @@ class MIMIC_CXR_reportgen(Benchmark):
     def setup(self):
         # Get the dataset ====================================================================
         self.path = self.engine.getConfig()["MIMIC_CXR_dir"]
-            
+
         self._generate_dataset()
 
         # Get the split.csv file in the image directory
@@ -89,10 +89,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         dataloader = DataLoader(
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
-        for batch in tqdm(
-            dataloader,
-            desc="Generating reports",
-        ):
+        for batch in tqdm_logging(selg.logger, dataloader, desc="Generating reports"):
             batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
             batcherHyp = batcher([self.format_question(sample) for sample in batch])
             batcherHyp = [h if h != "" else "Invalid Response" for h in batcherHyp]
