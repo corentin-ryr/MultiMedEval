@@ -1,5 +1,5 @@
 from warnings import warn
-from multimedeval.utils import Params, fileWriterFactory, Benchmark
+from multimedeval.utils import EvalParams, fileWriterFactory, Benchmark, SetupParams
 
 from multimedeval.qa import MedQA, PubMedQA, MedMCQA
 from multimedeval.vqa import VQA_RAD, Path_VQA, SLAKE
@@ -19,88 +19,96 @@ from multimedeval.mnist import (
     MNIST_Blood,
     MNIST_Breast,
     MNIST_Derma,
-
     MNIST_OrganC,
     MNIST_OrganS,
     MNIST_Pneumonia,
     MNIST_Retina,
     MNIST_Tissue,
 )
-import json
 import os
 import gdown
 from tqdm import tqdm
+from multimedeval.tqdm_loggable import tqdm_logging
 import getpass
 import nltk
 from multimedeval.visualization import BenchmarkVisualizer
 from collections.abc import Callable
 from radgraph import F1RadGraph
 from multimedeval.chexbert.label import encode, encode, label
-
-
+from dataclasses import asdict
+import logging
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-
-TASKS: dict[str, Benchmark] = {
-    "MedQA": MedQA,
-    "PubMedQA": PubMedQA,
-    "MedMCQA": MedMCQA,
-    "MIMIC-CXR-ReportGeneration": MIMIC_CXR_reportgen,  # Setup not tested
-    "VQA-RAD": VQA_RAD,
-    "Path-VQA": Path_VQA,
-    "SLAKE": SLAKE,
-    "MIMIC-CXR-ImageClassification": MIMIC_CXR_ImageClassification,  # Setup not tested
-    "VinDr-Mammo": VinDr_Mammo,  # Setup not tested
-    "Pad-UFES-20": Pad_UFES_20,
-    "CBIS-DDSM-Mass": CBIS_DDSM_Mass,
-    "CBIS-DDSM-Calcification": CBIS_DDSM_Calcification,
-    "MIMIC-III": MIMIC_III,
-    "MedNLI": MedNLI,
-    "MNIST-Oct": MNIST_Oct,
-    "MNIST-Path": MNIST_Path,
-    "MNIST-Blood": MNIST_Blood,
-    "MNIST-Breast": MNIST_Breast,
-    "MNIST-Derma": MNIST_Derma,
+TASKS: set[Benchmark] = {
+    MedQA,
+    PubMedQA,
+    MedMCQA,
+    VQA_RAD,
+    Path_VQA,
+    SLAKE,
+    MIMIC_CXR_reportgen,  # Setup not tested
+    MIMIC_III,
+    MedNLI,
+    MIMIC_CXR_ImageClassification,  # Setup not tested
+    VinDr_Mammo,  # Setup not tested
+    Pad_UFES_20,
+    CBIS_DDSM_Mass,
+    CBIS_DDSM_Calcification,
+    MNIST_Oct,
+    MNIST_Path,
+    MNIST_Blood,
+    MNIST_Breast,
+    MNIST_Derma,
+    MNIST_OrganC,
+    MNIST_OrganS,
+    MNIST_Pneumonia,
+    MNIST_Retina,
+    MNIST_Tissue,
     # # # "MNIST-OrganA": MNIST_OrganA,
     # # # "MNIST-Chest": MNIST_Chest,
-    "MNIST-OrganC": MNIST_OrganC,
-    "MNIST-OrganS": MNIST_OrganS,
-    "MNIST-Pneumonia": MNIST_Pneumonia,
-    "MNIST-Retina": MNIST_Retina,
-    "MNIST-Tissue": MNIST_Tissue,
 }
 
+
 TASKS_REQUIREMENTS: dict[str, list[str]] = {
-    "MIMIC-CXR-ReportGeneration": ["RadGraph", "Chexbert"],
-    "MIMIC-CXR-ImageClassification": ["Chexbert"],
-    "MIMIC-III": ["RadGraph", "Chexbert"],
+    MIMIC_CXR_reportgen: ["RadGraph", "Chexbert"],
+    MIMIC_CXR_ImageClassification: ["Chexbert"],
+    MIMIC_III: ["RadGraph", "Chexbert"],
 }
 
 
 class MultiMedEval(object):
-    def __init__(self, params: Params = None, batcher: Callable = None, generateVisualization: bool = False):
-        self.params = params if params is not None else Params()
-        self.batcher = batcher
-        self._config = None
+    def __init__(self):
+        self._config: SetupParams = None
         self._physionet_username = None
         self._physionet_password = None
 
-        print(f"\n\nRunning MultiMedEval with {self.params}")
+        self.logger = logging.getLogger("MultiMedEval")
 
-        if not os.path.exists(params.run_name):
-            os.mkdir(params.run_name)
+        self.tasksReady = {}
 
-        print(f"Running the setup")
         nltk.download("punkt", quiet=True)
         nltk.download("wordnet", quiet=True)
 
-        self.tasksReady = {}
-        tasksToSkip = []
-        if len(self.getConfig()["tasksToPrepare"]) > 0:
-            tasksToSkip = [x for x in TASKS if x not in self.getConfig()["tasksToPrepare"]]
+        self.nameToTask: dict[str, Benchmark] = {}
+        self.nameToRequirements: dict[str, list[str]] = {}
+        for taskClass in TASKS:
+            benchmark: Benchmark = taskClass(engine=self, logger=self.logger)
+            self.nameToTask[benchmark.taskName] = benchmark
+            self.nameToRequirements[benchmark.taskName] = (
+                TASKS_REQUIREMENTS[taskClass] if taskClass in TASKS_REQUIREMENTS else []
+            )
 
-        progressBar = tqdm(total=len(TASKS) + 2, dynamic_ncols=True)
+            self.tasksReady[benchmark.taskName] = {"ready": False, "error": "Not setup yet"}
+
+    def setup(self, setupParams: SetupParams, verbose: bool = True):
+        self.logger.info(f"Starting the setup of MultiMedEval.")
+        self._config = setupParams
+        tasksToSkip = []
+        # if len(self.getConfig()["tasks_to_prepare"]) > 0:
+        #     tasksToSkip = [x for x in self.nameToTask if x not in self.getConfig()["tasks_to_prepare"]]
+
+        progressBar = tqdm_logging(logger=self.logger, total=len(self.nameToTask) + 2, dynamic_ncols=True)
         progressBar.set_description(f"Setup RadGraph")
         try:
             self._prepare_radgraph()
@@ -119,66 +127,62 @@ class MultiMedEval(object):
             self.tasksReady["Chexbert"] = {"ready": True}
         progressBar.update(1)
 
-        for taskName in TASKS:
+        for taskName in self.nameToTask:
             progressBar.set_description(f"Setup {taskName}")
             try:
                 if taskName in tasksToSkip:
                     raise Exception(f"Task {taskName} is skipped")
-                taskBenchmark = TASKS[taskName](engine=self, fewshot=self.params.fewshot)
+                self.nameToTask[taskName].setup()
             except Exception as e:
                 self.tasksReady[taskName] = {"ready": False, "error": str(e)}
             else:
-                self.tasksReady[taskName] = {"ready": True, "task": taskBenchmark}
+                self.tasksReady[taskName] = {"ready": True}
 
             progressBar.update(1)
         progressBar.close()
 
-        # Print a table of the tasks and their status
-        print("\n\n")
-        print("Task".ljust(30) + "Status".ljust(30) + "Error")
-        for taskName in self.tasksReady:
-            error = "" if "error" not in self.tasksReady[taskName] else self.tasksReady[taskName]["error"]
-            ready = "Ready" if self.tasksReady[taskName]["ready"] else "Problem"
-            print(taskName.ljust(30) + ready.ljust(30) + error)
+        if verbose:
+            # Print a table of the tasks and their status
+            print("\n\n")
+            print("Task".ljust(30) + "Status".ljust(30) + "Error")
+            for taskName in self.tasksReady:
+                error = "No error." if "error" not in self.tasksReady[taskName] else self.tasksReady[taskName]["error"]
+                ready = "Ready" if self.tasksReady[taskName]["ready"] else "Problem"
+                print(taskName.ljust(30) + ready.ljust(30) + error)
 
-        if generateVisualization:
-            benchmarks = [
-                self.tasksReady[x]["task"]
-                for x in self.tasksReady
-                if (self.tasksReady[x]["ready"] and "task" in self.tasksReady[x])
-            ]
-            visualizer = BenchmarkVisualizer(benchmarks)
-            # visualizer.sunburstModalities()
-            # visualizer.sunburstTasks()
-            visualizer.tableImageClassification()
-            # visualizer.sankeyDiagram()
-            # visualizer.sankeyD3Blocks()
+        return self.tasksReady
 
-    def eval(self, name: str | list[str]):
-        if self.batcher is None:
+    def eval(self, name: str | list[str], batcher: Callable, evalParams: EvalParams = None):
+        if batcher is None:
             raise Exception("The engine was not initialized with a batcher, please provide a batcher to the engine")
+
+        self.evalParams = evalParams if evalParams is not None else EvalParams()
+        self.batcher = batcher
+
+        if not os.path.exists(evalParams.run_name):
+            os.mkdir(evalParams.run_name)
 
         # evaluate on evaluation [name], either takes string or list of strings
         if isinstance(name, list):
             if len(name) == 0:
-                name = list(TASKS.keys())
+                name = list(self.nameToTask.keys())
             self.results = {}
             for x in name:
-                currentResults = self.eval(x)
+                currentResults = self.eval(x, batcher, evalParams)
                 if currentResults is None:
                     continue
                 self.results[x] = currentResults
 
             return self.results
 
-        if name not in TASKS:
+        if name not in self.nameToTask:
             warn(
-                f"Task {name} not in {list(TASKS.keys())}",
+                f"Task {name} not in {list(self.nameToTask.keys())}",
             )
             return None
 
         # Check if the requirements are satisfied
-        listRequirements = ([name] + TASKS_REQUIREMENTS[name]) if name in TASKS_REQUIREMENTS else [name]
+        listRequirements = [name] + self.nameToRequirements[name]
         for req in listRequirements:
             if not self.tasksReady[req]["ready"]:
                 error = self.tasksReady[req]["error"] if "error" in self.tasksReady[req] else "No error message"
@@ -186,52 +190,39 @@ class MultiMedEval(object):
                 warn(f"Task {name} requires {req} to be ready: {error}")
                 return None
 
-        self.evaluation: Benchmark = self.tasksReady[name]["task"]
-        taskResult = self.evaluation.run(self.params, self.batcher)
+        evaluation: Benchmark = self.nameToTask[name]
+        taskResult = evaluation.run(self.evalParams, self.batcher)
 
         # Write to files
         for result in taskResult:
             if result["type"] == "json":
-                print(result["value"])
+                self.logger.info(result["value"])
                 self._writeTotensorboard(result)
-            fileWriterFactory(result["type"])(result["value"], f"{self.params.run_name}/{result['name']}")
+            fileWriterFactory(result["type"])(result["value"], f"{self.evalParams.run_name}/{result['name']}")
 
-        print(f"Done task {name}")
+        self.logger.info(f"Done task {name}")
 
         return taskResult
 
-    def _prepare_radgraph(self):
-        device = -1 if self.params.device != "cuda" else 0
-        self.radgraph = F1RadGraph(reward_level="partial", cuda=device)
-
-
-    def _prepare_chexbert(self):
-        # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
-        output = self.getConfig()["CheXBert"]["dlLocation"]
-
-        if not os.path.exists(os.path.join(output, "chexbert.pth")):
-            os.makedirs(output, exist_ok=True)
-            gdown.download(
-                "https://stanfordmedicine.app.box.com/shared/static/c3stck6w6dol3h36grdc97xoydzxd7w9",
-                os.path.join(output, "chexbert.pth"),
-                quiet=False,
-            )
-        # else:
-        #     print("Chexbert already downloaded")
-        
-        chexbertPath = os.path.join(self.getConfig()["CheXBert"]["dlLocation"], "chexbert.pth")
-        self.encoder = encode(chexbertPath, verbose=False)
-
-        self.labeler = label(chexbertPath, verbose=False)
+    def visualization(self):
+        benchmarks = [
+            self.tasksReady[x]["task"]
+            for x in self.tasksReady
+            if (self.tasksReady[x]["ready"] and "task" in self.tasksReady[x])
+        ]
+        visualizer = BenchmarkVisualizer(benchmarks)
+        visualizer.sunburstModalities()
+        visualizer.sunburstTasks()
+        visualizer.tableImageClassification()
+        visualizer.sankeyDiagram()
+        # visualizer.sankeyD3Blocks()
 
     def getPhysioNetCredentials(self):
         if self._physionet_password is None or self._physionet_username is None:
-            physionetConfig = self.getConfig()["physionet"]
-            if "username" in physionetConfig and "password" in physionetConfig:
-                self._physionet_username = physionetConfig["username"]
-                self._physionet_password = physionetConfig["password"]
-            else:
-                print(
+            self._physionet_username = self.getConfig()["physionet_username"]
+            self._physionet_password = self.getConfig()["physionet_password"]
+            if not self._physionet_username or not self._physionet_password:
+                self.logger.info(
                     "To setup the tasks that use a PhysioNet dataset, the scripts requires the PhysioNet username and password."
                 )
                 self._physionet_username = input("Enter your username: ")
@@ -241,21 +232,40 @@ class MultiMedEval(object):
 
     def getConfig(self) -> dict:
         if self._config is None:
-            self._config = json.load(open("MedMD_config.json", "r"))
+            raise Exception("The engine was not setup, please run the setup method first.")
 
-        return self._config
+        return asdict(self._config)
 
     def _writeTotensorboard(self, results):
-        writer = self.params.tensorBoardWriter
+        writer = self.evalParams.tensorboardWriter
         if writer is None:
             return
-        
-        runName = self.params.run_name
-        taskName = results["name"]
 
+        runName = self.evalParams.run_name
+        taskName = results["name"]
 
         metrics = results["value"]
         for metric in metrics:
             metricValue = metrics[metric]
-            writer.add_scalar(f"{runName}/{taskName}/{metric}", metricValue)
+            writer.add_scalar(
+                f"{runName}/{taskName}/{metric}", metricValue, global_step=self.evalParams.tensorboardStep
+            )
 
+    def _prepare_radgraph(self):
+        device = -1 if self.getConfig()["device"] != "cuda" else 0
+        self.radgraph = F1RadGraph(reward_level="partial", cuda=device)
+
+    def _prepare_chexbert(self):
+        # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
+        output = os.path.join(self.getConfig()["CheXBert_dir"], "chexbert.pth")
+
+        if not os.path.exists(output):
+            os.makedirs(output, exist_ok=True)
+            gdown.download(
+                "https://stanfordmedicine.app.box.com/shared/static/c3stck6w6dol3h36grdc97xoydzxd7w9",
+                output,
+                quiet=False,
+            )
+
+        self.encoder = encode(output, verbose=False)
+        self.labeler = label(output, verbose=False)

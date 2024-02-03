@@ -9,7 +9,7 @@ from transformers import (
     GenerationConfig,
 )
 import time
-from multimedeval import MultiMedEval, Params
+from multimedeval import MultiMedEval, EvalParams
 
 
 class batcherMistral:
@@ -196,7 +196,7 @@ class batcherPMCLlama(batcherLlama):
 
 
 if __name__ == "__main__":
-    params = Params(batch_size=32, run_name="benchmarkMedAlpaca")
+    params = EvalParams(batch_size=32, run_name="benchmarkMedAlpaca")
 
     device = "cuda:0"
     batcher = batcherMedAlpaca(device=device)

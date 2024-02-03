@@ -1,123 +1,20 @@
-from multimedeval.utils import Benchmark, Params, cleanStr
+from multimedeval.utils import cleanStr
 from tqdm import tqdm
-import math
-from torchmetrics import F1Score, AUROC, Accuracy
-import torch
 import os
 import pandas as pd
 import datasets
-from multimedeval.chexbert.label import label
 from PIL import Image
 import pydicom
 import numpy as np
 import urllib.request
 import zipfile
 import shutil
-from torchmetrics.text import BLEUScore
 from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
 from multimedeval.utils import download_file
-from abc import abstractmethod
-from torch.utils.data import DataLoader
 from zipfile import ZipFile
 import subprocess
-
-class ImageClassification(Benchmark):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.bleu = BLEUScore(n_gram=1)
-        self.task = "Image Classification"
-        self.scoringType = "multiclass"
-        self.num_classes = None
-
-    def run(self, params: Params, batcher):
-        print(f"***** Benchmarking : {self.taskName} *****")
-
-        predictions = []
-        groundTruth = []
-        answersLog = []
-
-        scorerArgs = {"task": self.scoringType, "average": "macro"}
-        scorerArgs.update(
-            {"num_classes": self.num_classes} if self.scoringType == "multiclass" else {"num_labels": self.num_classes}
-        )
-        f1Scorer = F1Score(**scorerArgs)
-        aurocScorer = AUROC(**scorerArgs)
-        accuracy = Accuracy(**scorerArgs)
-
-        dataloader = DataLoader(
-            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
-        )
-        for batch in tqdm(
-            dataloader,
-            desc="Running inference",
-        ):
-            batchPrompts = []
-            for sample in batch:
-                text, img = self.format_question(sample)
-                if self.fewshot and self.getPrompt() is not None:
-                    batchPrompts.append((self.getPrompt()[0] + text, self.getPrompt()[1] + img))
-                else:
-                    batchPrompts.append((text, img))
-
-            answers = batcher(batchPrompts)
-
-            correctAnswers = [self.getCorrectAnswer(sample) for sample in batch]
-
-            for idx, answer in enumerate(answers):
-                pred = self.getPredictedAnswer(answer)
-                gt = correctAnswers[idx]
-
-                predictions.append(pred)
-                groundTruth.append(gt)
-
-                answersLog.append(
-                    (f"{self.getCorrectAnswer(batch[idx], fullText=True)} (index {gt})", f"{answer} (index {pred})", gt == pred)
-                )
-
-            # print(predictions)
-            # print(groundTruth)
-            # break
-
-        # Convert pred and gt to tensor
-        predictions = torch.tensor(predictions)
-        if self.scoringType == "multiclass":
-            predictions = torch.nn.functional.one_hot(predictions, num_classes=self.num_classes)
-        predictions = predictions.to(torch.float32)
-        groundTruth = torch.tensor(groundTruth)
-
-        f1Macro = f1Scorer(predictions, groundTruth).item()
-        auroc = aurocScorer(predictions, groundTruth).item()
-        acc = accuracy(predictions, groundTruth).item()
-
-        metrics = {"AUC-macro": auroc, "F1-macro": f1Macro, "Accuracy": acc}
-
-        # Compute the scores
-        return [
-            {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
-            {"type": "csv", "name": self.taskName, "value": answersLog},
-        ]
-
-    @abstractmethod
-    def getCorrectAnswer(self, sample, fullText=False) -> int:
-        pass
-
-    @abstractmethod
-    def format_question(self, sample, prompt=False):
-        pass
-
-    @abstractmethod
-    def getPredictedAnswer(self, answer) -> int:
-        """Converts the free form text output to the answer index
-
-        Args:
-            sample (_type_): The sample used to generate the answer
-            answer (_type_): The free form text output of the model
-
-        Returns:
-            int: The index of the answer
-        """
-        pass
+from multimedeval.taskFamilies import ImageClassification
 
 
 class MIMIC_CXR_ImageClassification(ImageClassification):
@@ -126,14 +23,12 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         self.taskName = "MIMIC-CXR Image Classficication"
         self.modality = "X-Ray"
+
+    def setup(self):
         self.scoringType = "multilabel"
 
         self.num_classes = 5
-        self.path = (
-            self.engine.getConfig()["mimicCXR"]["path"]
-            if "mimicCXR" in self.engine.getConfig()
-            else os.path.join(self.engine.getConfig()["physionet"]["path"], "physionet.org/files")
-        )
+        self.path = self.engine.getConfig()["MIMIC_CXR_dir"]
         self._generate_dataset()
 
         # Get the split.csv file in the image directory
@@ -145,11 +40,10 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         chexbertMimicTest = chexbertMimicTest.merge(testSplit, on=["study_id", "subject_id"])
         self.dataset = datasets.Dataset.from_pandas(chexbertMimicTest)
 
-        if self.engine.params.fewshot:
-            trainSplit = split[split.split == "train"]
-            chexbertMimicTrain = chexbertMimic[chexbertMimic.study_id.isin(trainSplit.study_id)]
-            chexbertMimicTrain = chexbertMimicTrain.merge(trainSplit, on=["study_id", "subject_id"])
-            self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
+        trainSplit = split[split.split == "train"]
+        chexbertMimicTrain = chexbertMimic[chexbertMimic.study_id.isin(trainSplit.study_id)]
+        chexbertMimicTrain = chexbertMimicTrain.merge(trainSplit, on=["study_id", "subject_id"])
+        self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
 
         self.labelNames = [
             "Enlarged Cardiomediastinum",
@@ -174,8 +68,6 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
             "Edema",
             "Pleural Effusion",
         ]
-
-        
 
     def format_question(self, sample, prompt=False):
         samplePath = os.path.join(
@@ -242,7 +134,9 @@ class VinDr_Mammo(ImageClassification):
         self.taskName = "VinDr Mammo"
         self.modality = "Mammography"
 
-        self.path = self.engine.getConfig()["physionet"]["path"]
+    def setup(self):
+
+        self.path = self.engine.getConfig()["VinDr_Mammo_dir"]
 
         self._generate_dataset()
 
@@ -259,10 +153,9 @@ class VinDr_Mammo(ImageClassification):
 
         self.dataset = datasets.Dataset.from_pandas(annotationsTest)
 
-        if self.fewshot:
-            annotationsTrain = annotations[annotations["split"] == "training"]
-            annotationsTrain = annotationsTrain[annotationsTrain["finding_birads"].notna()]
-            self.trainDataset = datasets.Dataset.from_pandas(annotationsTrain)
+        annotationsTrain = annotations[annotations["split"] == "training"]
+        annotationsTrain = annotationsTrain[annotationsTrain["finding_birads"].notna()]
+        self.trainDataset = datasets.Dataset.from_pandas(annotationsTrain)
 
     def format_question(self, sample, prompt=False):
         formattedText = [
@@ -317,13 +210,18 @@ class VinDr_Mammo(ImageClassification):
             self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
             return
 
-        os.makedirs(self.path, exist_ok=True)    
-        
+        os.makedirs(self.path, exist_ok=True)
+
         username, password = self.engine.getPhysioNetCredentials()
         # wget_command = f'wget -c --user "{username}" --password "{password}" -O "{self.path}vindr_mammo.zip" https://physionet.org/content/vindr-mammo/get-zip/1.0.0/'
         # subprocess.run(wget_command, shell=True, check=True)
 
-        download_file("https://physionet.org/content/vindr-mammo/get-zip/1.0.0/", os.path.join(self.path, "vindr_mammo.zip"), username, password)
+        download_file(
+            "https://physionet.org/content/vindr-mammo/get-zip/1.0.0/",
+            os.path.join(self.path, "vindr_mammo.zip"),
+            username,
+            password,
+        )
 
         # Unzip the file
         with ZipFile(os.path.join(self.path, "vindr_mammo.zip"), "r") as zipObj:
@@ -335,14 +233,14 @@ class VinDr_Mammo(ImageClassification):
 class Pad_UFES_20(ImageClassification):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-
         self.taskName = "Pad UFES 20"
         self.modality = "Dermatology"
 
+    def setup(self):
         self.num_classes = 7
         self.scoringType = "multiclass"
 
-        self.path = self.engine.getConfig()["Pad-UFES-20"]["path"]
+        self.path = self.engine.getConfig()["Pad_UFES_20_dir"]
 
         # Check if the folder contains the zip file
         if not os.path.exists(os.path.join(self.path, "pad_ufes_20.zip")):
@@ -361,8 +259,6 @@ class Pad_UFES_20(ImageClassification):
             "MEL": "Melanoma (MEL)",
             "NEV": "Nevus (NEV)",
         }
-
-        self.fewshot = False
 
     def format_question(self, sample):
         patientInfo = {
@@ -411,7 +307,7 @@ class Pad_UFES_20(ImageClassification):
     def _generate_dataset(self):
         dataFolder = self.path
         # Download the file
-        print("Downloading the dataset...")
+        self.logger.info("Downloading the dataset...")
         url = "https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/zr7vgbcyr2-1.zip"
         with tqdm(unit="B", unit_scale=True, unit_divisor=1024, miniters=1, desc=url.split("/")[-1]) as t:
             os.makedirs(dataFolder, exist_ok=True)
@@ -420,11 +316,11 @@ class Pad_UFES_20(ImageClassification):
             )
 
         # Extract the file
-        print("Extracting the dataset...")
+        self.logger.info("Extracting the dataset...")
         with zipfile.ZipFile(os.path.join(dataFolder, "pad_ufes_20.zip"), "r") as zip_ref:
             zip_ref.extractall(f"{dataFolder}")
 
-        print("Extracting the images...")
+        self.logger.info("Extracting the images...")
         for file in os.listdir(os.path.join(dataFolder, "images")):
             if not file.endswith(".zip"):
                 continue
@@ -432,7 +328,7 @@ class Pad_UFES_20(ImageClassification):
                 zip_ref.extractall(os.path.join(dataFolder, "images"))
                 os.remove(os.path.join(dataFolder, "images", file))
 
-        print("Copying the images...")
+        self.logger.info("Copying the images...")
         for file in os.listdir(os.path.join(dataFolder, "images")):
             if not os.path.isdir(os.path.join(dataFolder, "images", file)):
                 continue
@@ -446,13 +342,17 @@ class Pad_UFES_20(ImageClassification):
 
 
 class CBIS_DDSM(ImageClassification):
-    def setup(self, abnormality: str):
+    def __init__(self, abnormality: str, **kwargs):
+        super().__init__(**kwargs)
         self.modality = "Mammography"
+        self.abnormality = abnormality
+
+    def setup(self):
         self.num_classes = 3
         self.scoringType = "multiclass"
 
         # Get the dataset from Kaggle
-        self.path = self.engine.getConfig()["CBIS-DDSM"]["path"]
+        self.path = self.engine.getConfig()["CBIS_DDSM_dir"]
 
         # Download the file at address https://huggingface.co/datasets/Reverb/CBIS-DDSM/resolve/main/CBIS-DDSM.7z?download=true
         self._generate_dataset()
@@ -485,18 +385,17 @@ class CBIS_DDSM(ImageClassification):
 
         self.options = ["BENIGN", "MALIGNANT", "BENIGN_WITHOUT_CALLBACK"]
 
-        self.dataset = pd.read_csv(os.path.join(self.path, "csv", f"{abnormality}_case_description_test_set.csv"))
+        self.dataset = pd.read_csv(os.path.join(self.path, "csv", f"{self.abnormality}_case_description_test_set.csv"))
         self.dataset = self.dataset[["pathology", "cropped image file path"]]
         self._fix_image_path(self.dataset)
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
-        if self.fewshot:
-            self.trainDataset = pd.read_csv(
-                os.path.join(self.path, "csv", f"{abnormality}_case_description_train_set.csv")
-            )
-            self.trainDataset = self.trainDataset[["pathology", "cropped image file path"]]
-            self._fix_image_path(self.trainDataset)
-            self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
+        self.trainDataset = pd.read_csv(
+            os.path.join(self.path, "csv", f"{self.abnormality}_case_description_train_set.csv")
+        )
+        self.trainDataset = self.trainDataset[["pathology", "cropped image file path"]]
+        self._fix_image_path(self.trainDataset)
+        self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
 
     def getPredictedAnswer(self, answer: str) -> int:
         answer = cleanStr(answer)
@@ -537,11 +436,8 @@ class CBIS_DDSM(ImageClassification):
 
 class CBIS_DDSM_Calcification(CBIS_DDSM):
     def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
+        super().__init__(abnormality="calc", **kwargs)
         self.taskName = "CBIS-DDSM Calcification"
-
-        self.setup("calc")
 
     def format_question(self, sample, prompt=False):
         path = Path(sample["cropped image file path"])
@@ -562,11 +458,8 @@ class CBIS_DDSM_Calcification(CBIS_DDSM):
 
 class CBIS_DDSM_Mass(CBIS_DDSM):
     def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
+        super().__init__(abnormality="mass", **kwargs)
         self.taskName = "CBIS-DDSM Mass"
-
-        self.setup("mass")
 
     def format_question(self, sample, prompt=False):
         path = Path(sample["cropped image file path"])

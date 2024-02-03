@@ -8,7 +8,7 @@ from bert_score import BERTScorer
 
 from multimedeval.utils import (
     Benchmark,
-    Params,
+    EvalParams,
     remove_punctuation,
     exact_entity_token_if_rel_exists_reward,
     section_text,
@@ -37,12 +37,10 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rougeL = ROUGEScore(rouge_keys="rougeL")
 
+    def setup(self):
         # Get the dataset ====================================================================
-        self.path = (
-            self.engine.getConfig()["mimicCXR"]["path"]
-            if "mimicCXR" in self.engine.getConfig()
-            else os.path.join(self.engine.getConfig()["physionet"]["path"], "physionet.org/files")
-        )
+        self.path = self.engine.getConfig()["MIMIC_CXR_dir"]
+            
         self._generate_dataset()
 
         # Get the split.csv file in the image directory
@@ -79,8 +77,8 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.dataset = self.dataset.drop_duplicates()
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
-    def run(self, params: Params, batcher):
-        print(f"***** Benchmarking : {self.taskName} *****")
+    def run(self, params: EvalParams, batcher):
+        self.logger.info(f"***** Benchmarking : {self.taskName} *****")
         refReports = []
         hypReports = []
         bleu1Scores = []

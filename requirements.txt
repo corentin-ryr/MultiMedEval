@@ -9,6 +9,5 @@ statsmodels
 bert_score
 pydicom
 kaggle
-tensorboardX
 medmnist
 radgraph==0.0.8
