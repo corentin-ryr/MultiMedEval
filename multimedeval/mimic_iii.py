@@ -161,7 +161,6 @@ class MIMIC_III(Benchmark):
         # Open the split csv
         split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mimiciiisplit.csv"))
         split = split[split["split"] == "test"]
-        # Convert to a list of ids
         split = split["ids"].tolist()
 
         # Get all the ids for the test set from the extToReport dict

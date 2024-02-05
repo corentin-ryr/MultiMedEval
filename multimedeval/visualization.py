@@ -253,7 +253,7 @@ class BenchmarkVisualizer:
                 yref="paper",
                 text=column_name,
                 showarrow=False,
-                font=dict(family="Helvetica", size=20, color="black"),
+                font=dict(family="Helvetica", size=25, color="black"),
                 align="center",
             )
 
@@ -269,7 +269,7 @@ class BenchmarkVisualizer:
                 "visible": False,  # numbers below
             },
             plot_bgcolor="rgba(0,0,0,0)",
-            font_size=16,
+            font_size=20,
             font_family="Helvetica",
         )
 

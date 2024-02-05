@@ -1,4 +1,3 @@
-from warnings import warn
 from multimedeval.utils import EvalParams, fileWriterFactory, Benchmark, SetupParams
 
 from multimedeval.qa import MedQA, PubMedQA, MedMCQA
@@ -140,14 +139,18 @@ class MultiMedEval(object):
             progressBar.update(1)
         progressBar.close()
 
+        finalMessage = "End of setup."
+
         if verbose:
-            # Print a table of the tasks and their status
-            print("\n\n")
-            print("Task".ljust(30) + "Status".ljust(30) + "Error")
+            finalMessage += "\n"
+            # Log a table of the tasks and their status
+            finalMessage += "Task".ljust(30) + "Status".ljust(30) + "Error"
             for taskName in self.tasksReady:
                 error = "No error." if "error" not in self.tasksReady[taskName] else self.tasksReady[taskName]["error"]
                 ready = "Ready" if self.tasksReady[taskName]["ready"] else "Problem"
-                print(taskName.ljust(30) + ready.ljust(30) + error)
+                finalMessage += "\n" + taskName.ljust(30) + ready.ljust(30) + error
+
+        self.logger.info(finalMessage)
 
         return self.tasksReady
 
@@ -175,7 +178,7 @@ class MultiMedEval(object):
             return self.results
 
         if name not in self.nameToTask:
-            warn(
+            self.logger.warn(
                 f"Task {name} not in {list(self.nameToTask.keys())}",
             )
             return None
@@ -186,7 +189,7 @@ class MultiMedEval(object):
             if not self.tasksReady[req]["ready"]:
                 error = self.tasksReady[req]["error"] if "error" in self.tasksReady[req] else "No error message"
 
-                warn(f"Task {name} requires {req} to be ready: {error}")
+                self.logger.warn(f"Task {name} requires {req} to be ready: {error}")
                 return None
 
         evaluation: Benchmark = self.nameToTask[name]
@@ -204,11 +207,7 @@ class MultiMedEval(object):
         return taskResult
 
     def visualization(self):
-        benchmarks = [
-            self.tasksReady[x]["task"]
-            for x in self.tasksReady
-            if (self.tasksReady[x]["ready"] and "task" in self.tasksReady[x])
-        ]
+        benchmarks = [self.nameToTask[x] for x in self.tasksReady if (self.tasksReady[x]["ready"] and x in self.nameToTask)]
         visualizer = BenchmarkVisualizer(benchmarks)
         visualizer.sunburstModalities()
         visualizer.sunburstTasks()
