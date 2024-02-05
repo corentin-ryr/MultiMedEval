@@ -246,8 +246,7 @@ class Pad_UFES_20(ImageClassification):
         if not os.path.exists(os.path.join(self.path, "pad_ufes_20.zip")):
             self._generate_dataset()
 
-        self.dataset = pd.read_csv(os.path.join(self.path, "metadata.csv"))
-        self.dataset = datasets.Dataset.from_pandas(self.dataset)
+        dataset = pd.read_csv(os.path.join(self.path, "metadata.csv"))
 
         self.options = ["BCC", "SCC", "ACK", "SEK", "BOD", "MEL", "NEV"]
         self.mapAcronymToName = {
@@ -260,7 +259,18 @@ class Pad_UFES_20(ImageClassification):
             "NEV": "Nevus (NEV)",
         }
 
-    def format_question(self, sample):
+        split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "padufessplit.csv"))
+        split = split[split["split"] == "test"]
+        split = split["ids"].tolist()
+
+        self.dataset = dataset[dataset["lesion_id"].isin(split)]
+        self.dataset = datasets.Dataset.from_pandas(dataset)
+
+        self.trainDataset = dataset[~dataset["lesion_id"].isin(split)]
+        self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
+
+
+    def format_question(self, sample, prompt=False):
         patientInfo = {
             "smokes": sample["smoke"],
             "drink": sample["drink"],
@@ -284,6 +294,9 @@ class Pad_UFES_20(ImageClassification):
                 "content": f"<img> {options} What is the most likely diagnosis among the following propositions?",
             }
         ]
+
+        if prompt:
+            formattedText.append({"role": "assistant", "content": f"{self.mapAcronymToName[sample['diagnostic']]} ({sample['diagnostic']})"})
 
         image = Image.open(os.path.join(self.path, "images", sample["img_id"]))
         return (formattedText, [image])
@@ -339,6 +352,7 @@ class Pad_UFES_20(ImageClassification):
                 os.remove(os.path.join(dataFolder, "images", file, image))
 
             os.rmdir(os.path.join(dataFolder, "images", file))
+
 
 
 class CBIS_DDSM(ImageClassification):

@@ -67,7 +67,7 @@ class EvalParams:
     """Dataclass defining the parameters for evaluation.
 
     Args:
-        batch_size: The soze of the batches sent to the user's batcher Callable. 
+        batch_size: The size of the batches sent to the user's batcher Callable. 
         run_name: The name to use for the folder where the output will be stored.
         fewshot: A boolean indicating whether the evaluation is few-shot.
         num_workers: The number of workers for the dataloader.
@@ -125,29 +125,29 @@ class SetupParams:
     """
 
 
-    MedQA_dir: Optional[str|os.PathLike]
-    PubMedQA_dir: Optional[str|os.PathLike]
-    MedMCQA_dir: Optional[str|os.PathLike]
-    VQA_RAD_dir: Optional[str|os.PathLike]
-    Path_VQA_dir: Optional[str|os.PathLike]
-    SLAKE_dir: Optional[str|os.PathLike]
-    MIMIC_III_dir: Optional[str|os.PathLike]
-    MedNLI_dir: Optional[str|os.PathLike]
-    MIMIC_CXR_dir: Optional[str|os.PathLike]
-    VinDr_Mammo_dir: Optional[str|os.PathLike]
-    Pad_UFES_20_dir: Optional[str|os.PathLike]
-    CBIS_DDSM_dir: Optional[str|os.PathLike]
-    MNIST_Oct_dir: Optional[str|os.PathLike]
-    MNIST_Path_dir: Optional[str|os.PathLike]
-    MNIST_Blood_dir: Optional[str|os.PathLike]
-    MNIST_Breast_dir: Optional[str|os.PathLike]
-    MNIST_Derma_dir: Optional[str|os.PathLike]
-    MNIST_OrganC_dir: Optional[str|os.PathLike]
-    MNIST_OrganS_dir: Optional[str|os.PathLike]
-    MNIST_Pneumonia_dir: Optional[str|os.PathLike]
-    MNIST_Retina_dir: Optional[str|os.PathLike]
-    MNIST_Tissue_dir: Optional[str|os.PathLike]
-    CheXBert_dir:Optional[str|os.PathLike]
+    MedQA_dir: Optional[str|os.PathLike] = None
+    PubMedQA_dir: Optional[str|os.PathLike] = None
+    MedMCQA_dir: Optional[str|os.PathLike] = None
+    VQA_RAD_dir: Optional[str|os.PathLike] = None
+    Path_VQA_dir: Optional[str|os.PathLike] = None
+    SLAKE_dir: Optional[str|os.PathLike] = None
+    MIMIC_III_dir: Optional[str|os.PathLike] = None
+    MedNLI_dir: Optional[str|os.PathLike] = None
+    MIMIC_CXR_dir: Optional[str|os.PathLike] = None
+    VinDr_Mammo_dir: Optional[str|os.PathLike] = None
+    Pad_UFES_20_dir: Optional[str|os.PathLike] = None
+    CBIS_DDSM_dir: Optional[str|os.PathLike] = None
+    MNIST_Oct_dir: Optional[str|os.PathLike] = None
+    MNIST_Path_dir: Optional[str|os.PathLike] = None
+    MNIST_Blood_dir: Optional[str|os.PathLike] = None
+    MNIST_Breast_dir: Optional[str|os.PathLike] = None
+    MNIST_Derma_dir: Optional[str|os.PathLike] = None
+    MNIST_OrganC_dir: Optional[str|os.PathLike] = None
+    MNIST_OrganS_dir: Optional[str|os.PathLike] = None
+    MNIST_Pneumonia_dir: Optional[str|os.PathLike] = None
+    MNIST_Retina_dir: Optional[str|os.PathLike] = None
+    MNIST_Tissue_dir: Optional[str|os.PathLike] = None
+    CheXBert_dir:Optional[str|os.PathLike] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     device: Optional[str] = "cuda"
