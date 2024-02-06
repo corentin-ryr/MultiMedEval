@@ -9,30 +9,30 @@ We include 24 tasks representing a 10 of different imaging modalities and some t
 
 | Task                           | Description                                                                                                        | Modality       | Size
 |--------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------|----------
-| MedQA                          | Multiple choice questions on general medical knowledge                                                             | Text           |
-| PubMedQA                       | Yes/no/maybe questions based on PubMed paper abstracts                                                             | Text           |
-| MedMCQA                        | Multiple choice questions on general medical knowledge                                                             | Text           |
-| MIMIC-CXR-ReportGeneration     | Generation of finding sections of radiology reports based on the radiology images                                  | Chest X-ray    |
-| VQA-RAD                        | Open ended questions on radiology images                                                                           | X-ray          |
-| Path-VQA                       | Open ended questions on pathology images                                                                           | Pathology      |
-| SLAKE                          | Open ended questions on radiology images                                                                           | X-ray          |
-| MIMIC-CXR-ImageClassification  | Classification of radiology images into 5 diseases                                                                 | Chest X-ray    |
-| VinDr-Mammo                    | Classification of mammography images into 5 BIRADS levels                                                          | Mammography    |
-| Pad-UFES-20                    | Classification of skin lesion images into 7 diseases                                                               | Dermatology    |
-| CBIS-DDSM-Mass                 | Classification of masses in mammography images into "benign", "malignant" or "benign without callback"             | Mammography    |
-| CBIS-DDSM-Calcification        | Classification of calcification in mammography images into "benign", "malignant" or "benign without callback"      | Mammography    |
-| MIMIC-III                      | Summarization of radiology reports                                                                                 | Text           |
-| MedNLI                         | Natural Language Inference on medical sentences.                                                                   | Text           |
-| MNIST-Oct                      |                                                                                                                    | OCT            |
-| MNIST-Path                     |                                                                                                                    | Pathology      |
-| MNIST-Blood                    |                                                                                                                    | Microscopy     |
-| MNIST-Breast                   |                                                                                                                    | Mammography    |
-| MNIST-Derma                    |                                                                                                                    | Dermatology    |
-| MNIST-OrganC                   |                                                                                                                    | CT             |
-| MNIST-OrganS                   |                                                                                                                    | CT             |
-| MNIST-Pneumonia                |                                                                                                                    | X-Ray          |
-| MNIST-Retina                   |                                                                                                                    | Fondus Camera  |
-| MNIST-Tissue                   |                                                                                                                    | Microscopy     |
+| MedQA                          | Multiple choice questions on general medical knowledge                                                             | General medicine| 1273
+| PubMedQA                       | Yes/no/maybe questions based on PubMed paper abstracts                                                             | General medicine| 500
+| MedMCQA                        | Multiple choice questions on general medical knowledge                                                             | General medicine| 4183
+| VQA-RAD                        | Open ended questions on radiology images                                                                           | X-ray          | 451
+| Path-VQA                       | Open ended questions on pathology images                                                                           | Pathology      | 6719
+| SLAKE                          | Open ended questions on radiology images                                                                           | X-ray          | 1061
+| MIMIC-CXR-ReportGeneration     | Generation of finding sections of radiology reports based on the radiology images                                  | Chest X-ray    | 2347
+| MIMIC-III                      | Summarization of radiology reports                                                                                 | Text           | 13054
+| MedNLI                         | Natural Language Inference on medical sentences.                                                                   | General medicine| 1422
+| MIMIC-CXR-ImageClassification  | Classification of radiology images into 5 diseases                                                                 | Chest X-ray    | 5159
+| VinDr-Mammo                    | Classification of mammography images into 5 BIRADS levels                                                          | Mammography    | 429
+| Pad-UFES-20                    | Classification of skin lesion images into 7 diseases                                                               | Dermatology    | 2298
+| CBIS-DDSM-Mass                 | Classification of masses in mammography images into "benign", "malignant" or "benign without callback"             | Mammography    | 378
+| CBIS-DDSM-Calcification        | Classification of calcification in mammography images into "benign", "malignant" or "benign without callback"      | Mammography    | 326
+| MNIST-Oct                      | Image classification of Optical coherence tomography of the retine                                                 | OCT            | 1000
+| MNIST-Path                     | Image classification of pathology image                                                                            | Pathology      | 7180
+| MNIST-Blood                    | Image classification of blood cell seen through a microscope                                                       | Microscopy     | 3421
+| MNIST-Breast                   | Image classification of mammography                                                                                | Mammography    | 156
+| MNIST-Derma                    | Image classification of skin deffect images                                                                        | Dermatology    | 2005
+| MNIST-OrganC                   | Image classification of abdominal CT scan                                                                          | CT             | 8216
+| MNIST-OrganS                   | Image classification of abdominal CT scan                                                                          | CT             | 8827
+| MNIST-Pneumonia                | Image classification of chest X-Rays                                                                               | X-Ray          | 624
+| MNIST-Retina                   | Image classification of the retina taken with a fondus camera                                                      | Fondus Camera  | 400
+| MNIST-Tissue                   | Image classification of kidney cortex seen through a microscope                                                    | Microscopy     | 12820
 
 
 
