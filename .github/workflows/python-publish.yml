@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   deploy:
@@ -21,10 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://test.pypi.org/p/multimedeval
-
-    permissions:
-      id-token: write
+      url: https://test.pypi.org/p/multimedeval      
       
     steps:
     - uses: actions/checkout@v4
