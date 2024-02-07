@@ -1,3 +1,0 @@
-include multimedeval/composite_metric_model_dill.pkl
-include multimedeval/normalizer_dill.pkl
-include multimedeval/mimiciiisplit.csv
