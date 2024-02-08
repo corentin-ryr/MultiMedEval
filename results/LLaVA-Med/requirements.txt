@@ -1,0 +1,9 @@
+transformers
+git+https://github.com/corentin-ryr/MultiMedEval.git
+tqdm
+pillow
+torch
+torchvision
+torchaudio
+git+https://github.com/microsoft/LLaVA-Med.git
+open-clip-torch

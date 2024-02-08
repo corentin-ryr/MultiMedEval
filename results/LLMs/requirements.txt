@@ -1,0 +1,5 @@
+transformers
+git+https://github.com/corentin-ryr/MultiMedEval.git
+tqdm
+pillow
+torch

@@ -9,7 +9,8 @@ from transformers import (
     GenerationConfig,
 )
 import time
-from multimedeval import MultiMedEval, EvalParams
+from multimedeval import MultiMedEval, SetupParams, EvalParams
+import json
 
 
 class batcherMistral:
@@ -196,12 +197,15 @@ class batcherPMCLlama(batcherLlama):
 
 
 if __name__ == "__main__":
-    params = EvalParams(batch_size=32, run_name="benchmarkMedAlpaca")
-
     device = "cuda:0"
     batcher = batcherMedAlpaca(device=device)
 
-    engine = MultiMedEval(params, batcher)
+    mme = MultiMedEval()
 
-    results = engine.eval(["PubMedQA", "MedMCQA", "MedQA", "MedNLI", "MIMIC-III"])
+    setupParams = SetupParams(**json.load(open("MedMD_config.json")))
+    mme.setup(setupParams)
+
+    params = EvalParams(batch_size=32, run_name="benchmarkMedAlpaca")
+    mme.eval(["VQA-RAD"], batcher, EvalParams(batch_size=32, run_name="testRadFM", device=device))
+
     print(f"Everything is done, see the {params.run_name} folder for detailed results.")
