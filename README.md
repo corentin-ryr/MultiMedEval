@@ -137,7 +137,7 @@ results = engine.eval(["MedQA", "VQA-RAD"], batcher, evalParams=evalParams)
 
 ## MultiMedEval parameters
 
-The `SetupParams` class takes the path for each dataset:
+The `SetupParams` class takes a path for each dataset:
 * MedQA_dir: will be use in Huggingface's `load_dataset` as cache_dir
 * PubMedQA_dir: will be use in Huggingface's `load_dataset` as cache_dir
 * MedMCQA_dir: will be use in Huggingface's `load_dataset` as cache_dir
@@ -150,16 +150,16 @@ The `SetupParams` class takes the path for each dataset:
 * VinDr_Mammo_dir: path for the (physionet) VinDr-Mammo dataset.
 * Pad_UFES_20_dir
 * CBIS_DDSM_dir: dataset hosted on Kaggle. Kaggle must be set up on the system (see [this](https://www.kaggle.com/docs/api#getting-started-installation-&-authentication))
-* MNIST_Oct_dir:  
-* MNIST_Path_dir:  
-* MNIST_Blood_dir:  
-* MNIST_Breast_dir:  
-* MNIST_Derma_dir:  
-* MNIST_OrganC_dir:  
-* MNIST_OrganS_dir:  
-* MNIST_Pneumonia_dir:  
-* MNIST_Retina_dir:  
-* MNIST_Tissue_dir:  
+* MNIST_Oct_dir
+* MNIST_Path_dir
+* MNIST_Blood_dir
+* MNIST_Breast_dir
+* MNIST_Derma_dir
+* MNIST_OrganC_dir
+* MNIST_OrganS_dir
+* MNIST_Pneumonia_dir
+* MNIST_Retina_dir
+* MNIST_Tissue_dir
 * CheXBert_dir: path for the CheXBert model checkpoint
 * physionet_username: physionet username to download MIMIC and VinDr-Mammo
 * physionet_password: password for the physionet account
