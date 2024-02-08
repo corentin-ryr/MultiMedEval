@@ -22,11 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-<<<<<<< HEAD
-      url: https://test.pypi.org/p/multimedeval      
-=======
       url: https://pypi.org/p/multimedeval      
->>>>>>> 47d84614ad600a18a068abeb5b1a6acaab24a64f
       
     steps:
     - uses: actions/checkout@v4
@@ -43,8 +39,4 @@ jobs:
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
-<<<<<<< HEAD
-        repository-url: https://test.pypi.org/legacy/
-=======
         repository-url: https://pypi.org/legacy/
->>>>>>> 47d84614ad600a18a068abeb5b1a6acaab24a64f
