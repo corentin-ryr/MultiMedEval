@@ -89,7 +89,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         dataloader = DataLoader(
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
-        for batch in tqdm_logging(selg.logger, dataloader, desc="Generating reports"):
+        for batch in tqdm_logging(self.logger, dataloader, desc="Generating reports"):
             batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
             batcherHyp = batcher([self.format_question(sample) for sample in batch])
             batcherHyp = [h if h != "" else "Invalid Response" for h in batcherHyp]
