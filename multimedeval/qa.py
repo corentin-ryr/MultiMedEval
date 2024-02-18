@@ -13,6 +13,9 @@ class MedQA(QA):
     def setup(self):
         cacheDir = self.engine.getConfig()["MedQA_dir"]
 
+        if cacheDir is None:
+            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
+
         self.dataset = load_dataset(
             "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=cacheDir, trust_remote_code=True
         )
@@ -73,6 +76,9 @@ class PubMedQA(QA):
 
     def setup(self):
         cacheDir = self.engine.getConfig()["PubMedQA_dir"]
+
+        if cacheDir is None:
+            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
 
         self.dataset = load_dataset(
             "bigbio/pubmed_qa",
@@ -138,6 +144,9 @@ class MedMCQA(QA):
 
     def setup(self):
         cacheDir = self.engine.getConfig()["MedMCQA_dir"]
+
+        if cacheDir is None:
+            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
 
         self.dataset = load_dataset("medmcqa", split="validation", cache_dir=cacheDir)
 
