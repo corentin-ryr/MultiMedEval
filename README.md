@@ -49,7 +49,7 @@ We include 24 tasks representing a 10 of different imaging modalities and some t
 To install the library, you can use `pip`
 
 ```console
-pip install git+https://github.com/corentin-ryr/MultiMedEval.git
+pip install multimedeval
 ```
 
 To run the benchmark on your model, you first need to create an instance of the `MultiMedEval` class.
