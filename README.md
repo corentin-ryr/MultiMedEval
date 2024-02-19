@@ -178,4 +178,14 @@ The `EvalParams` class takes the following arguments:
 
 ## Reference
 
+```
+@misc{royer2024multimedeval,
+      title={MultiMedEval: A Benchmark and a Toolkit for Evaluating Medical Vision-Language Models}, 
+      author={Corentin Royer and Bjoern Menze and Anjany Sekuboyina},
+      year={2024},
+      eprint={2402.09262},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
+}
+```
 
