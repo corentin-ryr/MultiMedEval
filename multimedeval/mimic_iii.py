@@ -12,6 +12,7 @@ from multimedeval.utils import download_file
 import gzip
 import shutil
 from multimedeval.mimic import compute_bertscore, compute_meteor, compute_composite
+from datasets import load_dataset
 
 
 def get_final_report(text):
@@ -159,9 +160,12 @@ class MIMIC_III(Benchmark):
             expToReport[EXP] = {"impression": impressions_list_clean, "findings": findings_list_clean, "ids": ids_list}
 
         # Open the split csv
-        split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mimiciiisplit.csv"))
-        split = split[split["split"] == "test"]
-        split = split["ids"].tolist()
+        splitDset = load_dataset("croyer/Pad-UFES-20-split", cache_dir=self.path, split="test")
+        split = set(splitDset["ids"])
+
+        # split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mimiciiisplit.csv"))
+        # split = split[split["split"] == "test"]
+        # split = split["ids"].tolist()
 
         # Get all the ids for the test set from the extToReport dict
         datasetTest = []

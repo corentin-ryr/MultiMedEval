@@ -144,11 +144,11 @@ class MultiMedEval(object):
         if verbose:
             finalMessage += "\n"
             # Log a table of the tasks and their status
-            finalMessage += "Task".ljust(30) + "Status".ljust(30) + "Error"
+            finalMessage += "Task".ljust(35) + "Status".ljust(20) + "Error"
             for taskName in self.tasksReady:
                 error = "No error." if "error" not in self.tasksReady[taskName] else self.tasksReady[taskName]["error"]
                 ready = "Ready" if self.tasksReady[taskName]["ready"] else "Problem"
-                finalMessage += "\n" + taskName.ljust(30) + ready.ljust(30) + error
+                finalMessage += "\n" + taskName.ljust(35) + ready.ljust(20) + error
 
         self.logger.info(finalMessage)
 

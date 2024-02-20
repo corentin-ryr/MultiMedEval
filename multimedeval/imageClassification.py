@@ -15,6 +15,7 @@ from multimedeval.utils import download_file
 from zipfile import ZipFile
 import subprocess
 from multimedeval.taskFamilies import ImageClassification
+from datasets import load_dataset
 
 
 class MIMIC_CXR_ImageClassification(ImageClassification):
@@ -259,9 +260,12 @@ class Pad_UFES_20(ImageClassification):
             "NEV": "Nevus (NEV)",
         }
 
-        split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "padufessplit.csv"))
-        split = split[split["split"] == "test"]
-        split = split["ids"].tolist()
+        splitDset = load_dataset("croyer/Pad-UFES-20-split", cache_dir=self.path, split="test")
+        split = set(splitDset["ids"])
+
+        # split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "padufessplit.csv"))
+        # split = split[split["split"] == "test"]
+        # split = split["ids"].tolist()
 
         self.dataset = dataset[dataset["lesion_id"].isin(split)]
         self.dataset = datasets.Dataset.from_pandas(dataset)
