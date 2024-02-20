@@ -160,7 +160,7 @@ class MIMIC_III(Benchmark):
             expToReport[EXP] = {"impression": impressions_list_clean, "findings": findings_list_clean, "ids": ids_list}
 
         # Open the split csv
-        splitDset = load_dataset("croyer/Pad-UFES-20-split", cache_dir=self.path, split="test")
+        splitDset = load_dataset("croyer/MIMIC-III-split", cache_dir=self.path, split="test")
         split = set(splitDset["ids"])
 
         # split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mimiciiisplit.csv"))

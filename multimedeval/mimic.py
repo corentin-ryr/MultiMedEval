@@ -104,6 +104,9 @@ class MIMIC_CXR_reportgen(Benchmark):
 
             # break
 
+        # print(f"Number of reports: {len(refReports)}")
+        # print(f"Number of hyps: {len(hypReports)}")
+
         f1_bertscore = compute_bertscore(hypReports, refReports)
         f1_bertscore_unscaled = compute_bertscore(hypReports, refReports, rescale=False)
 
