@@ -267,3 +267,10 @@ class MultiMedEval(object):
 
         self.encoder = encode(output, verbose=False)
         self.labeler = label(output, verbose=False)
+
+    def __len__(self):
+        total_len = 0
+        for task in self.nameToTask:
+            total_len += len(self.nameToTask[task])
+
+        return total_len
