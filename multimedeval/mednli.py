@@ -17,6 +17,10 @@ class MedNLI(Benchmark):
 
     def setup(self):
         self.path = self.engine.getConfig()["MedNLI_dir"]
+
+        if self.path is None:
+            raise Exception("No path for MedNLI dataset provided in the config file. Skipping the task.")
+
         self._generate_dataset()
 
         testSet = pd.read_json(path_or_buf=os.path.join(self.path, "mli_test_v1.jsonl"), lines=True)

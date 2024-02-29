@@ -81,19 +81,31 @@ class SLAKE(VQA):
         self.path = self.engine.getConfig()["SLAKE_dir"]
         self._generate_dataset()
 
-        self.path = os.path.join(self.path, "Slake1.0")
 
-        jsonFile = json.load(open(os.path.join(self.path, "test.json"), "r"))
+        if self.path is None:
+            raise Exception("No path for SLAKE dataset provided in the config file. Skipping the task.")
+        
+        dset = load_dataset("BoKelvin/SLAKE", cache_dir=self.path)
+
+
+        self.path = os.path.join(self.path, "BoKelvin___slake")
+
+        # jsonFile = json.load(open(os.path.join(self.path, "test.json"), "r"))
         self.dataset = []
-        for sample in jsonFile:
+        for sample in dset["test"]:
             if sample["q_lang"] == "en":
+                # Open the image
+                sample["image"] = os.path.join(self.path, "imgs", sample["img_name"])
                 self.dataset.append(sample)
 
-        jsonFile = json.load(open(os.path.join(self.path, "train.json"), "r"))
+        # jsonFile = json.load(open(os.path.join(self.path, "train.json"), "r"))
         self.trainDataset = []
-        for sample in jsonFile:
+        for sample in dset["train"]:
             if sample["q_lang"] == "en":
+                sample["image"] = os.path.join(self.path, "imgs", sample["img_name"])
                 self.trainDataset.append(sample)
+
+
 
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"<img> {sample['question']}"
@@ -117,14 +129,15 @@ class SLAKE(VQA):
         if not os.path.isdir(self.path):
             os.mkdir(self.path)
         else:
-            if os.path.exists(os.path.join(self.path, "Slake1.0", "train.json")):
+            if os.path.exists(os.path.join(self.path, "BoKelvin___slake", "imgs")):
                 return
 
-        output = os.path.join(self.path, "Slake.zip")
+        output = os.path.join(self.path, "BoKelvin___slake", "imgs.zip")
         if not os.path.exists(output):
-            gdown.download(id="1EZ0WpO5Z6BJUqC3iPBQJJS1INWSMsh7U", output=output, quiet=False)
+            gdown.download("https://huggingface.co/datasets/BoKelvin/SLAKE/resolve/main/imgs.zip?download=true", output=output, quiet=False)
 
+        print(output)
         with ZipFile(output, "r") as zObject:
-            zObject.extractall(path=self.path)
+            zObject.extractall(path=os.path.join(self.path, "BoKelvin___slake"))
 
         os.remove(output)
