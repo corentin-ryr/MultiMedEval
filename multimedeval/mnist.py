@@ -41,6 +41,10 @@ class MNIST(ImageClassification):
 
     def setup(self):
         self.cacheDir = self.engine.getConfig()[self.cachedirName]
+
+        if self.cacheDir is None:
+            raise Exception(f"Skipping {self.taskName} because the cache directory is not set.")
+
         if not os.path.exists(self.cacheDir):
             os.makedirs(self.cacheDir, exist_ok=True)
 
