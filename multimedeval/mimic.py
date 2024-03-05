@@ -35,7 +35,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         self.bleu_1 = BLEUScore(n_gram=1)
         self.bleu_2 = BLEUScore(n_gram=2)
         self.bleu_4 = BLEUScore(n_gram=4)
-        self.rougeL = ROUGEScore(rouge_keys="rougeL")
+        self.rougeL = ROUGEScore(rouge_keys=("rougeL", "rouge1"))
 
     def setup(self):
         # Get the dataset ====================================================================
@@ -84,6 +84,7 @@ class MIMIC_CXR_reportgen(Benchmark):
         bleu1Scores = []
         bleu4Scores = []
         rougeLScores = []
+        rouge1Scores = []
 
         # Run the batcher for all data split in chunks
         dataloader = DataLoader(
@@ -101,6 +102,7 @@ class MIMIC_CXR_reportgen(Benchmark):
                 bleu1Scores.append(self.bleu_1([hyp], [[ref]]).item())
                 bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
                 rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
+                rouge1Scores.append(self.rougeL([hyp], [[ref]])["rouge1_fmeasure"].item())
 
             # break
 
@@ -114,27 +116,27 @@ class MIMIC_CXR_reportgen(Benchmark):
 
         f1_radgraph = self.compute_radgraph(hypReports, refReports)
 
-        bleu_scores = torch.tensor(
-            [self.bleu_1([candidate], [[reference]]).item() for reference, candidate in zip(refReports, hypReports)]
-        )
+        bleu_scores = torch.tensor(bleu1Scores)
 
         radcliq_v0_scores = compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
 
         meteor_scores = compute_meteor(hypReports, refReports)
 
-        rougeScores = self.rougeL.compute()
-        rougeScores = {key: value.item() for key, value in rougeScores.items()}
+        # rougeScores = self.rougeL.compute()
+        # rougeScores = {key: value.item() for key, value in rougeScores.items()}
 
         metrics = {
-            "bleu1": self.bleu_1.compute().item(),
-            "bleu4": self.bleu_4.compute().item(),
+            "bleu1": sum(bleu1Scores) / len(bleu1Scores),
+            "bleu4": sum(bleu4Scores) / len(bleu4Scores),
             "f1-radgraph": f1_radgraph.mean().item(),
             "CheXBert vector similarity": chexbert_similarity.mean().item(),
             "f1-bertscore": f1_bertscore_unscaled.mean().item(),
             "radcliq": sum(radcliq_v0_scores) / len(radcliq_v0_scores),
             "meteor": sum(meteor_scores) / len(meteor_scores),
+            "rougeL": sum(rougeLScores) / len(rougeLScores),
+            "rouge1": sum(rouge1Scores) / len(rouge1Scores),
         }
-        metrics.update(rougeScores)
+        # metrics.update(rougeScores)
 
         answersLog = zip(refReports, hypReports, bleu1Scores, bleu4Scores, rougeLScores)
         # Add a header to the log
