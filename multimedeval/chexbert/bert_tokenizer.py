@@ -38,25 +38,25 @@ def load_list(path):
         return impressions
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Tokenize radiology report impressions and save as a list.")
-    parser.add_argument(
-        "-d",
-        "--data",
-        type=str,
-        nargs="?",
-        required=True,
-        help='path to csv containing reports. The reports should be \
-                            under the "Report Impression" column',
-    )
-    parser.add_argument("-o", "--output_path", type=str, nargs="?", required=True, help="path to intended output file")
-    args = parser.parse_args()
-    csv_path = args.data
-    out_path = args.output_path
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser(description="Tokenize radiology report impressions and save as a list.")
+#     parser.add_argument(
+#         "-d",
+#         "--data",
+#         type=str,
+#         nargs="?",
+#         required=True,
+#         help='path to csv containing reports. The reports should be \
+#                             under the "Report Impression" column',
+#     )
+#     parser.add_argument("-o", "--output_path", type=str, nargs="?", required=True, help="path to intended output file")
+#     args = parser.parse_args()
+#     csv_path = args.data
+#     out_path = args.output_path
 
-    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+#     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
 
-    impressions = get_impressions_from_pandas(csv_path)
-    new_impressions = tokenize(impressions, tokenizer)
-    with open(out_path, "w") as filehandle:
-        json.dump(new_impressions, filehandle)
+#     impressions = get_impressions_from_pandas(csv_path)
+#     new_impressions = tokenize(impressions, tokenizer)
+#     with open(out_path, "w") as filehandle:
+#         json.dump(new_impressions, filehandle)

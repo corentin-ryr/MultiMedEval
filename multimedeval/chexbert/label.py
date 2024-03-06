@@ -153,24 +153,24 @@ class encode:
         return torch.stack(rep)
 
 
-def save_preds(y_pred, csv_path, out_path):
-    """Save predictions as out_path/labeled_reports.csv
-    @param y_pred (List[List[int]]): list of predictions for each report
-    @param csv_path (string): path to csv containing reports
-    @param out_path (string): path to output directory
-    """
-    y_pred = np.array(y_pred)
-    y_pred = y_pred.T
+# def save_preds(y_pred, csv_path, out_path):
+#     """Save predictions as out_path/labeled_reports.csv
+#     @param y_pred (List[List[int]]): list of predictions for each report
+#     @param csv_path (string): path to csv containing reports
+#     @param out_path (string): path to output directory
+#     """
+#     y_pred = np.array(y_pred)
+#     y_pred = y_pred.T
 
-    df = pd.DataFrame(y_pred, columns=CONDITIONS)
-    reports = pd.read_csv(csv_path)["Report Impression"]
+#     df = pd.DataFrame(y_pred, columns=CONDITIONS)
+#     reports = pd.read_csv(csv_path)["Report Impression"]
 
-    df["Report Impression"] = reports.tolist()
-    new_cols = ["Report Impression"] + CONDITIONS
-    df = df[new_cols]
+#     df["Report Impression"] = reports.tolist()
+#     new_cols = ["Report Impression"] + CONDITIONS
+#     df = df[new_cols]
 
-    df.replace(0, np.nan, inplace=True)  # blank class is NaN
-    df.replace(3, -1, inplace=True)  # uncertain class is -1
-    df.replace(2, 0, inplace=True)  # negative class is 0
+#     df.replace(0, np.nan, inplace=True)  # blank class is NaN
+#     df.replace(3, -1, inplace=True)  # uncertain class is -1
+#     df.replace(2, 0, inplace=True)  # negative class is 0
 
-    df.to_csv(os.path.join(out_path, "labeled_reports.csv"), index=False)
+#     df.to_csv(os.path.join(out_path, "labeled_reports.csv"), index=False)

@@ -28,57 +28,89 @@ class TestLoadingAll:
 
         assert isinstance(len(self.engine), int)
 
-    # Do this test second
+    @pytest.mark.order(2)
+    def test_visualization(self):
+        self.engine.visualization()
+
+    @pytest.mark.order(3)
     def test_running_qa(self):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
-        results = self.engine.eval(["MedQA", "PubMedQA", "MedMCQA"], batcher, evalParams=evalParams)
+        try:
+            results = self.engine.eval(["MedQA", "PubMedQA", "MedMCQA"], batcher, evalParams=evalParams)
+        except:
+            assert False
 
-        print(results)
+        assert True
 
+    @pytest.mark.order(4)
     def test_running_vqa(self):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
-        results = self.engine.eval(["VQA-Rad", "VQA-Path", "SLAKE"], batcher, evalParams=evalParams)
+        tasks = ["VQA-Rad", "VQA-Path", "SLAKE"]
+        try:
+            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
+        except:
+            assert False
 
-        print(results)
+        for task in tasks:
+            assert task in results
 
+    @pytest.mark.order(5)
     def test_running_nli(self):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
-        results = self.engine.eval(["MedNLI"], batcher, evalParams=evalParams)
+        tasks = ["MedNLI"]
+        try:
+            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
+        except:
+            assert False
 
-        print(results)
+        for task in tasks:
+            assert task in results
 
+    @pytest.mark.order(6)
     def test_running_reportcomparison(self):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
-        results = self.engine.eval(["MIMIC-CXR Report Generation", "MIMIC-III"], batcher, evalParams=evalParams)
+        tasks = ["MIMIC-CXR Report Comparison", "MIMIC-III"]
+        try:
+            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
+        except:
+            assert False
 
-        print(results)
+        for task in tasks:
+            assert task in results
 
+    @pytest.mark.order(7)
     def test_running_image_classification(self):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
-        results = self.engine.eval(
-            [
-                "MIMIC-CXR Image Classficication",
-                "VinDr Mammo",
-                "Pad UFES 20",
-                "CBIS-DDSM Mass",
-                "CBIS-DDSM Calcification",
-                "OCTMNIST",
-                "PathMNIST",
-                "PneumoniaMNIST",
-                "RetinaMNIST",
-                "BloodMNIST" "OrganCMNIST",
-                "DermaMNIST",
-                "BreastMNIST",
-                "TissueMNIST",
-                "OrganSMNIST",
-            ],
-            batcher,
-            evalParams=evalParams,
-        )
+        tasks = [
+            "MIMIC-CXR Image Classficication",
+            "VinDr Mammo",
+            "Pad UFES 20",
+            "CBIS-DDSM Mass",
+            "CBIS-DDSM Calcification",
+            "OCTMNIST",
+            "PathMNIST",
+            "PneumoniaMNIST",
+            "RetinaMNIST",
+            "BloodMNIST" "OrganCMNIST",
+            "DermaMNIST",
+            "BreastMNIST",
+            "TissueMNIST",
+            "OrganSMNIST",
+        ]
+        try:
+            results = self.engine.eval(
+                tasks,
+                batcher,
+                evalParams=evalParams,
+            )
+        except:
+            assert False
 
-        print(results)
+        for task in tasks:
+            assert task in results
+
