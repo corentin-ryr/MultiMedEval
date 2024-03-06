@@ -5,6 +5,7 @@ import pytest
 
 logging.basicConfig(level=logging.INFO)
 
+
 def batcher(prompts):
     return ["Dummy answer" for _ in range(len(prompts))]
 
@@ -24,7 +25,7 @@ class TestLoadingAll:
 
         for task in tasksReady:
             assert tasksReady[task]["ready"] == True
-                
+
         assert isinstance(len(self.engine), int)
 
     # Do this test second
@@ -49,10 +50,35 @@ class TestLoadingAll:
 
         print(results)
 
-    @pytest.xfail
     def test_running_reportcomparison(self):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
         results = self.engine.eval(["MIMIC-CXR Report Generation", "MIMIC-III"], batcher, evalParams=evalParams)
+
+        print(results)
+
+    def test_running_image_classification(self):
+        evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
+
+        results = self.engine.eval(
+            [
+                "MIMIC-CXR Image Classficication",
+                "VinDr Mammo",
+                "Pad UFES 20",
+                "CBIS-DDSM Mass",
+                "CBIS-DDSM Calcification",
+                "OCTMNIST",
+                "PathMNIST",
+                "PneumoniaMNIST",
+                "RetinaMNIST",
+                "BloodMNIST" "OrganCMNIST",
+                "DermaMNIST",
+                "BreastMNIST",
+                "TissueMNIST",
+                "OrganSMNIST",
+            ],
+            batcher,
+            evalParams=evalParams,
+        )
 
         print(results)
