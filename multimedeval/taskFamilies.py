@@ -393,6 +393,12 @@ class ReportComparison(Benchmark):
         return torch.tensor(f1_radgraph)
 
     def _evaluate_reports(self, hypReports, refReports):
+        for i in range(len(hypReports)):
+            if hypReports[i] == "":
+                hypReports[i] = "Invalid Response"
+            if refReports[i] == "":
+                refReports[i] = "Invalid Response"
+
         bleu1Scores = []
         bleu2Scores = []
         bleu4Scores = []
