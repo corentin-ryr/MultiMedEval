@@ -33,3 +33,14 @@ dependencies = {file = ["requirements.txt"]}
 
 [tool.setuptools.package-data]
 multimedeval = ["*.plk", "*.csv"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-order"
+]
+
+[tool.pytest.ini_options]
+addopts = "--cov=multimedeval"
+testpaths = "tests"

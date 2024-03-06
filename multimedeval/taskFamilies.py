@@ -1,11 +1,54 @@
-from multimedeval.utils import Benchmark, EvalParams, cleanStr
-from torchmetrics.text import BLEUScore
+from multimedeval.utils import Benchmark, EvalParams, cleanStr, exact_entity_token_if_rel_exists_reward
+from torchmetrics.text import BLEUScore, ROUGEScore
 from torch.utils.data import DataLoader
 from multimedeval.tqdm_loggable import tqdm_logging
 from abc import abstractmethod
 from nltk.stem import WordNetLemmatizer
 from torchmetrics import F1Score, AUROC, Accuracy
 import torch
+from bert_score import BERTScorer
+import pandas as pd
+from nltk.tokenize import word_tokenize
+import os
+import dill
+from nltk.translate.meteor_score import meteor_score
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+import pickle
+import numpy as np
+
+
+class CompositeMetric:
+    """The RadCliQ-v1 composite metric.
+
+    Attributes:
+        scaler: Input normalizer.
+        coefs: Coefficients including the intercept.
+    """
+
+    def __init__(self, scaler, coefs):
+        """Initializes the composite metric with a normalizer and coefficients.
+
+        Args:
+            scaler: Input normalizer.
+            coefs: Coefficients including the intercept.
+        """
+        self.scaler = scaler
+        self.coefs = coefs
+
+    def predict(self, x):
+        """Generates composite metric score for input.
+
+        Args:
+            x: Input data.
+
+        Returns:
+            Composite metric score.
+        """
+        norm_x = self.scaler.transform(x)
+        norm_x = np.concatenate((norm_x, np.ones((norm_x.shape[0], 1))), axis=1)
+        pred = norm_x @ self.coefs
+        return pred
 
 
 class QA(Benchmark):
@@ -267,3 +310,167 @@ class ImageClassification(Benchmark):
             int: The index of the answer
         """
         pass
+
+
+class ReportComparison(Benchmark):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.bleu_1 = BLEUScore(n_gram=1)
+        self.bleu_2 = BLEUScore(n_gram=2, weights=[1 / 2, 1 / 2])
+        self.bleu_4 = BLEUScore(n_gram=4)
+        self.rougeL = ROUGEScore(rouge_keys=("rougeL", "rouge1"))
+
+    def run(self, params: EvalParams, batcher):
+        self.logger.info(f"***** Benchmarking : {self.taskName} *****")
+        refReports = []
+        hypReports = []
+
+        # Run the batcher for all data split in chunks
+        dataloader = DataLoader(
+            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
+        )
+        for batch in tqdm_logging(self.logger, dataloader, desc="Generating reports"):
+            batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
+            batcherHyp = batcher([self.format_question(sample) for sample in batch])
+            batcherHyp = [h if h != "" else "Invalid Response" for h in batcherHyp]
+
+            refReports += batcherCorrect
+            hypReports += batcherHyp
+
+        (
+            bleu1Scores,
+            bleu2Scores,
+            bleu4Scores,
+            rougeLScores,
+            rouge1Scores,
+            f1_bertscore_unscaled,
+            chexbert_similarity,
+            f1_radgraph,
+            radcliq_v0_scores,
+            meteor_scores,
+            f1_bertscore,
+        ) = self._evaluate_reports(hypReports, refReports)
+
+        metrics = {
+            "bleu1": sum(bleu1Scores) / len(bleu1Scores),
+            "bleu4": sum(bleu4Scores) / len(bleu4Scores),
+            "f1-radgraph": sum(f1_radgraph) / len(f1_radgraph),
+            "CheXBert vector similarity": sum(chexbert_similarity) / len(chexbert_similarity),
+            "f1-bertscore": sum(f1_bertscore_unscaled) / len(f1_bertscore_unscaled),
+            "radcliq": sum(radcliq_v0_scores) / len(radcliq_v0_scores),
+            "meteor": sum(meteor_scores) / len(meteor_scores),
+            "rougeL": sum(rougeLScores) / len(rougeLScores),
+            "rouge1": sum(rouge1Scores) / len(rouge1Scores),
+        }
+
+        answersLog = zip(refReports, hypReports, bleu1Scores, bleu4Scores, rougeLScores)
+        # Add a header to the log
+        answersLog = [("ref", "hyp", "bleu1", "bleu4", "rougeL")] + list(answersLog)
+
+        return [
+            {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
+            {"type": "csv", "name": self.taskName, "value": answersLog},
+        ]
+
+    def compute_chexbert(self, hypReports, refReports):
+        df = pd.DataFrame(columns=["Report Impression"], data=refReports)
+        labelsReference = self.engine.encoder(df)
+
+        df = pd.DataFrame(columns=["Report Impression"], data=hypReports)
+        labelsHypothesis = self.engine.encoder(df)
+
+        # Compute the vector similarity between the reference and the geenrated reports
+        return torch.cosine_similarity(labelsReference, labelsHypothesis)
+
+    def compute_radgraph(self, hypReports, refReports):
+        f1_radgraph = []
+        for hyp, ref in zip(hypReports, refReports):
+            # Compute the F1-radgraph score
+            (_, _, hyp_annotation_lists, ref_annotation_lists) = self.engine.radgraph(refs=[ref], hyps=[hyp])
+            f1_radgraph.append(
+                exact_entity_token_if_rel_exists_reward(hyp_annotation_lists[0], ref_annotation_lists[0])
+            )
+        return torch.tensor(f1_radgraph)
+
+    def _evaluate_reports(self, hypReports, refReports):
+        bleu1Scores = []
+        bleu2Scores = []
+        bleu4Scores = []
+        rougeLScores = []
+        rouge1Scores = []
+
+        for hyp, ref in zip(hypReports, refReports):
+            bleu1Scores.append(self.bleu_1([hyp], [[ref]]).item())
+            bleu2Scores.append(self.bleu_2([hyp], [[ref]]).item())
+            bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
+            currentRouge = self.rougeL([hyp], [[ref]])
+            rougeLScores.append(currentRouge["rougeL_fmeasure"].item())
+            rouge1Scores.append(currentRouge["rouge1_fmeasure"].item())
+
+        f1_bertscore = compute_bertscore(hypReports, refReports)
+        f1_bertscore_unscaled = compute_bertscore(hypReports, refReports, rescale=False)
+
+        chexbert_similarity = self.compute_chexbert(hypReports, refReports)
+
+        f1_radgraph = self.compute_radgraph(hypReports, refReports)
+
+        bleu_scores = torch.tensor(bleu2Scores)
+
+        radcliq_v0_scores = compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
+
+        meteor_scores = compute_meteor(hypReports, refReports)
+
+        return (
+            bleu1Scores,
+            bleu2Scores,
+            bleu4Scores,
+            rougeLScores,
+            rouge1Scores,
+            f1_bertscore_unscaled.tolist(),
+            chexbert_similarity.tolist(),
+            f1_radgraph.tolist(),
+            radcliq_v0_scores.tolist(),
+            meteor_scores,
+            f1_bertscore.tolist(),
+        )
+
+
+def compute_bertscore(hypReports, refReports, rescale=True):
+    scorer = BERTScorer(
+        model_type="distilroberta-base",
+        batch_size=256,
+        lang="en",
+        rescale_with_baseline=rescale,
+        idf=True,
+        idf_sents=hypReports,
+    )
+
+    P, R, f1_bertscore = scorer.score(hypReports, refReports)
+    return f1_bertscore
+
+
+def compute_meteor(hypReports, refReports):
+    meteor_scores = []
+    for ref, hyp in zip(refReports, hypReports):
+        # Tokenize the reference and hypothesis
+        ref_tokens = word_tokenize(ref)
+        hyp_tokens = word_tokenize(hyp)
+
+        # Compute the meteor score
+        meteor_scores.append(meteor_score([ref_tokens], hyp_tokens))
+
+    return meteor_scores
+
+
+def compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph):
+    # Get the current path to the module
+    module_path = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(module_path, "radcliq-v1_dill.pkl"), "rb") as f:
+        composite_metric_v0_model: CompositeMetric = pickle.load(f)
+
+    # The column need to be in the order [bleu, bertscore, chexbert, radgraph]
+    input_data = torch.stack(
+        [f1_radgraph, f1_bertscore, chexbert_similarity, bleu_scores],
+        dim=1,
+    )
+    return composite_metric_v0_model.predict(input_data)

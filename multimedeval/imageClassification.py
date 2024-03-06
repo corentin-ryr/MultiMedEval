@@ -30,6 +30,10 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         self.num_classes = 5
         self.path = self.engine.getConfig()["MIMIC_CXR_dir"]
+
+        if self.path is None:
+            raise ValueError("Skipping Pad-UFES 20 because the cache directory is not set.")
+        
         self._generate_dataset()
 
         # Get the split.csv file in the image directory
@@ -139,6 +143,9 @@ class VinDr_Mammo(ImageClassification):
 
         self.path = self.engine.getConfig()["VinDr_Mammo_dir"]
 
+        if self.path is None:
+            raise ValueError("Skipping VinDr Mammo because the cache directory is not set.")
+
         self._generate_dataset()
 
         self.num_classes = 5
@@ -242,6 +249,9 @@ class Pad_UFES_20(ImageClassification):
         self.scoringType = "multiclass"
 
         self.path = self.engine.getConfig()["Pad_UFES_20_dir"]
+
+        if self.path is None:
+            raise ValueError("Skipping Pad-UFES 20 because the cache directory is not set.")
 
         # Check if the folder contains the zip file
         if not os.path.exists(os.path.join(self.path, "pad_ufes_20.zip")):
@@ -371,6 +381,9 @@ class CBIS_DDSM(ImageClassification):
 
         # Get the dataset from Kaggle
         self.path = self.engine.getConfig()["CBIS_DDSM_dir"]
+
+        if self.path is None:
+            raise ValueError("Skipping CBIS-DDSM because the cache directory is not set.")
 
         # Download the file at address https://huggingface.co/datasets/Reverb/CBIS-DDSM/resolve/main/CBIS-DDSM.7z?download=true
         self._generate_dataset()

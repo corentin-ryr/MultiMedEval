@@ -1,18 +1,14 @@
-from multimedeval.utils import Benchmark, EvalParams
 import os
 import pandas as pd
 from multimedeval.tqdm_loggable import tqdm_logging
 import datasets
 import re
-from multimedeval.utils import Benchmark, exact_entity_token_if_rel_exists_reward
-import torch
 from torchmetrics.text import BLEUScore, ROUGEScore
-from torch.utils.data import DataLoader
 from multimedeval.utils import download_file
 import gzip
 import shutil
-from multimedeval.mimic import compute_bertscore, compute_meteor, compute_composite
 from datasets import load_dataset
+from multimedeval.taskFamilies import ReportComparison
 
 
 def get_final_report(text):
@@ -69,7 +65,7 @@ def extract_sections(text):
     return (section_names, preprocessed)
 
 
-class MIMIC_III(Benchmark):
+class MIMIC_III(ReportComparison):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self.taskName = "MIMIC-III"
@@ -83,6 +79,9 @@ class MIMIC_III(Benchmark):
 
     def setup(self):
         self.path = self.engine.getConfig()["MIMIC_III_dir"]
+
+        if self.path is None:
+            raise ValueError("MIMIC_III_dir is not set in the config file")
 
         self._generate_dataset()
 
@@ -187,68 +186,6 @@ class MIMIC_III(Benchmark):
 
         self.dataset = datasets.Dataset.from_list(datasetTest)
 
-    def run(self, params: EvalParams, batcher):
-        self.logger.info(f"***** Benchmarking : {self.taskName} *****")
-        refReports = []
-        hypReports = []
-        bleu1Scores = []
-        bleu4Scores = []
-        rougeLScores = []
-
-        # Run the batcher for all data split in chunks
-        dataloader = DataLoader(
-            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
-        )
-        for batch in tqdm_logging(self.logger, dataloader, desc="Generating reports"):
-            batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
-            batcherHyp = batcher([self.format_question(sample) for sample in batch])
-            batcherHyp = [h if h != "" else "Invalid Response" for h in batcherHyp]
-
-            refReports += batcherCorrect
-            hypReports += batcherHyp
-
-            for hyp, ref in zip(batcherHyp, batcherCorrect):
-                bleu1Scores.append(self.bleu_1([hyp], [[ref]]).item())
-                bleu4Scores.append(self.bleu_4([hyp], [[ref]]).item())
-                rougeLScores.append(self.rougeL([hyp], [[ref]])["rougeL_fmeasure"].item())
-
-        f1_bertscore = compute_bertscore(hypReports, refReports)
-        f1_bertscore_unscaled = compute_bertscore(hypReports, refReports, rescale=False)
-
-        chexbert_similarity = self.compute_chexbert(hypReports, refReports)
-
-        f1_radgraph = self.compute_radgraph(hypReports, refReports)
-
-        bleu_scores = torch.tensor(
-            [self.bleu_1([candidate], [[reference]]).item() for reference, candidate in zip(refReports, hypReports)]
-        )
-
-        radcliq_v0_scores = compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
-
-        meteor_scores = compute_meteor(hypReports, refReports)
-
-        rougeScores = self.rougeL.compute()
-        rougeScores = {key: value.item() for key, value in rougeScores.items()}
-
-        metrics = {
-            "bleu1": self.bleu_1.compute().item(),
-            "bleu4": self.bleu_4.compute().item(),
-            "f1-radgraph": f1_radgraph.mean().item(),
-            "CheXBert vector similarity": chexbert_similarity.mean().item(),
-            "f1-bertscore": f1_bertscore_unscaled.mean().item(),
-            "radcliq": sum(radcliq_v0_scores) / len(radcliq_v0_scores),
-            "meteor": sum(meteor_scores) / len(meteor_scores),
-        }
-        metrics.update(rougeScores)
-
-        answersLog = zip(refReports, hypReports, bleu1Scores, bleu4Scores, rougeLScores)
-        # Add a header to the log
-        answersLog = [("ref", "hyp", "bleu1", "bleu4", "rougeL")] + list(answersLog)
-
-        return [
-            {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
-            {"type": "csv", "name": self.taskName, "value": answersLog},
-        ]
 
     def getCorrectAnswer(self, sample, fullText=False):
         return sample["impression"]
@@ -264,26 +201,6 @@ class MIMIC_III(Benchmark):
         ]
         return (formattedText, [])
 
-    def compute_chexbert(self, hypReports, refReports):
-        df = pd.DataFrame(columns=["Report Impression"], data=refReports)
-        labelsReference = self.engine.encoder(df)
-
-        df = pd.DataFrame(columns=["Report Impression"], data=hypReports)
-        labelsHypothesis = self.engine.encoder(df)
-
-        # Compute the vector similarity between the reference and the geenrated reports
-        return torch.cosine_similarity(labelsReference, labelsHypothesis)
-
-    def compute_radgraph(self, hypReports, refReports):
-        f1_radgraph = []
-        for hyp, ref in zip(hypReports, refReports):
-            # Compute the F1-radgraph score
-            (_, _, hyp_annotation_lists, ref_annotation_lists) = self.engine.radgraph(refs=[ref], hyps=[hyp])
-            f1_radgraph.append(
-                exact_entity_token_if_rel_exists_reward(hyp_annotation_lists[0], ref_annotation_lists[0])
-            )
-
-        return torch.tensor(f1_radgraph)
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return

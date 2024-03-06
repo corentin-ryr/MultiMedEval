@@ -29,7 +29,6 @@ class MedQA(QA):
     def format_question(self, sample, prompt=False):
         question = sample["question"]
         options = sample["options"]
-        answer = f"{sample['answer_idx']}: {sample['answer']}"
 
         formattedQuestion = f"{question}\n"
         formattedQuestion += (

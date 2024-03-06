@@ -79,6 +79,10 @@ class SLAKE(VQA):
 
     def setup(self):
         self.path = self.engine.getConfig()["SLAKE_dir"]
+
+        if self.path is None:
+            raise Exception("No path for SLAKE dataset provided in the config file. Skipping the task.")
+
         self._generate_dataset()
 
 
