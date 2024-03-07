@@ -299,7 +299,6 @@ class ReportComparison(Benchmark):
             refReports += batcherCorrect
             hypReports += batcherHyp
 
-            break
 
         (
             bleu1Scores,

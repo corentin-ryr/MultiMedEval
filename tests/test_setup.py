@@ -1,7 +1,6 @@
 from multimedeval import EvalParams, MultiMedEval, SetupParams
 import json
 import logging
-import pytest
 import shutil
 import os
 
