@@ -20,6 +20,9 @@ class MIMIC_CXR_reportgen(ReportComparison):
         # Get the dataset ====================================================================
         self.path = self.engine.getConfig()["MIMIC_CXR_dir"]
 
+        if self.path is None:
+            raise ValueError("The path to the MIMIC-CXR dataset is not set")
+
         self._generate_dataset()
 
         # Get the split.csv file in the image directory

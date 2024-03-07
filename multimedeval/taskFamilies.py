@@ -18,37 +18,37 @@ import pickle
 import numpy as np
 
 
-class CompositeMetric:
-    """The RadCliQ-v1 composite metric.
+# class CompositeMetric:
+#     """The RadCliQ-v1 composite metric.
 
-    Attributes:
-        scaler: Input normalizer.
-        coefs: Coefficients including the intercept.
-    """
+#     Attributes:
+#         scaler: Input normalizer.
+#         coefs: Coefficients including the intercept.
+#     """
 
-    def __init__(self, scaler, coefs):
-        """Initializes the composite metric with a normalizer and coefficients.
+#     def __init__(self, scaler, coefs):
+#         """Initializes the composite metric with a normalizer and coefficients.
 
-        Args:
-            scaler: Input normalizer.
-            coefs: Coefficients including the intercept.
-        """
-        self.scaler = scaler
-        self.coefs = coefs
+#         Args:
+#             scaler: Input normalizer.
+#             coefs: Coefficients including the intercept.
+#         """
+#         self.scaler = scaler
+#         self.coefs = coefs
 
-    def predict(self, x):
-        """Generates composite metric score for input.
+#     def predict(self, x):
+#         """Generates composite metric score for input.
 
-        Args:
-            x: Input data.
+#         Args:
+#             x: Input data.
 
-        Returns:
-            Composite metric score.
-        """
-        norm_x = self.scaler.transform(x)
-        norm_x = np.concatenate((norm_x, np.ones((norm_x.shape[0], 1))), axis=1)
-        pred = norm_x @ self.coefs
-        return pred
+#         Returns:
+#             Composite metric score.
+#         """
+#         norm_x = self.scaler.transform(x)
+#         norm_x = np.concatenate((norm_x, np.ones((norm_x.shape[0], 1))), axis=1)
+#         pred = norm_x @ self.coefs
+#         return pred
 
 
 class QA(Benchmark):
@@ -332,7 +332,7 @@ class ReportComparison(Benchmark):
         for batch in tqdm_logging(self.logger, dataloader, desc="Generating reports"):
             batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
             batcherHyp = batcher([self.format_question(sample) for sample in batch])
-            batcherHyp = [h if h != "" else "Invalid Response" for h in batcherHyp]
+            batcherHyp = [h if h.strip() != "" else "Invalid Response" for h in batcherHyp]
 
             refReports += batcherCorrect
             hypReports += batcherHyp
@@ -393,12 +393,6 @@ class ReportComparison(Benchmark):
         return torch.tensor(f1_radgraph)
 
     def _evaluate_reports(self, hypReports, refReports):
-        for i in range(len(hypReports)):
-            if hypReports[i] == "":
-                hypReports[i] = "Invalid Response"
-            if refReports[i] == "":
-                refReports[i] = "Invalid Response"
-
         bleu1Scores = []
         bleu2Scores = []
         bleu4Scores = []
@@ -472,7 +466,7 @@ def compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgrap
     # Get the current path to the module
     module_path = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(module_path, "radcliq-v1_dill.pkl"), "rb") as f:
-        composite_metric_v0_model: CompositeMetric = pickle.load(f)
+        composite_metric_v0_model = pickle.load(f)
 
     # The column need to be in the order [bleu, bertscore, chexbert, radgraph]
     input_data = torch.stack(

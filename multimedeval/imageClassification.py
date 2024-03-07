@@ -32,7 +32,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         self.path = self.engine.getConfig()["MIMIC_CXR_dir"]
 
         if self.path is None:
-            raise ValueError("Skipping Pad-UFES 20 because the cache directory is not set.")
+            raise ValueError("Skipping MIMIC-CXR Image classification because the cache directory is not set.")
         
         self._generate_dataset()
 

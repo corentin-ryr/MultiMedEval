@@ -83,14 +83,9 @@ class SLAKE(VQA):
         if self.path is None:
             raise Exception("No path for SLAKE dataset provided in the config file. Skipping the task.")
 
-        self._generate_dataset()
 
-
-        if self.path is None:
-            raise Exception("No path for SLAKE dataset provided in the config file. Skipping the task.")
-        
         dset = load_dataset("BoKelvin/SLAKE", cache_dir=self.path)
-
+        self._generate_dataset()
 
         self.path = os.path.join(self.path, "BoKelvin___slake")
 

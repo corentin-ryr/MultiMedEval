@@ -72,11 +72,6 @@ class MIMIC_III(ReportComparison):
         self.modality = "Radiology"
         self.task = "Report Summarization"
 
-        self.bleu_1 = BLEUScore(n_gram=1)
-        self.bleu_2 = BLEUScore(n_gram=2)
-        self.bleu_4 = BLEUScore(n_gram=4)
-        self.rougeL = ROUGEScore(rouge_keys="rougeL")
-
     def setup(self):
         self.path = self.engine.getConfig()["MIMIC_III_dir"]
 

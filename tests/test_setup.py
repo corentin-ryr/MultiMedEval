@@ -19,6 +19,8 @@ def test_setup():
 
     engine = MultiMedEval()
 
+    config = json.load(open("MedMD_config.json"))
+
     setupParams = SetupParams(
         MedQA_dir=path,
         PubMedQA_dir=path,
@@ -29,9 +31,17 @@ def test_setup():
         CBIS_DDSM_dir=path,
         MedNLI_dir=path,
         CheXBert_dir=path,
+        physionet_password=config["physionet_password"],
+        physionet_username=config["physionet_username"],
     )
 
     tasksReady = engine.setup(setupParams)
+
+    shutil.rmtree(path)
+
+    # Dump the dict to a file
+    with open("setupSummary.json", "w") as f:
+        json.dump(tasksReady, f)
 
     for task in tasksReady:
         if task in [
@@ -47,7 +57,8 @@ def test_setup():
             "Chexbert",
             "RadGraph",
         ]:
-            assert tasksReady[task]["ready"] == True
+            assert tasksReady[task]["ready"]
 
     # Delete the setup data folder
-    shutil.rmtree(path)
+
+

@@ -256,10 +256,11 @@ class MultiMedEval(object):
 
     def _prepare_chexbert(self):
         # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
-        output = os.path.join(self.getConfig()["CheXBert_dir"], "chexbert.pth")
+        path = self.getConfig()["CheXBert_dir"]
+        output = os.path.join(path, "chexbert.pth")
 
         if not os.path.exists(output):
-            os.makedirs(output, exist_ok=True)
+            os.makedirs(path, exist_ok=True)
             gdown.download(
                 "https://stanfordmedicine.app.box.com/shared/static/c3stck6w6dol3h36grdc97xoydzxd7w9",
                 output,
