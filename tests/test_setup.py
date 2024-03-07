@@ -37,28 +37,26 @@ def test_setup():
 
     tasksReady = engine.setup(setupParams)
 
+
+    json.dump(tasksReady, open("tasksReady.json", "w"))
+
     shutil.rmtree(path)
 
-    # Dump the dict to a file
-    with open("setupSummary.json", "w") as f:
-        json.dump(tasksReady, f)
-
-    for task in tasksReady:
-        if task in [
-            "MedQA",
-            "PubMedQA",
-            "MedMCQA",
-            "VQA-RAD",
-            "VQA-Path",
-            "SLAKE",
-            "CBIS-DDSM Mass",
-            "CBIS-DDSM Calcification",
-            "MedNLI",
-            "Chexbert",
-            "RadGraph",
-        ]:
+    tasksToCheck = [
+        "MedQA",
+        "PubMedQA",
+        "MedMCQA",
+        "VQA-Rad",
+        "VQA-Path",
+        "SLAKE",
+        "CBIS-DDSM Mass",
+        "CBIS-DDSM Calcification",
+        "MedNLI",
+        "Chexbert",
+        "RadGraph",
+    ]
+    for task in tasksToCheck:
+        if task in tasksReady:
             assert tasksReady[task]["ready"]
-
-    # Delete the setup data folder
-
-
+        else:
+            assert False

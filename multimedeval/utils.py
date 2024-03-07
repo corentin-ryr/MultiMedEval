@@ -83,6 +83,7 @@ class EvalParams:
     num_workers: Optional[int] = 0
     tensorboardWriter:Optional[Any] = None
     tensorboardStep: Optional[int] = 0
+    mimic_cxr_include_indication_section: Optional[bool] = False
 
     def __post_init__(self):
         if self.tensorboardWriter is not None:

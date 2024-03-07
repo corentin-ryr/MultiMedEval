@@ -90,7 +90,7 @@ class MIMIC_CXR_reportgen(ReportComparison):
 
         return radiology_dict
 
-    def format_question(self, sample):
+    def format_question(self, sample, include_indication=False):
 
         samplePath = os.path.join(self.path, "files", "p" + sample["subject_id"][:2], "p" + sample["subject_id"])
 
@@ -104,7 +104,7 @@ class MIMIC_CXR_reportgen(ReportComparison):
 
         imgTags = "<img> " * len(imagesPath)
 
-        question = (sample["indications"] + " ") if "indications" in sample else ""
+        question = (sample["indications"] + " ") if ("indications" in sample and include_indication) else ""
         question += f"Can you provide a radiology report for this medical image? {imgTags}"
 
         formattedText = [
