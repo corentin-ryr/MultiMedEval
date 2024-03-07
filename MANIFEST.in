@@ -1,1 +1,2 @@
-include multimedeval/radcliq-v1_dill.pkl
+include multimedeval/*.pkl
+include multimedeval/*.dill
