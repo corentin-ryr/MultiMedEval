@@ -36,9 +36,10 @@ dependencies = {file = ["requirements.txt"]}
 dev = [
     "pytest",
     "pytest-cov",
-    "pytest-order"
+    "pytest-order",
 ]
 
 [tool.pytest.ini_options]
 addopts = "--cov=multimedeval"
 testpaths = "tests"
+

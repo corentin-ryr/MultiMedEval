@@ -8,7 +8,7 @@ class BenchmarkVisualizer:
     def __init__(self, datasets: list[Benchmark]) -> None:
         self.datasets = datasets
 
-        self.folderName = "figures"
+        self.folderName = "visualizations"
 
         # Create the folder if it doesn't exist
         Path(self.folderName).mkdir(parents=True, exist_ok=True)
@@ -278,72 +278,6 @@ class BenchmarkVisualizer:
         # Increase font size of the labels
 
         fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=1500, height=700)
-
-    def sankeyD3Blocks(self):
-        from d3blocks import D3Blocks
-        import random
-        from colour import Color
-
-        print("======================= Creating sankey diagram with D3Blocks =======================")
-
-        dfAsList = []
-        tasks = set()
-        modalities = set()
-
-        for dataset in self.datasets:
-            task = dataset.task.replace("_", " ")
-            # Add the link between the dataset and the task
-            dfAsList.append((dataset.taskName, task, len(dataset)))
-
-            # Add the link between the task and the modality
-            dfAsList.append((task, dataset.modality, len(dataset)))
-
-            tasks.add(task)
-            modalities.add(dataset.modality)
-
-        # Take colors from the G10 palette
-        nameToColor = {}
-        for idx, task in enumerate(tasks):
-            nameToColor[task] = (idx / len(tasks) + 0.5) % 1
-
-        for dataset in self.datasets:
-            # Sample a color based on the task of the dataset
-            taskColor = nameToColor[dataset.task.replace("_", " ")]
-
-            # Sample small variation of the color for the dataset
-            rangeColor = 1 / len(tasks) / 4
-            datasetColor = (taskColor + random.uniform(-rangeColor, rangeColor)) % 1
-            nameToColor[dataset.taskName] = datasetColor
-
-        for idx, modality in enumerate(modalities):
-            # Get all the tasks that have this modality
-            taskColors = []
-            taskWeights = []
-            for dataset in self.datasets:
-                if dataset.modality == modality:
-                    taskColors.append(nameToColor[dataset.task])
-                    taskWeights.append(len(dataset))
-
-            weighted_mean_angle = self._averageCircular(taskColors, taskWeights)
-
-            nameToColor[modality] = weighted_mean_angle
-
-        # Convert every color to hex
-        for name, color in nameToColor.items():
-            tempColor = Color(hsl=(color, 0.5, 0.4)).hex
-            nameToColor[name] = tempColor
-
-        df = pd.DataFrame(dfAsList, columns=["source", "target", "weight"])
-        print(df)
-
-        d3 = D3Blocks(chart="Sankey", frame=True)
-        
-        # Change the font
-        d3.set_node_properties(df, width=30, color=nameToColor)
-
-        d3.set_edge_properties(df, color="source-target", opacity=0.8)
-
-        d3.show(filepath="tempSankey.html", figsize=(1000, 700))
 
     def _importPlotly(self):
         try:

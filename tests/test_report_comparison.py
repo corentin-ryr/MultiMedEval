@@ -9,7 +9,6 @@ from sklearn.utils import resample
 logging.basicConfig(level=logging.INFO)
 
 
-
 def compute_kendall_tau(computed_scores, evaluator_scores):
     tau, _ = kendalltau(evaluator_scores, computed_scores)
 
@@ -168,8 +167,5 @@ def test_ReportComparison():
     # plt.savefig("scatter_plot.png")
 
 
-
-
 if __name__ == "__main__":
     test_ReportComparison()
-
