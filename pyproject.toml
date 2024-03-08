@@ -39,7 +39,8 @@ dev = [
     "pytest-order",
     "plotly",
     "kaleido",
-    "tabulate"
+    "tabulate",
+    "colour"
 ]
 
 [tool.pytest.ini_options]
