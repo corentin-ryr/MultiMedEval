@@ -7,17 +7,61 @@ We include 24 tasks representing a 10 of different imaging modalities and some t
 
 ## Tasks
 
+<details>
+  <summary>Question Answering</summary>
+
+
 | Task                           | Description                                                                                                        | Modality       | Size
 |--------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------|----------
 | MedQA                          | Multiple choice questions on general medical knowledge                                                             | General medicine| 1273
 | PubMedQA                       | Yes/no/maybe questions based on PubMed paper abstracts                                                             | General medicine| 500
 | MedMCQA                        | Multiple choice questions on general medical knowledge                                                             | General medicine| 4183
+
+</details>
+
+</br>
+
+<details>
+  <summary>Question Answering</summary>
+
+| Task                           | Description                                                                                                        | Modality       | Size
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------|----------
 | VQA-RAD                        | Open ended questions on radiology images                                                                           | X-ray          | 451
 | Path-VQA                       | Open ended questions on pathology images                                                                           | Pathology      | 6719
 | SLAKE                          | Open ended questions on radiology images                                                                           | X-ray          | 1061
+
+</details>
+
+</br>
+
+<details>
+  <summary>Report Comparison</summary>
+
+| Task                           | Description                                                                                                        | Modality       | Size
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------|----------
 | MIMIC-CXR-ReportGeneration     | Generation of finding sections of radiology reports based on the radiology images                                  | Chest X-ray    | 2347
 | MIMIC-III                      | Summarization of radiology reports                                                                                 | Text           | 13054
+
+</details>
+
+</br>
+
+<details>
+  <summary>Natural Language Inference</summary>
+
+| Task                           | Description                                                                                                        | Modality       | Size
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------|----------
 | MedNLI                         | Natural Language Inference on medical sentences.                                                                   | General medicine| 1422
+
+</details>
+
+</br>
+
+<details>
+  <summary>Image Classification</summary>
+
+| Task                           | Description                                                                                                        | Modality       | Size
+|--------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------|----------
 | MIMIC-CXR-ImageClassification  | Classification of radiology images into 5 diseases                                                                 | Chest X-ray    | 5159
 | VinDr-Mammo                    | Classification of mammography images into 5 BIRADS levels                                                          | Mammography    | 429
 | Pad-UFES-20                    | Classification of skin lesion images into 7 diseases                                                               | Dermatology    | 2298
@@ -34,7 +78,9 @@ We include 24 tasks representing a 10 of different imaging modalities and some t
 | MNIST-Retina                   | Image classification of the retina taken with a fondus camera                                                      | Fondus Camera  | 400
 | MNIST-Tissue                   | Image classification of kidney cortex seen through a microscope                                                    | Microscopy     | 12820
 
+</details>
 
+</br>
 
 <p align="center">
     <img src="figures/sankey.png" alt="sankey graph">
@@ -173,6 +219,26 @@ The `EvalParams` class takes the following arguments:
 * device: The device to run the evaluation on.
 * tensorBoardWriter: The tensorboard writer to use for logging.
 * tensorboardStep: The global step for logging to tensorboard.
+
+
+## Additional tasks
+
+To add a new task to the list of already implemented ones, create a folder named `MultiMedEvalAdditionalDatasets` and a subfolder with the name of your dataset.
+
+Inside your dataset folder, create a `json` file that follows the following template:
+
+```json
+{
+    "taskType": "VQA",
+    "modality": "Radiology",
+    "samples": [
+        {"question": "Question 1", "answer": "Answer 1", "images": ["image1.png", "image2.png"]},
+        {"question": "Question 2", "answer": "Answer 2", "images": ["image1.png"]},
+        {"question": "Question 3", "answer": "Answer 3", "images": []},
+        {"question": "Question 4", "answer": "Answer 4", "images": []}
+    ]
+}
+```
 
 
 
