@@ -10,7 +10,6 @@ import pandas as pd
 from multimedeval.reportComparisonUtils import compute_bertscore, compute_composite, compute_meteor
 
 
-
 class QA(Benchmark):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -156,8 +155,12 @@ class VQA(Benchmark):
             "F1": sum(f1) / len(f1) if len(f1) > 0 else 0,
             "recall": sum(recall) / len(recall) if len(recall) > 0 else 0,
             "closedQuestionsAccuracy": closedQuestionsCorrect / sum(closedQuestions) if sum(closedQuestions) > 0 else 0,
-            "openQuestionsRecall": sum(openQuestionsRecall) / len(openQuestionsRecall) if len(openQuestionsRecall) > 0 else 0,
-            "openQuestionsAccuracy": openQuestionsAccuracy / len(openQuestionsRecall) if len(openQuestionsRecall) > 0 else 0,
+            "openQuestionsRecall": (
+                sum(openQuestionsRecall) / len(openQuestionsRecall) if len(openQuestionsRecall) > 0 else 0
+            ),
+            "openQuestionsAccuracy": (
+                openQuestionsAccuracy / len(openQuestionsRecall) if len(openQuestionsRecall) > 0 else 0
+            ),
         }
 
         # Compute the scores
@@ -290,7 +293,11 @@ class ReportComparison(Benchmark):
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
 
-        kwargs_format_question = {"include_indication":params.mimic_cxr_include_indication_section} if self.taskName == "MIMIC-CXR Report Generation" else {}
+        kwargs_format_question = (
+            {"include_indication": params.mimic_cxr_include_indication_section}
+            if self.taskName == "MIMIC-CXR Report Generation"
+            else {}
+        )
         for batch in tqdm_logging(self.logger, dataloader, desc="Generating reports"):
             batcherCorrect = [self.getCorrectAnswer(sample) for sample in batch]
             batcherHyp = batcher([self.format_question(sample, **kwargs_format_question) for sample in batch])
@@ -298,7 +305,6 @@ class ReportComparison(Benchmark):
 
             refReports += batcherCorrect
             hypReports += batcherHyp
-
 
         (
             bleu1Scores,

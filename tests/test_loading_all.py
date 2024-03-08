@@ -33,8 +33,17 @@ class TestLoadingAll:
             "VQA-Path",
             "SLAKE",
             "MedNLI",
-            "OCTMNIST",
             "Pad UFES 20",
+            "OCTMNIST",
+            "PathMNIST",
+            "PneumoniaMNIST",
+            "RetinaMNIST",
+            "BloodMNIST",
+            "OrganCMNIST",
+            "DermaMNIST",
+            "BreastMNIST",
+            "TissueMNIST",
+            "OrganSMNIST",
         ]
 
         if IN_GITHUB_ACTIONS:
@@ -108,35 +117,43 @@ class TestLoadingAll:
     #     for task in tasks:
     #         assert task in results
 
-    # @pytest.mark.order(7)
-    # @pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
-    # def test_running_image_classification(self):
-    #     evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
+    @pytest.mark.order(7)
+    def test_running_image_classification(self):
+        evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
-    #     tasks = [
-    #         "MIMIC-CXR Image Classficication",
-    #         # "VinDr Mammo",
-    #         "Pad UFES 20",
-    #         # "CBIS-DDSM Mass",
-    #         # "CBIS-DDSM Calcification",
-    #         "OCTMNIST",
-    #         # "PathMNIST",
-    #         # "PneumoniaMNIST",
-    #         # "RetinaMNIST",
-    #         # "BloodMNIST" "OrganCMNIST",
-    #         # "DermaMNIST",
-    #         # "BreastMNIST",
-    #         # "TissueMNIST",
-    #         # "OrganSMNIST",
-    #     ]
-    #     try:
-    #         results = self.engine.eval(
-    #             tasks,
-    #             batcher,
-    #             evalParams=evalParams,
-    #         )
-    #     except:
-    #         assert False
+        tasks = [
+            # "MIMIC-CXR Image Classficication",
+            # "VinDr Mammo",
+            "Pad UFES 20",
+            # "CBIS-DDSM Mass",
+            # "CBIS-DDSM Calcification",
+            "OCTMNIST",
+            "PathMNIST",
+            "PneumoniaMNIST",
+            "RetinaMNIST",
+            "BloodMNIST", "OrganCMNIST",
+            "DermaMNIST",
+            "BreastMNIST",
+            "TissueMNIST",
+            "OrganSMNIST",
+        ]
+        try:
+            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
+        except:
+            assert False
 
-    #     for task in tasks:
-    #         assert task in results
+        for task in tasks:
+            assert task in results
+
+    @pytest.mark.order(8)
+    def test_running_dynamic_datasets(self):
+        evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
+
+        tasks = ["exampleDatasetQA", "exampleDatasetVQA"]
+        try:
+            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
+        except:
+            assert False
+
+        for task in tasks:
+            assert task in results
