@@ -1,0 +1,10 @@
+{
+    "taskType": "QA",
+    "modality": "Radiology",
+    "samples": [
+        {"question": "Question 1", "answer": "Answer 1", "options": ["option 1", "option 2"]},
+        {"question": "Question 2", "answer": "Answer 2", "options": ["option 1", "option 2"]},
+        {"question": "Question 3", "answer": "Answer 3", "options": ["option 1", "option 2", "option 2"]},
+        {"question": "Question 4", "answer": "Answer 4", "options": ["option 1", "option 2", "option 2", "option 4"]}
+    ]
+}

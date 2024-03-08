@@ -6,7 +6,16 @@
     "Path_VQA_dir" : "/mnt/data",
     "SLAKE_dir" : "/mnt/data",
     "Pad_UFES_20_dir": "/mnt/data",
-    "MNIST_Oct_dir" : "/mnt/data",
     "MedNLI_dir" : "/mnt/data",
-    "CheXBert_dir" : "/mnt/data"
-  }
+    "CheXBert_dir" : "/mnt/data",
+    "MNIST_Oct_dir" : "/mnt/data",
+    "MNIST_Path_dir" : "/mnt/data",
+    "MNIST_Blood_dir" : "/mnt/data",
+    "MNIST_Breast_dir" : "/mnt/data",
+    "MNIST_Derma_dir" : "/mnt/data",
+    "MNIST_OrganC_dir" : "/mnt/data",
+    "MNIST_OrganS_dir" : "/mnt/data",
+    "MNIST_Pneumonia_dir" : "/mnt/data",
+    "MNIST_Retina_dir" : "/mnt/data",
+    "MNIST_Tissue_dir" : "/mnt/data"
+}

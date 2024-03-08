@@ -3,7 +3,18 @@ from multimedeval.taskFamilies import VQA, QA, ImageClassification, ReportCompar
 import os
 import json
 from PIL import Image
+from multimedeval.utils import cleanStr
+from torchmetrics.text import BLEUScore
 
+
+def make_constructor(newClass, dataset, datasetName, datasetSamples):
+    def constructor(self, **kwargs) -> None:
+        super(newClass, self).__init__(**kwargs)
+        self.path = dataset
+        self.taskName = datasetName
+        self.modality = datasetSamples["modality"]
+        self.dataset = datasetSamples["samples"]
+    return constructor
 
 def setup(self):
     pass
@@ -11,18 +22,43 @@ def setup(self):
 
 def format_question(self, sample, prompt=False):
 
-    formattedPrompt = [{"role": "user", "content": sample["question"]}]
+    question = sample["question"]
 
+    if "options" in sample:
+        question += " " + " ".join(sample["options"])
+
+    formattedPrompt = [{"role": "user", "content": question}]
+    
     if prompt:
         formattedPrompt.append({"role": "assistant", "content": sample["answer"]})
 
-    images = [Image.open(os.path.join(self.path, imagePath)) for imagePath in sample["images"]]
+    if "images" in sample:
+        images = [Image.open(os.path.join(self.path, imagePath)) for imagePath in sample["images"]]
+    else:
+        images = []
 
     return (formattedPrompt, images)
 
 
-def getCorrectAnswer(self, sample):
+def getCorrectAnswer(self, sample, fullText=False):
     return sample["answer"].lower().strip()
+
+
+def getPredictedAnswer(self, pred: str, sample):
+    pred = cleanStr(pred)
+    if len(pred) == 0:
+        return "Invalid answer"
+
+    options = [cleanStr(option) for option in sample["options"]]
+    # Compute the BLEU score for each option
+    scores = [self.bleuScorer([pred], [[option]]) for option in options]
+
+    if max(scores) == 0:
+        return "Invalid answer"
+
+    pred = sample["options"][scores.index(max(scores))].lower()
+
+    return pred
 
 
 def findDatasets():
@@ -33,7 +69,7 @@ def findDatasets():
     print("Found the following additional datasets:" + str(additionalDatasets))
 
     # For each datasets, create a dynamic class with the dataset name
-    dynamicDatasets = set()
+    dynamicDatasets = []
     for dataset in additionalDatasets:
         datasetName = dataset.split("/")[-1]
 
@@ -50,8 +86,9 @@ def findDatasets():
         if taskFamily == "VQA":
             parentClass = VQA
         elif taskFamily == "QA":
-            raise NotImplementedError("QA task family not implemented yet")
             parentClass = QA
+            attributes["getPredictedAnswer"] = getPredictedAnswer
+            attributes["bleuScorer"] = BLEUScore(n_gram=1)
         elif taskFamily == "ImageClassification":
             raise NotImplementedError("ImageClassification task family not implemented yet")
             parentClass = ImageClassification
@@ -63,14 +100,8 @@ def findDatasets():
 
         newClass = type(datasetName, (parentClass,), attributes)
 
-        def constructor(self, **kwargs) -> None:
-            super(newClass, self).__init__(**kwargs)
-            self.path = dataset
-            self.taskName = datasetName
-            self.modality = datasetSamples["modality"]
-            self.dataset = datasetSamples["samples"]
+        newClass.__init__ = make_constructor(newClass, dataset, datasetName, datasetSamples)
+        dynamicDatasets.append(newClass)
 
-        newClass.__init__ = constructor
-        dynamicDatasets.add(newClass)
 
     return dynamicDatasets
