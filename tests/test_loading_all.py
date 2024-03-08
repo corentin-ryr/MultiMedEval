@@ -8,6 +8,7 @@ logging.basicConfig(level=logging.INFO)
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
+
 def batcher(prompts):
     return ["Dummy answer" for _ in range(len(prompts))]
 
@@ -21,7 +22,20 @@ class TestLoadingAll:
     # Do this test first
     @pytest.mark.order(1)
     def test_loading_all(self):
-        config = json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+        config = (
+            json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+        )
+        tasksToPrepare = [
+            "MedQA",
+            "PubMedQA",
+            "MedMCQA",
+            "VQA-Rad",
+            "VQA-Path",
+            "SLAKE",
+            "MedNLI",
+            "OCTMNIST",
+            "Pad UFES 20",
+        ]
 
         if IN_GITHUB_ACTIONS:
             config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
@@ -30,7 +44,9 @@ class TestLoadingAll:
         setupParams = SetupParams(**config)
         tasksReady = self.engine.setup(setupParams=setupParams)
 
-        for task in tasksReady:
+        for task in tasksToPrepare:
+            if task not in tasksReady:
+                assert False
             assert tasksReady[task]["ready"] == True
 
         assert isinstance(len(self.engine), int)
@@ -124,4 +140,3 @@ class TestLoadingAll:
 
     #     for task in tasks:
     #         assert task in results
-
