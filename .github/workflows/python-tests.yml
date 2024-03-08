@@ -24,8 +24,15 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+    - name: free disk space
+      run: |
+        sudo swapoff -a
+        sudo rm -f /swapfile
+        sudo apt clean
+        docker rmi $(docker image ls -aq)
+        df -h
     - name: Create writable directory
-      run: mkdir -p data && chmod -R 777 data
+      run: mkdir -p data
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
