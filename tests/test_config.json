@@ -5,7 +5,6 @@
     "VQA_RAD_dir" : "/mnt/data",
     "Path_VQA_dir" : "/mnt/data",
     "SLAKE_dir" : "/mnt/data",
-    "MIMIC_III_dir" : "/mnt/data",
     "Pad_UFES_20_dir": "/mnt/data",
     "MNIST_Oct_dir" : "/mnt/data",
     "MedNLI_dir" : "/mnt/data",

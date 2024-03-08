@@ -1,0 +1,10 @@
+{
+    "taskType": "VQA",
+    "modality": "Radiology",
+    "samples": [
+        {"question": "Question 1", "answer": "Answer 1", "images": ["image1.png", "image2.png"]},
+        {"question": "Question 2", "answer": "Answer 2", "images": ["image1.png"]},
+        {"question": "Question 3", "answer": "Answer 3", "images": []},
+        {"question": "Question 4", "answer": "Answer 4", "images": []}
+    ]
+}

@@ -42,7 +42,7 @@ def test_ReportComparison():
         config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
         config["physionet_password"] = os.getenv("PHYSIONET_PASSWORD")
 
-    engine.setup(SetupParams(CheXBert_dir=config["CheXBert_dir"]))
+    engine.setup(SetupParams(CheXBert_dir=config["CheXBert_dir"], physionet_username=config["physionet_username"], physionet_password=config["physionet_password"]))
     reportComparison = engine.nameToTask["MIMIC-CXR Report Generation"]
 
     # Download the files from Physionet
@@ -55,7 +55,7 @@ def test_ReportComparison():
     reportPairs = []
     id_to_details = {}
     id = 0
-    with open("tests/50_samples_gt_and_candidates.csv", "r") as file:
+    with open("tests/physionet.org/files/rexval-dataset/1.0.0/50_samples_gt_and_candidates.csv", "r") as file:
         reader = csv.reader(file)
         next(reader)
 
@@ -75,7 +75,7 @@ def test_ReportComparison():
             id += 1
 
     id_to_num_error = {}
-    with open("tests/6_valid_raters_per_rater_error_categories.csv", "r") as file:
+    with open("tests/physionet.org/files/rexval-dataset/1.0.0/6_valid_raters_per_rater_error_categories.csv", "r") as file:
         reader = csv.reader(file)
         next(reader)
         for row in reader:

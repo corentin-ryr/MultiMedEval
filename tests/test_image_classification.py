@@ -13,7 +13,7 @@ IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 def test_image_classification():
     engine = MultiMedEval()
     config = json.load(open("MedMD_config.json"))
-    engine.setup(SetupParams(VinDr_Mammo_dir=config["VinDr_Mammo_dir"]))
+    engine.setup(SetupParams(MNIST_Oct_dir=config["MNIST_Oct_dir"]))
     
     
-    engine.eval(["VinDr Mammo"], batcher, EvalParams())
+    engine.eval(["OCTMNIST"], batcher, EvalParams())

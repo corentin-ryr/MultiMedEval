@@ -152,12 +152,12 @@ class VQA(Benchmark):
                     openQuestionsAccuracy += 1
 
         metrics = {
-            "bleu": sum(bleuScores) / len(bleuScores),
-            "F1": sum(f1) / len(f1),
-            "recall": sum(recall) / len(recall),
-            "closedQuestionsAccuracy": closedQuestionsCorrect / sum(closedQuestions),
-            "openQuestionsRecall": sum(openQuestionsRecall) / len(openQuestionsRecall),
-            "openQuestionsAccuracy": openQuestionsAccuracy / len(openQuestionsRecall),
+            "bleu": sum(bleuScores) / len(bleuScores) if len(bleuScores) > 0 else 0,
+            "F1": sum(f1) / len(f1) if len(f1) > 0 else 0,
+            "recall": sum(recall) / len(recall) if len(recall) > 0 else 0,
+            "closedQuestionsAccuracy": closedQuestionsCorrect / sum(closedQuestions) if sum(closedQuestions) > 0 else 0,
+            "openQuestionsRecall": sum(openQuestionsRecall) / len(openQuestionsRecall) if len(openQuestionsRecall) > 0 else 0,
+            "openQuestionsAccuracy": openQuestionsAccuracy / len(openQuestionsRecall) if len(openQuestionsRecall) > 0 else 0,
         }
 
         # Compute the scores

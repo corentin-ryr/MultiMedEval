@@ -35,6 +35,7 @@ from radgraph import F1RadGraph
 from multimedeval.chexbert.label import encode, encode, label
 from dataclasses import asdict
 import logging
+from multimedeval.dynamicDatasets import findDatasets
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -83,6 +84,9 @@ class MultiMedEval(object):
 
         self.logger = logging.getLogger("MultiMedEval")
 
+        dynamicDatasets = findDatasets()
+        TASKS.update(dynamicDatasets)
+
         self.tasksReady = {}
 
         nltk.download("punkt", quiet=True)
@@ -98,6 +102,7 @@ class MultiMedEval(object):
             )
 
             self.tasksReady[benchmark.taskName] = {"ready": False, "error": "Not setup yet"}
+
 
     def setup(self, setupParams: SetupParams, verbose: bool = True):
         self.logger.info(f"Starting the setup of MultiMedEval.")
