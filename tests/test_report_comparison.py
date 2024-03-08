@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.utils import resample
 import os
 import pytest
+import json
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,10 +28,13 @@ def compute_kendall_tau(computed_scores, evaluator_scores):
     return tau, confidence_interval[0], confidence_interval[1]
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
-@pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
+# @pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
 def test_ReportComparison():
     engine = MultiMedEval()
-    engine.setup(SetupParams(CheXBert_dir="/shares/menze.dqbm.uzh/corentin/CheXBert/"))
+
+    config = json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+
+    engine.setup(SetupParams(CheXBert_dir=config["CheXBert_dir"]))
     reportComparison = engine.nameToTask["MIMIC-CXR Report Generation"]
 
     # Load the all the report pairs from the csv file

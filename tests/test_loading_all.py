@@ -90,7 +90,7 @@ class TestLoadingAll:
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
         tasks = [
-            # "MIMIC-CXR Image Classficication",
+            "MIMIC-CXR Image Classficication",
             # "VinDr Mammo",
             "Pad UFES 20",
             # "CBIS-DDSM Mass",
