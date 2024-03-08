@@ -5,6 +5,8 @@ import logging
 from scipy.stats import kendalltau
 import numpy as np
 from sklearn.utils import resample
+import os
+import pytest
 
 logging.basicConfig(level=logging.INFO)
 
@@ -24,7 +26,8 @@ def compute_kendall_tau(computed_scores, evaluator_scores):
     confidence_interval = np.percentile(bootstrap_samples, [2.5, 97.5])
     return tau, confidence_interval[0], confidence_interval[1]
 
-
+IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
+@pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
 def test_ReportComparison():
     engine = MultiMedEval()
     engine.setup(SetupParams(CheXBert_dir="/shares/menze.dqbm.uzh/corentin/CheXBert/"))

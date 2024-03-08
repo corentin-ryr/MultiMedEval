@@ -9,7 +9,6 @@ import numpy as np
 import urllib.request
 import zipfile
 import shutil
-from kaggle.api.kaggle_api_extended import KaggleApi
 from pathlib import Path
 from multimedeval.utils import download_file
 from zipfile import ZipFile
@@ -443,6 +442,8 @@ class CBIS_DDSM(ImageClassification):
     def _generate_dataset(self):
         if os.path.exists(os.path.join(self.path, "csv")):
             return
+        
+        from kaggle.api.kaggle_api_extended import KaggleApi
 
         api = KaggleApi()
         api.authenticate()

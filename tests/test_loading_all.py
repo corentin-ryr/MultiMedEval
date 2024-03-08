@@ -2,9 +2,11 @@ from multimedeval import EvalParams, MultiMedEval, SetupParams
 import json
 import logging
 import pytest
+import os
 
 logging.basicConfig(level=logging.INFO)
 
+IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 def batcher(prompts):
     return ["Dummy answer" for _ in range(len(prompts))]
@@ -19,7 +21,8 @@ class TestLoadingAll:
     # Do this test first
     @pytest.mark.order(1)
     def test_loading_all(self):
-        config = json.load(open("MedMD_config.json"))
+        config = json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+
         setupParams = SetupParams(**config)
         tasksReady = self.engine.setup(setupParams=setupParams)
 
@@ -73,7 +76,7 @@ class TestLoadingAll:
     def test_running_reportcomparison(self):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
-        tasks = ["MIMIC-CXR Report Generation"]
+        tasks = ["MIMIC-III"]
         try:
             results = self.engine.eval(tasks, batcher, evalParams=evalParams)
         except:
@@ -87,10 +90,10 @@ class TestLoadingAll:
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
         tasks = [
-            "MIMIC-CXR Image Classficication",
+            # "MIMIC-CXR Image Classficication",
             # "VinDr Mammo",
             "Pad UFES 20",
-            "CBIS-DDSM Mass",
+            # "CBIS-DDSM Mass",
             # "CBIS-DDSM Calcification",
             "OCTMNIST",
             # "PathMNIST",

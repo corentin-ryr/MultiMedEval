@@ -1,0 +1,13 @@
+{
+    "MedQA_dir" : "/data",
+    "PubMedQA_dir" : "/data/",
+    "MedMCQA_dir" : "/data",
+    "VQA_RAD_dir" : "/data",
+    "Path_VQA_dir" : "/data",
+    "SLAKE_dir" : "/data",
+    "MIMIC_III_dir" : "/data",
+    "Pad_UFES_20_dir": "/data",
+    "MNIST_Oct_dir" : "/data",
+    "MedNLI_dir" : "/data",
+    "CheXBert_dir" : "/data"
+  }
