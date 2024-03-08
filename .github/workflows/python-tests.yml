@@ -32,7 +32,7 @@ jobs:
         docker rmi $(docker image ls -aq)
         df -h
     - name: Create writable directory
-      run: mkdir -p data
+      run: mkdir -p /mnt/data
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip

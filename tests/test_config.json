@@ -1,9 +1,13 @@
 {
-    "MedQA_dir" : "data",
-    "PubMedQA_dir" : "data",
-    "MedMCQA_dir" : "data",
-    "VQA_RAD_dir" : "data",
-    "Path_VQA_dir" : "data",
-    "SLAKE_dir" : "data",
-    "CheXBert_dir" : "data"
+    "MedQA_dir" : "/mnt/data",
+    "PubMedQA_dir" : "/mnt/data",
+    "MedMCQA_dir" : "/mnt/data",
+    "VQA_RAD_dir" : "/mnt/data",
+    "Path_VQA_dir" : "/mnt/data",
+    "SLAKE_dir" : "/mnt/data",
+    "MIMIC_III_dir" : "/mnt/data",
+    "Pad_UFES_20_dir": "/mnt/data",
+    "MNIST_Oct_dir" : "/mnt/data",
+    "MedNLI_dir" : "/mnt/data",
+    "CheXBert_dir" : "/mnt/data"
   }
