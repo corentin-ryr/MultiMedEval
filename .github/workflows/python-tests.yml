@@ -40,5 +40,8 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install -e .[dev]
     - name: Test with pytest
+      env:
+        PHYSIONET_USERNAME: ${{ secrets.physionet_username }}
+        PHYSIONET_PASSWORD: ${{ secrets.physionet_password }}
       run: |
         pytest

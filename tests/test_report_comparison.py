@@ -8,6 +8,7 @@ from sklearn.utils import resample
 import os
 import pytest
 import json
+import subprocess
 
 logging.basicConfig(level=logging.INFO)
 
@@ -27,15 +28,28 @@ def compute_kendall_tau(computed_scores, evaluator_scores):
     confidence_interval = np.percentile(bootstrap_samples, [2.5, 97.5])
     return tau, confidence_interval[0], confidence_interval[1]
 
+
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
+
+
 # @pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
 def test_ReportComparison():
+
     engine = MultiMedEval()
 
     config = json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+    if IN_GITHUB_ACTIONS:
+        config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
+        config["physionet_password"] = os.getenv("PHYSIONET_PASSWORD")
 
     engine.setup(SetupParams(CheXBert_dir=config["CheXBert_dir"]))
     reportComparison = engine.nameToTask["MIMIC-CXR Report Generation"]
+
+    # Download the files from Physionet
+    username, password = engine.getPhysioNetCredentials()
+    wget_command = f'wget -r -c -np -nc --directory-prefix tests --user "{username}" --password "{password}" https://physionet.org/files/rexval-dataset/1.0.0/'
+
+    subprocess.run(wget_command, shell=True, check=True)
 
     # Load the all the report pairs from the csv file
     reportPairs = []
