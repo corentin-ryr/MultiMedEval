@@ -23,7 +23,7 @@ def test_image_classification(batcherAnswer, expectedAccuracy, expectedMacroF1, 
         return [batcherAnswer for _ in range(len(prompts))]
 
     engine = MultiMedEval()
-    config = json.load(open("MedMD_config.json"))
+    config = json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
     engine.setup(SetupParams(MNIST_Oct_dir=config["MNIST_Oct_dir"]))
 
     results = engine.eval(["OCTMNIST"], batcher, EvalParams())
@@ -38,9 +38,7 @@ def test_image_classification(batcherAnswer, expectedAccuracy, expectedMacroF1, 
                 break
         else:
             assert False
-    
 
     assert (results["Accuracy"] - expectedAccuracy) < 0.01
     assert (results["F1-macro"] - expectedMacroF1) < 0.01
     assert (results["AUC-macro"] - expectedMacroAUC) < 0.01
-

@@ -44,7 +44,6 @@ class TestLoadingAll:
     def setup_class(self):
         self.engine = MultiMedEval()
 
-
     # Do this test first
     @pytest.mark.order(1)
     def test_loading_all(self):
@@ -56,8 +55,6 @@ class TestLoadingAll:
         if IN_GITHUB_ACTIONS:
             config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
             config["physionet_password"] = os.getenv("PHYSIONET_PASSWORD")
-
-            
 
         setupParams = SetupParams(**config)
         tasksReady = self.engine.setup(setupParams=setupParams)
