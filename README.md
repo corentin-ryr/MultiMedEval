@@ -4,6 +4,11 @@
 MultiMedEval is a library to evaluate the performance of Vision-Language Models (VLM) on medical domain tasks. The goal is to have a set of benchmark with a unified evaluation scheme to facilitate the development and comparison of medical VLM.
 We include 24 tasks representing a 10 of different imaging modalities and some text-only tasks.
 
+![tests workflow](https://github.com/corentin-ryr/MultiMedEval/actions/workflows/python-tests.yml/badge.svg) ![PyPI - Version](https://img.shields.io/pypi/v/multimedeval) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/multimedeval) ![GitHub License](https://img.shields.io/github/license/corentin-ryr/MultiMedEval)
+
+
+
+
 
 ## Tasks
 
