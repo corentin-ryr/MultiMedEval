@@ -8,6 +8,29 @@ logging.basicConfig(level=logging.INFO)
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
+TASKS = [
+    "MedQA",
+    "PubMedQA",
+    "MedMCQA",
+    "VQA-Rad",
+    "VQA-Path",
+    "SLAKE",
+    "MedNLI",
+    "Pad UFES 20",
+    "OCTMNIST",
+    "PathMNIST",
+    "PneumoniaMNIST",
+    "RetinaMNIST",
+    "BloodMNIST",
+    "OrganCMNIST",
+    "DermaMNIST",
+    "BreastMNIST",
+    "TissueMNIST",
+    "OrganSMNIST",
+    "CBIS-DDSM Mass",
+    "CBIS-DDSM Calcification",
+]
+
 
 def batcher(prompts):
     return ["Dummy answer" for _ in range(len(prompts))]
@@ -19,32 +42,14 @@ class TestLoadingAll:
     def setup_class(self):
         self.engine = MultiMedEval()
 
+
     # Do this test first
     @pytest.mark.order(1)
     def test_loading_all(self):
         config = (
             json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
         )
-        tasksToPrepare = [
-            "MedQA",
-            "PubMedQA",
-            "MedMCQA",
-            "VQA-Rad",
-            "VQA-Path",
-            "SLAKE",
-            "MedNLI",
-            "Pad UFES 20",
-            "OCTMNIST",
-            "PathMNIST",
-            "PneumoniaMNIST",
-            "RetinaMNIST",
-            "BloodMNIST",
-            "OrganCMNIST",
-            "DermaMNIST",
-            "BreastMNIST",
-            "TissueMNIST",
-            "OrganSMNIST",
-        ]
+        tasksToPrepare = TASKS
 
         if IN_GITHUB_ACTIONS:
             config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
@@ -67,28 +72,7 @@ class TestLoadingAll:
     @pytest.mark.order(3)
     @pytest.mark.parametrize(
         "task",
-        [
-            "MedQA",
-            "PubMedQA",
-            "MedMCQA",
-            "VQA-Rad",
-            "VQA-Path",
-            "SLAKE",
-            "MedNLI",
-            "Pad UFES 20",
-            # "CBIS-DDSM Mass",
-            # "CBIS-DDSM Calcification",
-            "OCTMNIST",
-            "PathMNIST",
-            "PneumoniaMNIST",
-            "RetinaMNIST",
-            "BloodMNIST",
-            "OrganCMNIST",
-            "DermaMNIST",
-            "BreastMNIST",
-            "TissueMNIST",
-            "OrganSMNIST",
-        ],
+        TASKS,
     )
     def test_running_task(self, task):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)

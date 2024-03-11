@@ -17,5 +17,6 @@
     "MNIST_OrganS_dir" : "/mnt/data",
     "MNIST_Pneumonia_dir" : "/mnt/data",
     "MNIST_Retina_dir" : "/mnt/data",
-    "MNIST_Tissue_dir" : "/mnt/data"
+    "MNIST_Tissue_dir" : "/mnt/data",
+    "CBIS_DDSM_dir" : "/mnt/data"
 }
