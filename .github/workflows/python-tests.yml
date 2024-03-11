@@ -43,5 +43,7 @@ jobs:
       env:
         PHYSIONET_USERNAME: ${{ secrets.physionet_username }}
         PHYSIONET_PASSWORD: ${{ secrets.physionet_password }}
+        KAGGLE_USERNAME: ${{ secrets.kaggle_username }}
+        KAGGLE_KEY: ${{ secrets.kaggle_key }}
       run: |
         pytest

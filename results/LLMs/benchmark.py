@@ -200,12 +200,12 @@ if __name__ == "__main__":
     device = "cuda:0"
     batcher = batcherMedAlpaca(device=device)
 
-    mme = MultiMedEval()
+    engine = MultiMedEval()
 
     setupParams = SetupParams(**json.load(open("MedMD_config.json")))
-    mme.setup(setupParams)
+    engine.setup(setupParams)
 
     params = EvalParams(batch_size=32, run_name="benchmarkMedAlpaca")
-    mme.eval(["VQA-RAD"], batcher, EvalParams(batch_size=32, run_name="testRadFM", device=device))
+    engine.eval(["VQA-RAD"], batcher, params)
 
     print(f"Everything is done, see the {params.run_name} folder for detailed results.")

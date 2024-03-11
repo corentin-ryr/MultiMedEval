@@ -57,6 +57,8 @@ class TestLoadingAll:
             config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
             config["physionet_password"] = os.getenv("PHYSIONET_PASSWORD")
 
+            
+
         setupParams = SetupParams(**config)
         tasksReady = self.engine.setup(setupParams=setupParams)
 

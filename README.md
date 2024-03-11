@@ -251,7 +251,7 @@ And for a QA dataset:
 }
 ```
 
-Note that in both cases the `images` key is optional. If the `taskType` is VQA, the metrics computed will be BLEU-1, accuracy for closed and questions, recall and recall for open questions as well as F1. For the QA `taskType`, the tool will report the accuracy (by comparing the answer to every option using BLEU).
+Note that in both cases the `images` key is optional. If the `taskType` is VQA, the metrics computed will be BLEU-1, accuracy for closed and open questions, recall and recall for open questions as well as F1. For the QA `taskType`, the tool will report the accuracy (by comparing the answer to every option using BLEU).
 
 
 ## Reference
