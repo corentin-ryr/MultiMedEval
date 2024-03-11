@@ -29,6 +29,8 @@ TASKS = [
     "OrganSMNIST",
     "CBIS-DDSM Mass",
     "CBIS-DDSM Calcification",
+    "exampleDatasetQA",
+    "exampleDatasetVQA",
 ]
 
 
