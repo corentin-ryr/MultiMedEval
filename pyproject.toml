@@ -47,3 +47,6 @@ dev = [
 addopts = "--cov=multimedeval"
 testpaths = "tests"
 
+[tool.coverage.run]
+omit = ["multimedeval/chexbert/*", "multimedeval/tqdm_loggable.py"]
+
