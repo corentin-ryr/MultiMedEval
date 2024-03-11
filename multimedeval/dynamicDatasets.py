@@ -22,7 +22,12 @@ def setup(self):
 
 def format_question(self, sample, prompt=False):
 
-    question = sample["question"]
+    if "images" in sample:
+        images = [Image.open(os.path.join(self.path, imagePath)) for imagePath in sample["images"]]
+    else:
+        images = []
+    
+    question = " ".join(["<img>" for _ in images]) + " " + sample["question"]
 
     if "options" in sample:
         question += " " + " ".join(sample["options"])
@@ -32,10 +37,6 @@ def format_question(self, sample, prompt=False):
     if prompt:
         formattedPrompt.append({"role": "assistant", "content": sample["answer"]})
 
-    if "images" in sample:
-        images = [Image.open(os.path.join(self.path, imagePath)) for imagePath in sample["images"]]
-    else:
-        images = []
 
     return (formattedPrompt, images)
 

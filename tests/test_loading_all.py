@@ -8,6 +8,31 @@ logging.basicConfig(level=logging.INFO)
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
+TASKS = [
+    "MedQA",
+    "PubMedQA",
+    "MedMCQA",
+    "VQA-Rad",
+    "VQA-Path",
+    "SLAKE",
+    "MedNLI",
+    "Pad UFES 20",
+    "OCTMNIST",
+    "PathMNIST",
+    "PneumoniaMNIST",
+    "RetinaMNIST",
+    "BloodMNIST",
+    "OrganCMNIST",
+    "DermaMNIST",
+    "BreastMNIST",
+    "TissueMNIST",
+    "OrganSMNIST",
+    "CBIS-DDSM Mass",
+    "CBIS-DDSM Calcification",
+    "exampleDatasetQA",
+    "exampleDatasetVQA",
+]
+
 
 def batcher(prompts):
     return ["Dummy answer" for _ in range(len(prompts))]
@@ -25,26 +50,7 @@ class TestLoadingAll:
         config = (
             json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
         )
-        tasksToPrepare = [
-            "MedQA",
-            "PubMedQA",
-            "MedMCQA",
-            "VQA-Rad",
-            "VQA-Path",
-            "SLAKE",
-            "MedNLI",
-            "Pad UFES 20",
-            "OCTMNIST",
-            "PathMNIST",
-            "PneumoniaMNIST",
-            "RetinaMNIST",
-            "BloodMNIST",
-            "OrganCMNIST",
-            "DermaMNIST",
-            "BreastMNIST",
-            "TissueMNIST",
-            "OrganSMNIST",
-        ]
+        tasksToPrepare = TASKS
 
         if IN_GITHUB_ACTIONS:
             config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
@@ -65,91 +71,15 @@ class TestLoadingAll:
         self.engine.visualization()
 
     @pytest.mark.order(3)
-    def test_running_qa(self):
+    @pytest.mark.parametrize(
+        "task",
+        TASKS,
+    )
+    def test_running_task(self, task):
         evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
-        tasks = ["MedQA", "PubMedQA", "MedMCQA"]
+        tasks = [task]
 
-        try:
-            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
-        except:
-            assert False
-
-        for task in tasks:
-            assert task in results
-
-    @pytest.mark.order(4)
-    def test_running_vqa(self):
-        evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
-
-        tasks = ["VQA-Rad", "VQA-Path", "SLAKE"]
-        try:
-            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
-        except:
-            assert False
-
-        for task in tasks:
-            assert task in results
-
-    @pytest.mark.order(5)
-    def test_running_nli(self):
-        evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
-
-        tasks = ["MedNLI"]
-        try:
-            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
-        except:
-            assert False
-
-        for task in tasks:
-            assert task in results
-
-    # @pytest.mark.order(6)
-    # def test_running_reportcomparison(self):
-    #     evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
-
-    #     tasks = ["MIMIC-III"]
-    #     try:
-    #         results = self.engine.eval(tasks, batcher, evalParams=evalParams)
-    #     except:
-    #         assert False
-
-    #     for task in tasks:
-    #         assert task in results
-
-    @pytest.mark.order(7)
-    def test_running_image_classification(self):
-        evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
-
-        tasks = [
-            # "MIMIC-CXR Image Classficication",
-            # "VinDr Mammo",
-            "Pad UFES 20",
-            # "CBIS-DDSM Mass",
-            # "CBIS-DDSM Calcification",
-            "OCTMNIST",
-            "PathMNIST",
-            "PneumoniaMNIST",
-            "RetinaMNIST",
-            "BloodMNIST", "OrganCMNIST",
-            "DermaMNIST",
-            "BreastMNIST",
-            "TissueMNIST",
-            "OrganSMNIST",
-        ]
-        try:
-            results = self.engine.eval(tasks, batcher, evalParams=evalParams)
-        except:
-            assert False
-
-        for task in tasks:
-            assert task in results
-
-    @pytest.mark.order(8)
-    def test_running_dynamic_datasets(self):
-        evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
-
-        tasks = ["exampleDatasetQA", "exampleDatasetVQA"]
         try:
             results = self.engine.eval(tasks, batcher, evalParams=evalParams)
         except:
