@@ -225,7 +225,7 @@ The `EvalParams` class takes the following arguments:
 
 To add a new task to the list of already implemented ones, create a folder named `MultiMedEvalAdditionalDatasets` and a subfolder with the name of your dataset.
 
-Inside your dataset folder, create a `json` file that follows the following template:
+Inside your dataset folder, create a `json` file that follows the following template for a VQA dataset:
 
 ```json
 {
@@ -234,12 +234,24 @@ Inside your dataset folder, create a `json` file that follows the following temp
     "samples": [
         {"question": "Question 1", "answer": "Answer 1", "images": ["image1.png", "image2.png"]},
         {"question": "Question 2", "answer": "Answer 2", "images": ["image1.png"]},
-        {"question": "Question 3", "answer": "Answer 3", "images": []},
-        {"question": "Question 4", "answer": "Answer 4", "images": []}
     ]
 }
 ```
 
+And for a QA dataset:
+
+```json
+{
+    "taskType": "QA",
+    "modality": "Pathology",
+    "samples": [
+        {"question": "Question 1", "answer": "Answer 1", "options": ["Option 1", "Option 2"], "images": ["image1.png", "image2.png"]},
+        {"question": "Question 2", "answer": "Answer 2", "options": ["Option 1", "Option 2"], "images": ["image1.png"]},
+    ]
+}
+```
+
+Note that in both cases the `images` key is optional. If the `taskType` is VQA, the metrics computed will be BLEU-1, accuracy for closed and questions, recall and recall for open questions as well as F1. For the QA `taskType`, the tool will report the accuracy (by comparing the answer to every option using BLEU).
 
 
 ## Reference
