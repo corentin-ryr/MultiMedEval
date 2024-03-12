@@ -31,7 +31,6 @@ TASKS = [
     "CBIS-DDSM Calcification",
     "exampleDatasetQA",
     "exampleDatasetVQA",
-    "MIMIC-III",
 ]
 
 
