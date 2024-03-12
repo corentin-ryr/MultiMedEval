@@ -1,7 +1,7 @@
 from multimedeval.utils import EvalParams, fileWriterFactory, Benchmark, SetupParams
 
 from multimedeval.qa import MedQA, PubMedQA, MedMCQA
-from multimedeval.vqa import VQA_RAD, Path_VQA, SLAKE
+from multimedeval.vqa import VQA_RAD, Path_VQA, SLAKE, DiffVQA
 from multimedeval.mimic import MIMIC_CXR_reportgen
 from multimedeval.imageClassification import (
     MIMIC_CXR_ImageClassification,
@@ -45,6 +45,7 @@ TASKS: set[Benchmark] = {
     MedMCQA,
     VQA_RAD,
     Path_VQA,
+    DiffVQA,
     SLAKE,
     MIMIC_CXR_reportgen,  # Setup not tested
     MIMIC_III,
@@ -73,6 +74,7 @@ TASKS_REQUIREMENTS: dict[str, list[str]] = {
     MIMIC_CXR_reportgen: ["RadGraph", "Chexbert"],
     MIMIC_CXR_ImageClassification: ["Chexbert"],
     MIMIC_III: ["RadGraph", "Chexbert"],
+    DiffVQA: ["MIMIC-CXR Report Generation"],
 }
 
 
@@ -137,7 +139,6 @@ class MultiMedEval(object):
                     raise Exception(f"Task {taskName} is skipped")
                 self.nameToTask[taskName].setup()
             except Exception as e:
-                # raise e
                 self.tasksReady[taskName] = {"ready": False, "error": str(e)}
             else:
                 self.tasksReady[taskName] = {"ready": True}
