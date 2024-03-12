@@ -65,6 +65,10 @@ def getPredictedAnswer(self, pred: str, sample):
 def findDatasets():
     # Find the subfolders in the MultiMedEvalAdditionalDatasets folder
     additionalDatasetsPath = "MultiMedEvalAdditionalDatasets"
+
+    if not os.path.exists(additionalDatasetsPath):
+        return []
+
     additionalDatasets = [f.path for f in os.scandir(additionalDatasetsPath) if f.is_dir()]
 
     print("Found the following additional datasets:" + str(additionalDatasets))
