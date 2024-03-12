@@ -21,7 +21,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        self.taskName = "MIMIC-CXR Image Classficication"
+        self.taskName = "MIMIC-CXR Image Classification"
         self.modality = "X-Ray"
 
     def setup(self):
