@@ -107,8 +107,8 @@ class VQA(Benchmark):
                 cleanCorrect = cleanStr(self.getCorrectAnswer(batch[idx]))
                 cleanPredicted = cleanStr(answer)
 
-                predictedTokens = set([self.wnl.lemmatize(token) for token in cleanPredicted.split(" ")])
-                correctTokens = set([self.wnl.lemmatize(token) for token in cleanCorrect.split(" ")])
+                predictedTokens = self._preprocess(cleanPredicted)
+                correctTokens = self._preprocess(cleanCorrect)
                 if correctTokens == {"no"}:
                     correctTokens.add("not")
                 currentPrecision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens)
@@ -168,6 +168,11 @@ class VQA(Benchmark):
             {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
             {"type": "csv", "name": self.taskName, "value": answersLog},
         ]
+    
+    def _preprocess(self, text):
+        tokenizedText = set([self.wnl.lemmatize(token) for token in text.split(" ")])
+        tokenizedText.discard("")
+        return tokenizedText
 
     @abstractmethod
     def getCorrectAnswer(self, sample):

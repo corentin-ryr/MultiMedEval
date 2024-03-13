@@ -21,7 +21,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
 
-        self.taskName = "MIMIC-CXR Image Classficication"
+        self.taskName = "MIMIC-CXR Image Classification"
         self.modality = "X-Ray"
 
     def setup(self):
@@ -298,13 +298,13 @@ class Pad_UFES_20(ImageClassification):
             "has sewage system": sample["has_sewage_system"],
         }
         # Create a sentence out of the patient information don't include Nones
-        # patientInfo = ", ".join([f"{key} {value}" for key, value in patientInfo.items() if value is not None])
+        patientInfo = "Patient history: " + ", ".join([f"{key} {value}" for key, value in patientInfo.items() if value is not None])
         options = "Options:\n" + "\n".join([self.mapAcronymToName[option] for option in self.options])
 
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img> {options} What is the most likely diagnosis among the following propositions?",
+                "content": f"<img> {patientInfo} Which of the following is the most likely diagnosis of the patient's skin lesion? {options}",
             }
         ]
 

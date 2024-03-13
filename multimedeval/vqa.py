@@ -1,10 +1,12 @@
-from datasets import load_dataset
-import json
+from datasets import load_dataset, Dataset
 import os
-import PIL
+from PIL import Image
 import gdown
 from zipfile import ZipFile
 from multimedeval.taskFamilies import VQA
+from multimedeval.utils import download_file
+import pandas as pd
+
 
 
 
@@ -116,7 +118,7 @@ class SLAKE(VQA):
         if prompt:
             question.append({"role": "assistant", "content": formattedAnswer})
 
-        images = [PIL.Image.open(os.path.join(self.path, "imgs", sample["img_name"]))]
+        images = [Image.open(os.path.join(self.path, "imgs", sample["img_name"]))]
 
         return (question, images)
 
@@ -140,3 +142,77 @@ class SLAKE(VQA):
             zObject.extractall(path=os.path.join(self.path, "BoKelvin___slake"))
 
         os.remove(output)
+
+
+
+class DiffVQA(VQA):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.taskName = "Diff-VQA"
+        self.modality = "Radiology"
+
+
+    def setup(self):
+        self.path = self.engine.getConfig()["DiffVQA_dir"]
+
+        self.mimicPath = self.engine.getConfig()["MIMIC_CXR_dir"]
+
+        if self.path is None or self.mimicPath is None:
+            raise Exception("No path for DiffVQA dataset provided in the config file. Skipping the task.")
+    
+        self._generate_dataset()
+
+        # Open the csv file
+        df = pd.read_csv(os.path.join(self.path, "mimic_pair_questions.csv"))
+
+        testDf = df[df["split"] == "test"]
+        self.dataset = Dataset.from_pandas(testDf)
+
+        trainDf = df[df["split"] == "train"]
+        self.trainDataset = Dataset.from_pandas(trainDf)
+
+
+
+    def format_question(self, sample, prompt=False):
+        imageFolderPath = os.path.join(self.mimicPath, "mimic-cxr-jpg", "2.0.0", "files", f"p{str(sample['subject_id'])[:2]}", f"p{sample['subject_id']}", f"s{sample['study_id']}")
+        listOfFiles = os.listdir(imageFolderPath)
+
+        print(listOfFiles)
+        images = [Image.open(os.path.join(imageFolderPath, imagePath)) for imagePath in listOfFiles if imagePath.endswith(".jpg")]
+
+        imgTokens = "<img>" * len(images)
+        formattedQuestion = f"{imgTokens} {sample['question']}"
+        formattedAnswer = f"{sample['answer']}"
+        if formattedAnswer in ["yes", "no"]:
+            formattedQuestion = "Answer the following question with yes or no. " + formattedQuestion
+
+        question = [{"role": "user", "content": formattedQuestion}]
+        if prompt:
+            question.append({"role": "assistant", "content": formattedAnswer})
+
+        return (question, images)
+
+    def getCorrectAnswer(self, sample):
+        return sample["answer"].lower().strip()
+
+    def _generate_dataset(self):
+        # Check if the path already exists and if so return
+        if os.path.exists(os.path.join(self.path, "DiffVQA", "mimic_pair_questions.csv")):
+            self.path = os.path.join(self.path, "DiffVQA")
+            return
+
+        os.makedirs(os.path.join(self.path, "DiffVQA"), exist_ok=True)
+
+        username, password = self.engine.getPhysioNetCredentials()
+        # wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz'
+        # subprocess.run(wget_command, shell=True, check=True)
+
+        download_file(
+            "https://physionet.org/files/medical-diff-vqa/1.0.0/mimic_pair_questions.csv?download",
+            os.path.join(self.path, "DiffVQA", "mimic_pair_questions.csv"),
+            username,
+            password,
+        )
+
+        self.path = os.path.join(self.path, "DiffVQA")
+
