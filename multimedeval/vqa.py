@@ -177,7 +177,6 @@ class DiffVQA(VQA):
         imageFolderPath = os.path.join(self.mimicPath, "mimic-cxr-jpg", "2.0.0", "files", f"p{str(sample['subject_id'])[:2]}", f"p{sample['subject_id']}", f"s{sample['study_id']}")
         listOfFiles = os.listdir(imageFolderPath)
 
-        print(listOfFiles)
         images = [Image.open(os.path.join(imageFolderPath, imagePath)) for imagePath in listOfFiles if imagePath.endswith(".jpg")]
 
         imgTokens = "<img>" * len(images)
