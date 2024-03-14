@@ -170,7 +170,7 @@ class VQA(Benchmark):
         ]
     
     def _preprocess(self, text):
-        tokenizedText = set([self.wnl.lemmatize(token) for token in text.split(" ")])
+        tokenizedText = set(text.split()) # set([self.wnl.lemmatize(token) for token in text.split()])
         tokenizedText.discard("")
         return tokenizedText
 
