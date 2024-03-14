@@ -81,8 +81,9 @@ class VQA(Benchmark):
         bleuScores = []
         f1 = []
         recall = []
-
         closedQuestions = []
+        closedQuestionsCorrect = 0
+
         # Run the batcher for all data split in chunks
         dataloader = DataLoader(
             self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
@@ -109,8 +110,7 @@ class VQA(Benchmark):
 
                 predictedTokens = self._preprocess(cleanPredicted)
                 correctTokens = self._preprocess(cleanCorrect)
-                if correctTokens == {"no"}:
-                    correctTokens.add("not")
+                
                 currentPrecision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens) if len(predictedTokens) > 0 else 0
                 currentRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens) if len(correctTokens) > 0 else 0
                 currentF1 = 2 * (currentPrecision * currentRecall) / (currentPrecision + currentRecall + 1e-8)
@@ -123,6 +123,13 @@ class VQA(Benchmark):
                 # If the question is closed, decide if it is correct or not
                 if cleanCorrect in ["yes", "no"]:
                     closedQuestions.append(True)
+
+                    if correctTokens == {"no"}:
+                        correctTokens.add("not")
+
+                    closedQRecall = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens) if len(predictedTokens) > 0 else 0
+                    if closedQRecall >= 0.4:
+                        closedQuestionsCorrect += 1
                 else:
                     closedQuestions.append(False)
 
@@ -139,13 +146,10 @@ class VQA(Benchmark):
                 )
 
         # Compute the accuracy for closed questions
-        closedQuestionsCorrect = 0
         openQuestionsRecall = []
         openQuestionsAccuracy = 0
         for idx, isClosed in enumerate(closedQuestions):
-            if isClosed and recall[idx] >= 0.4:
-                closedQuestionsCorrect += 1
-            elif not isClosed:
+            if not isClosed:
                 openQuestionsRecall.append(recall[idx])
                 if recall[idx] >= 0.75:
                     openQuestionsAccuracy += 1
