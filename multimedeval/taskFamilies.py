@@ -127,7 +127,7 @@ class VQA(Benchmark):
                     if correctTokens == {"no"}:
                         correctTokens.add("not")
 
-                    closedQRecall = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens) if len(predictedTokens) > 0 else 0
+                    closedQRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens) if len(correctTokens) > 0 else 0
                     if closedQRecall >= 0.4:
                         closedQuestionsCorrect += 1
                 else:
