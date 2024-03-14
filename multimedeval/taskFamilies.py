@@ -111,8 +111,8 @@ class VQA(Benchmark):
                 correctTokens = self._preprocess(cleanCorrect)
                 if correctTokens == {"no"}:
                     correctTokens.add("not")
-                currentPrecision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens)
-                currentRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens)
+                currentPrecision = len(predictedTokens.intersection(correctTokens)) / len(predictedTokens) if len(predictedTokens) > 0 else 0
+                currentRecall = len(predictedTokens.intersection(correctTokens)) / len(correctTokens) if len(correctTokens) > 0 else 0
                 currentF1 = 2 * (currentPrecision * currentRecall) / (currentPrecision + currentRecall + 1e-8)
                 f1.append(currentF1)
                 recall.append(currentRecall)
