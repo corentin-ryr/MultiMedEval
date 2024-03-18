@@ -3,7 +3,7 @@ einops
 einops-exts
 huggingface-hub
 pandas
-Pillow==9.4.0
+Pillow==10.2.0
 pytz==2023.3
 PyYAML==6.0.1
 scikit-learn==1.3.0
