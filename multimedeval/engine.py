@@ -140,7 +140,6 @@ class MultiMedEval(object):
                     raise Exception(f"Task {taskName} is skipped")
                 self.nameToTask[taskName].setup()
             except Exception as e:
-                # raise e
                 self.tasksReady[taskName] = {"ready": False, "error": str(e)}
             else:
                 self.tasksReady[taskName] = {"ready": True}
