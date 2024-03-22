@@ -140,6 +140,7 @@ class MultiMedEval(object):
                     raise Exception(f"Task {taskName} is skipped")
                 self.nameToTask[taskName].setup()
             except Exception as e:
+                # raise e
                 self.tasksReady[taskName] = {"ready": False, "error": str(e)}
             else:
                 self.tasksReady[taskName] = {"ready": True}
@@ -288,7 +289,6 @@ class MultiMedEval(object):
     def get_dataloader(self, dataset, params:EvalParams):
         if params.dataloader_fn is not None:
             return params.dataloader_fn(dataset)
-
 
         dataloader = DataLoader(
             dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
