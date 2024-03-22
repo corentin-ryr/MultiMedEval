@@ -36,6 +36,7 @@ from multimedeval.chexbert.label import encode, encode, label
 from dataclasses import asdict
 import logging
 from multimedeval.dynamicDatasets import findDatasets
+from torch.utils.data import DataLoader
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -283,3 +284,14 @@ class MultiMedEval(object):
                 total_len += len(self.nameToTask[task])
 
         return total_len
+
+    def get_dataloader(self, dataset, params:EvalParams):
+        if params.dataloader_fn is not None:
+            return params.dataloader_fn(dataset)
+
+
+        dataloader = DataLoader(
+            dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
+        )
+
+        return dataloader 

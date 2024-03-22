@@ -106,6 +106,9 @@ class SLAKE(VQA):
                 sample["image"] = os.path.join(self.path, "imgs", sample["img_name"])
                 self.trainDataset.append(sample)
 
+        self.dataset = Dataset.from_dict(self.dataset)
+        self.trainDataset = Dataset.from_dict(self.trainDataset)
+
 
 
     def format_question(self, sample, prompt=False):

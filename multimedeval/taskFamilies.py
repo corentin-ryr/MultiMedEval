@@ -23,10 +23,7 @@ class QA(Benchmark):
 
         answersLog = []
 
-        # Run the batcher for all data split in chunks
-        dataloader = DataLoader(
-            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
-        )
+        dataloader = self.engine.get_dataloader(self.dataset, params)
         for batch in tqdm_logging(self.logger, dataloader, desc="Running inference"):
             batchPrompts = []
             for sample in batch:
@@ -85,9 +82,7 @@ class VQA(Benchmark):
         closedQuestionsCorrect = 0
 
         # Run the batcher for all data split in chunks
-        dataloader = DataLoader(
-            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
-        )
+        dataloader = self.engine.get_dataloader(self.dataset, params)
         for batch in tqdm_logging(
             self.logger,
             dataloader,
