@@ -80,12 +80,15 @@ TASKS_REQUIREMENTS: dict[str, list[str]] = {
 
 
 class MultiMedEval(object):
-    def __init__(self):
+    def __init__(self, logger: logging.Logger = None):
         self._config: SetupParams = None
         self._physionet_username = None
         self._physionet_password = None
 
-        self.logger = logging.getLogger("MultiMedEval")
+        if logger is None:
+            self.logger = logging.getLogger("MultiMedEval")
+        else:
+            self.logger = logger
 
         dynamicDatasets = findDatasets()
         TASKS.update(dynamicDatasets)
