@@ -54,7 +54,7 @@ def load_unlabeled_data(df, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuf
 
 
 class label:
-    def __init__(self, checkpoint_path, verbose=False) -> None:
+    def __init__(self, checkpoint_path, verbose=False, deepspeed=False) -> None:
         model = bert_labeler()
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if torch.cuda.device_count() > 0:  # works even if only 1 GPU available
@@ -108,23 +108,29 @@ class label:
 
 
 class encode:
-    def __init__(self, checkpoint_path, verbose=False) -> None:
+    def __init__(self, checkpoint_path, verbose=False, deepspeed=False) -> None:
         model = bert_encoder(False)
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        if torch.cuda.device_count() > 0:  # works even if only 1 GPU available
-            if verbose:
-                print("Using", torch.cuda.device_count(), "GPUs!")
-            model = nn.DataParallel(model)  # to utilize multiple GPU's
-            model = model.to(device)
-            checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint["model_state_dict"], strict=False)  # TODO check if it works
+        if deepspeed:
+            with deepspeed.zero.GatheredParameters(
+                model.parameters(),
+            ):
+                model.load_state_dict(checkpoint["model_state_dict"], strict=False)
         else:
-            checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
-            new_state_dict = OrderedDict()
-            for k, v in checkpoint["model_state_dict"].items():
-                name = k[7:]  # remove `module.`
-                new_state_dict[name] = v
-            model.load_state_dict(new_state_dict, strict=False)
+            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            if torch.cuda.device_count() > 0:  # works even if only 1 GPU available
+                if verbose:
+                    print("Using", torch.cuda.device_count(), "GPUs!")
+                model = nn.DataParallel(model)  # to utilize multiple GPU's
+                model = model.to(device)
+                checkpoint = torch.load(checkpoint_path)
+                model.load_state_dict(checkpoint["model_state_dict"], strict=False)  # TODO check if it works
+            else:
+                checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
+                new_state_dict = OrderedDict()
+                for k, v in checkpoint["model_state_dict"].items():
+                    name = k[7:]  # remove `module.`
+                    new_state_dict[name] = v
+                model.load_state_dict(new_state_dict, strict=False)
 
         model.eval()
         self.model = model
@@ -148,7 +154,7 @@ class encode:
 
                 out = self.model(batch, attn_mask)
                 for j in range(len(out)):
-                    rep.append(out[j].to('cpu'))
+                    rep.append(out[j].to("cpu"))
 
         return torch.stack(rep)
 

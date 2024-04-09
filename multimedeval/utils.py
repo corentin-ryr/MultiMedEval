@@ -150,6 +150,7 @@ class SetupParams:
     MNIST_Retina_dir: Optional[str|os.PathLike] = None
     MNIST_Tissue_dir: Optional[str|os.PathLike] = None
     DiffVQA_dir: Optional[str|os.PathLike] = None
+    MMLU_dir: Optional[str|os.PathLike] = None
     CheXBert_dir:Optional[str|os.PathLike] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None

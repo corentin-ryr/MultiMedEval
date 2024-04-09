@@ -197,3 +197,66 @@ class MedMCQA(QA):
 
         pred = str(scores.index(max(scores)) + 1)  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
         return pred
+
+
+class MMLU(QA):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.taskName = "MMLU"
+        self.modality = "General knowledge"
+        self.task = "QA"
+
+    def setup(self):
+        cacheDir = self.engine.getConfig()["MMLU_dir"]
+
+        if cacheDir is None:
+            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
+
+        self.dataset = load_dataset("cais/mmlu", "all", split="test", cache_dir=cacheDir)
+
+        self.trainDataset = load_dataset("cais/mmlu", "all", split="train", cache_dir=cacheDir)
+
+        self.bleuScorer = BLEUScore(n_gram=1)
+
+    def format_question(self, sample, prompt=False):
+        question = sample["question"]
+        options = self._getOptions(sample)
+        answer = sample["answer"] # Answer is the index of the correct option
+
+        formattedQuestion = f"{question}\n"
+        formattedQuestion += "\n".join(options) + "\n"
+        formattedQuestion += "What is the correct answer?"
+
+        formattedAnswer = f"The answer is {options[answer]}."
+
+        question = [{"role": "user", "content": formattedQuestion}]
+        if prompt:
+            question.append({"role": "assistant", "content": formattedAnswer})
+        return (question, [])
+
+    def getCorrectAnswer(self, sample, fullText=False):
+        number = sample["answer"]
+        if fullText:
+            return self._getOptions(sample)[number]
+        else:
+            return str(number + 1)
+
+    def _getOptions(self, sample):
+        choices = sample["choices"]
+        options = [f"{idx}: {choice}." for idx, choice in enumerate(choices)]
+        return options
+
+    def getPredictedAnswer(self, pred: str, sample):
+        pred = cleanStr(pred)
+        if len(pred) == 0:
+            return "Invalid answer"
+
+        # Compute the BLEU score for each option
+        scores = [self.bleuScorer([pred], [[cleanStr(option)]]) for option in self._getOptions(sample)]
+
+        if max(scores) == 0:
+            return "Invalid answer"
+
+        pred = str(scores.index(max(scores)) + 1)
+
+        return pred
