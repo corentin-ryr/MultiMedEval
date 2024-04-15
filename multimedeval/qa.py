@@ -2,6 +2,7 @@ from datasets import load_dataset, Dataset
 from multimedeval.utils import cleanStr
 from torchmetrics.text import BLEUScore
 from multimedeval.taskFamilies import QA
+import pandas as pd
 
 
 class MedQA(QA):
@@ -272,12 +273,20 @@ class MMLU(QA):
             "world_religions",
         ]
 
-        self.dataset = []
-        for subset in subsets:
-            currentSubset = load_dataset("cais/mmlu", subset, split="test", cache_dir=cacheDir)
-            self.dataset += currentSubset.to_list()[: len(currentSubset) // 4]
+        # self.dataset = []
+        # for subset in subsets:
+        #     currentSubset = load_dataset("cais/mmlu", subset, split="test", cache_dir=cacheDir)
+        #     self.dataset += currentSubset.to_list()[: len(currentSubset) // 4]
 
-        self.dataset = Dataset.from_list(self.dataset)
+        self.dataset = load_dataset("cais/mmlu", "all", split="test", cache_dir=cacheDir)
+        self.dataset = self.dataset.to_pandas()
+
+        def keep_quarter(group):
+            quarter_len = len(group) // 4  # Calculate the length of a quarter
+            return group.head(quarter_len)  # Keep the first quarter of rows
+            
+        self.dataset = self.dataset.groupby('subject').apply(keep_quarter)
+        self.dataset = Dataset.from_pandas(self.dataset)
 
         self.trainDataset = load_dataset("cais/mmlu", "all", split="dev", cache_dir=cacheDir)
 
