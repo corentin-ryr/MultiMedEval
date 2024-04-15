@@ -210,11 +210,11 @@ class MMLU(QA):
         cacheDir = self.engine.getConfig()["MMLU_dir"]
 
         if cacheDir is None:
-            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
+            raise Exception("No path for MMLU dataset provided in the config file. Skipping the task.")
 
         self.dataset = load_dataset("cais/mmlu", "all", split="test", cache_dir=cacheDir)
 
-        self.trainDataset = load_dataset("cais/mmlu", "all", split="train", cache_dir=cacheDir)
+        self.trainDataset = load_dataset("cais/mmlu", "all", split="dev", cache_dir=cacheDir)
 
         self.bleuScorer = BLEUScore(n_gram=1)
 
