@@ -295,7 +295,7 @@ class MMLU(QA):
     def format_question(self, sample, prompt=False):
         question = sample["question"]
         options = self._getOptions(sample)
-        answer = sample["answer"] - 1 # Answer is the index of the correct option
+        answer = sample["answer"] # Answer is the index of the correct option
 
         formattedQuestion = f"{question}\n"
         formattedQuestion += "\n".join(options) + "\n"
