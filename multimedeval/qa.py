@@ -299,7 +299,7 @@ class MMLU(QA):
 
         formattedQuestion = f"{question}\n"
         formattedQuestion += "\n".join(options) + "\n"
-        formattedQuestion += "What is the correct answer?"
+        formattedQuestion += "Answer:"
 
         formattedAnswer = f"The answer is {options[answer]}."
 
@@ -317,7 +317,8 @@ class MMLU(QA):
 
     def _getOptions(self, sample):
         choices = sample["choices"]
-        options = [f"{idx}: {choice}." for idx, choice in enumerate(choices)]
+        letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
+        options = [f"{idx}: {choice}." for idx, choice in zip(letters[len(choices)], choices)]
         return options
 
     def getPredictedAnswer(self, pred: str, sample):
