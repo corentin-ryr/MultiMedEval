@@ -34,7 +34,7 @@ class Benchmark(ABC):
         if self._prompt is None:
             prompt = []
             images = []
-            for i in range(3):
+            for i in range(5):
                 index = int(i / 3 * len(self.trainDataset))
                 text, img = self.format_question(
                     self.trainDataset[index],
