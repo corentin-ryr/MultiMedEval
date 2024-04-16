@@ -318,7 +318,7 @@ class MMLU(QA):
     def _getOptions(self, sample):
         choices = sample["choices"]
         letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
-        options = [f"{idx}: {choice}." for idx, choice in zip(letters, choices)]
+        options = [f"{idx}. {choice}." for idx, choice in zip(letters, choices)]
         return options
 
     def getPredictedAnswer(self, pred: str, sample):
