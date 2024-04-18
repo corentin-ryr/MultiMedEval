@@ -20,7 +20,7 @@ class VQA_RAD(VQA):
         cacheDir = self.engine.getConfig()["VQA_RAD_dir"]
 
         if cacheDir is None:
-            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
+            raise Exception("No path for VQA-Rad dataset provided in the config file. Skipping the task.")
 
         self.dataset = load_dataset("flaviagiammarino/vqa-rad", split="test", cache_dir=cacheDir)
         self.trainDataset = load_dataset("flaviagiammarino/vqa-rad", split="train", cache_dir=cacheDir)
@@ -51,7 +51,7 @@ class Path_VQA(VQA):
         cacheDir = self.engine.getConfig()["Path_VQA_dir"]
 
         if cacheDir is None:
-            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
+            raise Exception("No path for Path-VQA dataset provided in the config file. Skipping the task.")
     
         self.dataset = load_dataset("flaviagiammarino/path-vqa", split="test", cache_dir=cacheDir)
         self.trainDataset = load_dataset("flaviagiammarino/path-vqa", split="train", cache_dir=cacheDir)
