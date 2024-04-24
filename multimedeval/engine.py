@@ -275,7 +275,7 @@ class MultiMedEval(object):
             raise Exception("Deepspeed is initialized.")
 
         device = -1 if self.getConfig()["device"] != "cuda" else 0
-        self.radgraph = F1RadGraph(reward_level="partial", cuda=device)
+        self.radgraph = F1RadGraph(reward_level="partial", cuda=device, model_type="radgraph")
 
     def _prepare_chexbert(self):
         # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
