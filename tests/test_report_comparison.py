@@ -9,6 +9,8 @@ import os
 import pytest
 import json
 import subprocess
+from appdirs import user_cache_dir
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -42,7 +44,21 @@ def test_ReportComparison():
         config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
         config["physionet_password"] = os.getenv("PHYSIONET_PASSWORD")
 
-    engine.setup(SetupParams(CheXBert_dir=config["CheXBert_dir"], physionet_username=config["physionet_username"], physionet_password=config["physionet_password"]))
+    try:
+        success = engine.setup(SetupParams(CheXBert_dir=config["CheXBert_dir"], physionet_username=config["physionet_username"], physionet_password=config["physionet_password"]))
+    except:
+        assert False
+        
+    print(f"Radgraph: {success['RadGraph']}")
+    model_path = os.path.join(user_cache_dir("radgraph"))
+
+    # Print the names of the files in the model_path folder and the size of each file
+    print(f"Model path contains: {os.listdir(model_path)}")
+    for file in os.listdir(model_path):
+        print(f"{file}: {os.path.getsize(os.path.join(model_path, file))}")
+
+
+
     reportComparison = engine.nameToTask["MIMIC-CXR Report Generation"]
 
     # Download the files from Physionet
@@ -85,6 +101,8 @@ def test_ReportComparison():
         id_to_num_error[key] /= 6
 
     hypReports, refReports = zip(*reportPairs)
+    print(f"Hypotheses: {hypReports[:5]}")
+    print(f"References: {refReports[:5]}")
     (
         bleu1Scores,
         bleu2Scores,

@@ -34,8 +34,8 @@ class Benchmark(ABC):
         if self._prompt is None:
             prompt = []
             images = []
-            for i in range(3):
-                index = int(i / 3 * len(self.trainDataset))
+            for i in range(5):
+                index = int(i / 5 * len(self.trainDataset))
                 text, img = self.format_question(
                     self.trainDataset[index],
                     prompt=True,
@@ -84,6 +84,7 @@ class EvalParams:
     tensorboardWriter:Optional[Any] = None
     tensorboardStep: Optional[int] = 0
     mimic_cxr_include_indication_section: Optional[bool] = False
+    dataloader_fn: Optional[Any] = None
 
     def __post_init__(self):
         if self.tensorboardWriter is not None:
@@ -149,6 +150,7 @@ class SetupParams:
     MNIST_Retina_dir: Optional[str|os.PathLike] = None
     MNIST_Tissue_dir: Optional[str|os.PathLike] = None
     DiffVQA_dir: Optional[str|os.PathLike] = None
+    MMLU_dir: Optional[str|os.PathLike] = None
     CheXBert_dir:Optional[str|os.PathLike] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None

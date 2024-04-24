@@ -1,6 +1,6 @@
 from multimedeval.utils import EvalParams, fileWriterFactory, Benchmark, SetupParams
 
-from multimedeval.qa import MedQA, PubMedQA, MedMCQA
+from multimedeval.qa import MedQA, PubMedQA, MedMCQA, MMLU
 from multimedeval.vqa import VQA_RAD, Path_VQA, SLAKE, DiffVQA
 from multimedeval.mimic import MIMIC_CXR_reportgen
 from multimedeval.imageClassification import (
@@ -36,6 +36,7 @@ from multimedeval.chexbert.label import encode, encode, label
 from dataclasses import asdict
 import logging
 from multimedeval.dynamicDatasets import findDatasets
+from torch.utils.data import DataLoader
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -65,6 +66,7 @@ TASKS: set[Benchmark] = {
     MNIST_Pneumonia,
     MNIST_Retina,
     MNIST_Tissue,
+    MMLU,
     # # # "MNIST-OrganA": MNIST_OrganA,
     # # # "MNIST-Chest": MNIST_Chest,
 }
@@ -79,12 +81,15 @@ TASKS_REQUIREMENTS: dict[str, list[str]] = {
 
 
 class MultiMedEval(object):
-    def __init__(self):
+    def __init__(self, logger: logging.Logger = None):
         self._config: SetupParams = None
         self._physionet_username = None
         self._physionet_password = None
 
-        self.logger = logging.getLogger("MultiMedEval")
+        if logger is None:
+            self.logger = logging.getLogger("MultiMedEval")
+        else:
+            self.logger = logger
 
         dynamicDatasets = findDatasets()
         TASKS.update(dynamicDatasets)
@@ -257,12 +262,28 @@ class MultiMedEval(object):
             )
 
     def _prepare_radgraph(self):
+        # Check if deepspeed is installed and initialized
+        try:
+            from deepspeed.comm.comm import is_initialized
+
+            # Test if deepspeed is initialized
+            if not is_initialized():
+                raise Exception("Deepspeed is not initialized.")
+        except:
+            pass
+        else:
+            raise Exception("Deepspeed is initialized.")
+
         device = -1 if self.getConfig()["device"] != "cuda" else 0
-        self.radgraph = F1RadGraph(reward_level="partial", cuda=device)
+        self.radgraph = F1RadGraph(reward_level="partial", cuda=device, model_type="radgraph")
 
     def _prepare_chexbert(self):
         # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
         path = self.getConfig()["CheXBert_dir"]
+
+        if path is None:
+            raise Exception("CheXBert_dir is not set in the config file.")
+
         output = os.path.join(path, "chexbert.pth")
 
         if not os.path.exists(output):
@@ -273,8 +294,20 @@ class MultiMedEval(object):
                 quiet=False,
             )
 
-        self.encoder = encode(output, verbose=False)
-        self.labeler = label(output, verbose=False)
+        # Check if deepspeed is installed and initialized
+        try:
+            from deepspeed.comm.comm import is_initialized
+
+            # Test if deepspeed is initialized
+            if not is_initialized():
+                raise Exception("Deepspeed is not initialized.")
+
+            deepspeedEnabled = True
+        except:
+            deepspeedEnabled = False
+
+        self.encoder = encode(output, verbose=False, deepspeed=deepspeedEnabled)
+        self.labeler = label(output, verbose=False, deepspeed=deepspeedEnabled)
 
     def __len__(self):
         total_len = 0
@@ -283,3 +316,13 @@ class MultiMedEval(object):
                 total_len += len(self.nameToTask[task])
 
         return total_len
+
+    def get_dataloader(self, dataset, params:EvalParams):
+        if params.dataloader_fn is not None:
+            return params.dataloader_fn(dataset)
+
+        dataloader = DataLoader(
+            dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
+        )
+
+        return dataloader 
