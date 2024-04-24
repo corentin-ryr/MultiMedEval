@@ -2,7 +2,7 @@
 
 
 MultiMedEval is a library to evaluate the performance of Vision-Language Models (VLM) on medical domain tasks. The goal is to have a set of benchmark with a unified evaluation scheme to facilitate the development and comparison of medical VLM.
-We include 24 tasks representing a 10 of different imaging modalities and some text-only tasks.
+We include 24 tasks representing 10 different imaging modalities and some text-only tasks.
 
 ![tests workflow](https://github.com/corentin-ryr/MultiMedEval/actions/workflows/python-tests.yml/badge.svg) ![PyPI - Version](https://img.shields.io/pypi/v/multimedeval) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/multimedeval) ![GitHub License](https://img.shields.io/github/license/corentin-ryr/MultiMedEval)
 
@@ -27,7 +27,7 @@ We include 24 tasks representing a 10 of different imaging modalities and some t
 </br>
 
 <details>
-  <summary>Question Answering</summary>
+  <summary>Visual Question Answering</summary>
 
 | Task                           | Description                                                                                                        | Modality       | Size
 |--------------------------------|--------------------------------------------------------------------------------------------------------------------|----------------|----------
@@ -72,11 +72,11 @@ We include 24 tasks representing a 10 of different imaging modalities and some t
 | Pad-UFES-20                    | Classification of skin lesion images into 7 diseases                                                               | Dermatology    | 2298
 | CBIS-DDSM-Mass                 | Classification of masses in mammography images into "benign", "malignant" or "benign without callback"             | Mammography    | 378
 | CBIS-DDSM-Calcification        | Classification of calcification in mammography images into "benign", "malignant" or "benign without callback"      | Mammography    | 326
-| MNIST-Oct                      | Image classification of Optical coherence tomography of the retine                                                 | OCT            | 1000
+| MNIST-Oct                      | Image classification of Optical coherence tomography of the retina                                                 | OCT            | 1000
 | MNIST-Path                     | Image classification of pathology image                                                                            | Pathology      | 7180
 | MNIST-Blood                    | Image classification of blood cell seen through a microscope                                                       | Microscopy     | 3421
 | MNIST-Breast                   | Image classification of mammography                                                                                | Mammography    | 156
-| MNIST-Derma                    | Image classification of skin deffect images                                                                        | Dermatology    | 2005
+| MNIST-Derma                    | Image classification of skin defect images                                                                        | Dermatology    | 2005
 | MNIST-OrganC                   | Image classification of abdominal CT scan                                                                          | CT             | 8216
 | MNIST-OrganS                   | Image classification of abdominal CT scan                                                                          | CT             | 8827
 | MNIST-Pneumonia                | Image classification of chest X-Rays                                                                               | X-Ray          | 624
@@ -88,7 +88,7 @@ We include 24 tasks representing a 10 of different imaging modalities and some t
 </br>
 
 <p align="center">
-    <img src="figures/sankey.png" alt="sankey graph">
+    <img src="figures/sankey.png" alt="Sankey graph">
     <br>
     <em>Representation of the modalities, tasks and datasets in MultiMedEval</em>
 </p>
@@ -125,7 +125,7 @@ Here we initialize the `SetupParams` dataclass with only the path for the MedQA 
 The user must implement one Callable: `batcher`. It takes a batch of input and must return the answer.
 The batch is a list of inputs.
 Each input is a tuple of:
-* a prompt in the form of a Hugginface style conversation between a user and an assistant.
+* a prompt in the form of a Hugginface-style conversation between a user and an assistant.
 * a list of Pillow images. The number of images matches the number of <img> tokens in the prompt and are ordered.
 
 ```python
@@ -189,14 +189,14 @@ results = engine.eval(["MedQA", "VQA-RAD"], batcher, evalParams=evalParams)
 ## MultiMedEval parameters
 
 The `SetupParams` class takes a path for each dataset:
-* MedQA_dir: will be use in Huggingface's `load_dataset` as cache_dir
-* PubMedQA_dir: will be use in Huggingface's `load_dataset` as cache_dir
-* MedMCQA_dir: will be use in Huggingface's `load_dataset` as cache_dir
-* VQA_RAD_dir: will be use in Huggingface's `load_dataset` as cache_dir
-* Path_VQA_dir: will be use in Huggingface's `load_dataset` as cache_dir
+* MedQA_dir: will be used in Huggingface's `load_dataset` as cache_dir
+* PubMedQA_dir: will be used in Huggingface's `load_dataset` as cache_dir
+* MedMCQA_dir: will be used in Huggingface's `load_dataset` as cache_dir
+* VQA_RAD_dir: will be used in Huggingface's `load_dataset` as cache_dir
+* Path_VQA_dir: will be used in Huggingface's `load_dataset` as cache_dir
 * SLAKE_dir: the dataset is currently hosted on Google Drive which can be an issue on some systems.
 * MIMIC_III_dir: path for the (physionet) MIMIC-III dataset.
-* MedNLI_dir: will be use in Huggingface's `load_dataset` as cache_dir
+* MedNLI_dir: will be used in Huggingface's `load_dataset` as cache_dir
 * MIMIC_CXR_dir: path for the (physionet) MIMIC-CXR dataset.
 * VinDr_Mammo_dir: path for the (physionet) VinDr-Mammo dataset.
 * Pad_UFES_20_dir
