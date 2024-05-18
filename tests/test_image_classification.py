@@ -30,15 +30,10 @@ def test_image_classification(batcherAnswer, expectedAccuracy, expectedMacroF1, 
 
     print(results)
 
-    if "OCTMNIST" in results:
+    if "OCTMNIST" not in results:
         # Find the element in the list that has that "name" metrics_OCTMNIST
-        for element in results["OCTMNIST"]:
-            if element["name"] == "metrics_OCTMNIST":
-                results = element["value"]
-                break
-        else:
-            assert False
+        assert False
 
-    assert (results["Accuracy"] - expectedAccuracy) < 0.01
-    assert (results["F1-macro"] - expectedMacroF1) < 0.01
-    assert (results["AUC-macro"] - expectedMacroAUC) < 0.01
+    assert (results["OCTMNIST"]["Accuracy"] - expectedAccuracy) < 0.01
+    assert (results["OCTMNIST"]["F1-macro"] - expectedMacroF1) < 0.01
+    assert (results["OCTMNIST"]["AUC-macro"] - expectedMacroAUC) < 0.01

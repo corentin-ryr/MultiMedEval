@@ -1,4 +1,4 @@
-from multimedeval.utils import EvalParams, fileWriterFactory, Benchmark, SetupParams
+from multimedeval.utils import EvalParams, fileWriterFactory, Benchmark, SetupParams, EvaluationOutput
 
 from multimedeval.qa import MedQA, PubMedQA, MedMCQA, MMLU
 from multimedeval.vqa import VQA_RAD, Path_VQA, SLAKE, DiffVQA
@@ -37,6 +37,7 @@ from dataclasses import asdict
 import logging
 from multimedeval.dynamicDatasets import findDatasets
 from torch.utils.data import DataLoader
+import json
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -110,7 +111,6 @@ class MultiMedEval(object):
 
             self.tasksReady[benchmark.taskName] = {"ready": False, "error": "Not setup yet"}
 
-
     def setup(self, setupParams: SetupParams, verbose: bool = True):
         self.logger.info(f"Starting the setup of MultiMedEval.")
         self._config = setupParams
@@ -182,10 +182,10 @@ class MultiMedEval(object):
                 name = list(self.nameToTask.keys())
             self.results = {}
             for x in name:
-                currentResults = self.eval(x, batcher, evalParams)
-                if currentResults is None:
+                taskMetrics = self.eval(x, batcher, evalParams)
+                if taskMetrics is None:
                     continue
-                self.results[x] = currentResults
+                self.results[x] = taskMetrics
 
             return self.results
 
@@ -205,21 +205,58 @@ class MultiMedEval(object):
                 return None
 
         evaluation: Benchmark = self.nameToTask[name]
-        taskResult = evaluation.run(self.evalParams, self.batcher)
 
-        # Write to files
-        for result in taskResult:
-            if result["type"] == "json":
-                self.logger.info(result["value"])
-                self._writeTotensorboard(result)
-            fileWriterFactory(result["type"])(result["value"], f"{self.evalParams.run_name}/{result['name']}")
+        predictions = self._run_inference(evaluation)
+        taskResult: EvaluationOutput = evaluation.evaluate(predictions)
+
+        if taskResult.answer_log is not None:
+            fileWriterFactory("csv")(taskResult.answer_log, f"{self.evalParams.run_name}/{evaluation.taskName}")
+
+        try:
+            with open(f"{self.evalParams.run_name}/results.json", "r") as f:
+                metrics = json.load(f)
+        except IOError:
+            metrics = {}
+
+        metrics[evaluation.taskName] = taskResult.metrics
+        fileWriterFactory("json")(metrics, f"{self.evalParams.run_name}/results")
 
         self.logger.info(f"Done task {name}")
 
-        return taskResult
+        return taskResult.metrics
+
+    def _run_inference(self, task: Benchmark):
+        self.logger.info(f"======================== Running inference on {task.taskName} ========================")
+
+        dataloader = self.get_dataloader(task)
+        kwargs_format_question = (
+            {"include_indication": self.evalParams.mimic_cxr_include_indication_section}
+            if task.taskName == "MIMIC-CXR Report Generation"
+            else {}
+        )
+
+        predictions = []
+        for batch in tqdm_logging(self.logger, dataloader, desc="Running inference"):
+            batchPrompts = []
+            for el in batch:
+                sample = el["sample"]
+                text, img = task.format_question(sample, **kwargs_format_question)
+                if self.evalParams.fewshot and task.getPrompt() is not None:
+                    batchPrompts.append((task.getPrompt()[0] + text, task.getPrompt()[1] + img))
+                else:
+                    batchPrompts.append((text, img))
+
+            answers = self.batcher(batchPrompts)
+
+            for el, answer in zip(batch, answers):
+                predictions.append({"idx": el["idx"], "answer": answer})
+
+        return predictions
 
     def visualization(self):
-        benchmarks = [self.nameToTask[x] for x in self.tasksReady if (self.tasksReady[x]["ready"] and x in self.nameToTask)]
+        benchmarks = [
+            self.nameToTask[x] for x in self.tasksReady if (self.tasksReady[x]["ready"] and x in self.nameToTask)
+        ]
         visualizer = BenchmarkVisualizer(benchmarks)
         visualizer.sunburstModalities()
         visualizer.sunburstTasks()
@@ -317,7 +354,9 @@ class MultiMedEval(object):
 
         return total_len
 
-    def get_dataloader(self, dataset, params:EvalParams):
+    def get_dataloader(self, dataset, params: EvalParams = None):
+        if params is None:
+            params = self.evalParams
         if params.dataloader_fn is not None:
             return params.dataloader_fn(dataset)
 
@@ -325,4 +364,4 @@ class MultiMedEval(object):
             dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
         )
 
-        return dataloader 
+        return dataloader

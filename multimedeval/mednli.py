@@ -6,9 +6,9 @@ from datasets import Dataset
 from torch.utils.data import DataLoader
 import zipfile
 from multimedeval.utils import download_file
+from multimedeval.taskFamilies import QA
 
-
-class MedNLI(Benchmark):
+class MedNLI(QA):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.taskName = "MedNLI"
@@ -33,45 +33,6 @@ class MedNLI(Benchmark):
         trainSet = pd.read_json(path_or_buf=os.path.join(self.path, "mli_train_v1.jsonl"), lines=True)
         trainSet = trainSet[["sentence1", "sentence2", "gold_label"]]
         self.trainDataset = Dataset.from_pandas(trainSet)
-
-    def run(self, params: EvalParams, batcher):
-        self.logger.info(f"***** Benchmarking : {self.taskName} *****")
-
-        correct_answers = 0
-        total_answers = 0
-
-        answersLog = []
-
-        dataloader = DataLoader(
-            self.dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
-        )
-        for batch in tqdm_logging(self.logger, dataloader, desc="Running inference"):
-            batchPrompts = []
-            for sample in batch:
-                text, img = self.format_question(sample)
-                if params.fewshot and self.getPrompt() is not None:
-                    batchPrompts.append((self.getPrompt()[0] + text, self.getPrompt()[1] + img))
-                else:
-                    batchPrompts.append((text, img))
-
-            answers = batcher(batchPrompts)
-
-            for idx, answer in enumerate(answers):
-                gold = self.getCorrectAnswer(batch[idx])
-                pred = self.getPredictedAnswer(answer, batch[idx])
-                if pred == gold:
-                    correct_answers += 1
-                total_answers += 1
-
-                answersLog.append((self.getCorrectAnswer(batch[idx], fullText=True), answer, pred == gold))
-
-        metrics = {"accuracy": correct_answers / total_answers}
-
-        # Compute the scores
-        return [
-            {"type": "json", "name": f"metrics_{self.taskName}", "value": metrics},
-            {"type": "csv", "name": self.taskName, "value": answersLog},
-        ]
 
     def format_question(self, sample, prompt=False):
         formattedQuestion = f"Sentence 1: {sample['sentence1']}\nSentence 2: {sample['sentence2']}\n"

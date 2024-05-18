@@ -31,7 +31,7 @@ TASKS = [
     "CBIS-DDSM Calcification",
     "exampleDatasetQA",
     "exampleDatasetVQA",
-    "MMLU"
+    "MMLU",
 ]
 
 
@@ -88,3 +88,11 @@ class TestLoadingAll:
 
         for task in tasks:
             assert task in results
+
+        # Check that the results.json file contains the results
+        assert os.path.exists(os.path.join(self.engine.evalParams.run_name, "results.json"))
+
+        with open(os.path.join(self.engine.evalParams.run_name, "results.json")) as f:
+            results = json.load(f)
+
+        assert task in results
