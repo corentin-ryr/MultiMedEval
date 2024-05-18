@@ -50,15 +50,21 @@ class Benchmark(ABC):
         return len(self.dataset)
 
     @abstractmethod
-    def run(self, params, batcher):
-        pass
-
-    @abstractmethod
     def format_question(self, sample, prompt=False):
         pass
 
     @abstractmethod
     def setup(self):
+        pass
+
+    def __getitem__(self, idx):
+        return {"idx": idx, "sample": self.dataset[idx]}
+
+    def __len__(self):
+        return len(self.dataset)
+    
+    @abstractmethod
+    def evaluate(self, predictions):
         pass
 
 
@@ -164,6 +170,11 @@ class SetupParams:
 
             elif self.device == "mps" and not torch.backends.mps.is_available():
                 self.device = "cpu"
+
+@dataclass
+class EvaluationOutput:
+    metrics: dict[str, float]
+    answer_log: Optional[list[tuple]] = None
 
 
 def remove_punctuation(input_string: str):

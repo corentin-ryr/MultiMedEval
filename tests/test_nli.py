@@ -37,13 +37,7 @@ def test_mednli(batcherAnswer, expectedAccuracy):
 
     print(results)
 
-    if "MedNLI" in results:
-        # Find the element in the list that has that "name" metrics_OCTMNIST
-        for element in results["MedNLI"]:
-            if element["name"] == "metrics_MedNLI":
-                results = element["value"]
-                break
-        else:
-            assert False
+    if "MedNLI" not in results:
+        assert False
 
-    assert (results["accuracy"] - expectedAccuracy) < 0.01
+    assert (results["MedNLI"]["accuracy"] - expectedAccuracy) < 0.01
