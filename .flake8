@@ -1,0 +1,16 @@
+[flake8]
+max-line-length = 88
+ignore = E501,W503
+extend-ignore = E203
+exclude =
+    data,
+    scripts,
+    tools,
+    virtualenv,
+    scripts/bootstrap
+    tools/git-pre-commit
+    .git,
+    *.md,
+    *.txt,
+    .flake8
+    .gitignore

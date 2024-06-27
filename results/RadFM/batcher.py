@@ -13,9 +13,25 @@ from multimedeval import MultiMedEval, SetupParams, EvalParams
 import json
 import logging
 import os
-from cleanModel import cleanModel
 
 logging.basicConfig(level=logging.INFO)
+
+def cleanModel(original_model_path, cleaned_model_path):
+    model = MultiLLaMAForCausalLM(
+        lang_model_path=original_model_path,  ### Build up model based on LLaMa-13B config
+    )
+
+    print(f"{datetime.datetime.now()} Model created")
+
+    ckpt = torch.load( os.path.join(original_model_path, "pytorch_model.bin"), map_location="cpu")
+
+    model.load_state_dict(ckpt, strict=False)
+
+    print(f"{datetime.datetime.now()} Checkpoint loaded")
+
+    torch.save(model.state_dict(), os.path.join(cleaned_model_path, "pytorch_model.bin"))
+    
+    print(f"{datetime.datetime.now()} Clean model saved")
 
 
 def get_tokenizer(tokenizer_path, max_img_size=100, image_num=32):
@@ -173,15 +189,6 @@ class RadFMBatcher:
 
                 imagesFormatted.append({"img_file": images.pop(0), "position": start_pos})
 
-            # Temp test
-            # question = "Can you identify any visible signs of Cardiomegaly in the image?"
-            # imagesFormatted = [
-            #     {
-            #         "img_file": Image.open("./view1_frontal.jpg"),
-            #         "position": 0,  # indicate where to put the images in the text string, range from [0,len(question)-1]
-            #     },  # can add abitrary number of imgs
-            # ]
-
             text, vision_x = combine_and_preprocess(question, imagesFormatted, self.image_padding_tokens)
 
             texts.append(text)
@@ -218,13 +225,6 @@ class RadFMBatcher:
 
             generated_texts = self.text_tokenizer.batch_decode(generation, skip_special_tokens=True)
 
-            # print("---------------------------------------------------")
-            # print("Inputs: ", texts)
-            # print("Input tokens: ", lang_x.tolist())
-            # print("Outputs: ", generated_texts)
-            # print("Output tokens: ", generation.tolist())
-            # raise Exception
-
         return generated_texts
 
 
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     setupParams = SetupParams(**json.load(open("MedMD_config.json")))
     mmb.setup(setupParams)
 
-    mmb.eval(["VQA-RAD"], batcher, EvalParams(batch_size=32, run_name="testRadFM", fewshot=False))
+    mmb.eval([], batcher, EvalParams(batch_size=32, run_name="results_radfm", fewshot=False, mimic_cxr_include_indication_section=True))
 
 
     print("Done")
