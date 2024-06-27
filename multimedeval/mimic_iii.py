@@ -6,7 +6,6 @@ import shutil
 import datasets
 import pandas as pd
 from datasets import load_dataset
-from torchmetrics.text import BLEUScore, ROUGEScore
 
 from multimedeval.taskFamilies import ReportComparison
 from multimedeval.tqdm_loggable import tqdm_logging
@@ -26,9 +25,9 @@ def get_final_report(text):
 def extract_sections(text):
     p_section = re.compile(r"\n ([A-Z ()/,-]+):\s", re.DOTALL)
 
-    sections = list()
-    section_names = list()
-    section_idx = list()
+    sections = []
+    section_names = []
+    section_idx = []
 
     idx = 0
     s = p_section.search(text, idx)
@@ -641,7 +640,6 @@ section_map = {
         "ct abdomen",
         "ct abdomen ",
     ],
-    "indication": [" indication"],
     "subcutaneous tissues": ["subcutaneous tissue"],
     "comment": [" comment"],
     "angiogram": ["angiogram)"],

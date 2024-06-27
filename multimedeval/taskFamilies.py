@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from typing import List, Union
 
 import pandas as pd
 import torch
@@ -206,7 +207,7 @@ class ImageClassification(Benchmark):
         self.num_classes = None
 
     @abstractmethod
-    def getCorrectAnswer(self, sample, fullText=False) -> int:
+    def getCorrectAnswer(self, sample, fullText=False) -> Union[int, str, List[int]]:
         pass
 
     @abstractmethod
@@ -214,7 +215,7 @@ class ImageClassification(Benchmark):
         pass
 
     @abstractmethod
-    def getPredictedAnswer(self, answer) -> int:
+    def getPredictedAnswer(self, answer) -> Union[int, List[int]]:
         """Converts the free form text output to the answer index
 
         Args:

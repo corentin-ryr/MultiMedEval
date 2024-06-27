@@ -101,7 +101,6 @@ class tqdm_logging(tqdm_auto):
 
         # Taken from format_meter()
         remaining = (total - n) / rate if rate and total else 0
-        remaining_str = tqdm_auto.format_interval(remaining) if rate else "?"
         try:
             eta_dt = (
                 datetime.now() + timedelta(seconds=remaining)
@@ -110,19 +109,6 @@ class tqdm_logging(tqdm_auto):
             )
         except OverflowError:
             eta_dt = datetime.max
-
-        elapsed_str = tqdm_auto.format_interval(elapsed)
-
-        if rate:
-            if rate > 1:
-                rate_formatted = f"{rate:,.1f}{unit}/s"
-            else:
-                rate_formatted = f"{1/rate:,.1f}s/{unit}"
-        else:
-            rate_formatted = "-"
-
-        # Include any postfix variables in extra logging
-        raw_postfix = getattr(self, "raw_postfix", {})
 
         postfix_str = postfix or "-"
 

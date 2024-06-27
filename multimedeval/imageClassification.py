@@ -4,6 +4,7 @@ import subprocess
 import urllib.request
 import zipfile
 from pathlib import Path
+from typing import List, Union
 from zipfile import ZipFile
 
 import datasets
@@ -110,7 +111,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         return (formattedText, [Image.open(imagePath)])
 
-    def getPredictedAnswer(self, answer: str) -> int:
+    def getPredictedAnswer(self, answer: str) -> Union[int, List[int]]:
         df = pd.DataFrame(columns=["Report Impression"], data=[answer])
         labels = [element[0] == 1 for element in self.engine.labeler(df)]
         labels = [
@@ -120,7 +121,7 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         return labels
 
-    def getCorrectAnswer(self, sample, fullText=False) -> int:
+    def getCorrectAnswer(self, sample, fullText=False) -> Union[int, str, List[int]]:
         # Features: [Atelectasis, cardiomegaly, consolidation, edema, and pleural effusion]
         # If any of the features is 1, then it is positive
         # If all the features are 0, -1 or NaN, then it is negative
@@ -197,7 +198,7 @@ class VinDr_Mammo(ImageClassification):
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img> What is the BI-RADS level in this mammography (from 1 to 5)?",
+                "content": "<img> What is the BI-RADS level in this mammography (from 1 to 5)?",
             }
         ]
 
@@ -476,10 +477,10 @@ class CBIS_DDSM(ImageClassification):
         roi_img = df_dicom[df_dicom.SeriesDescription == "ROI mask images"].image_path
         nan_img = df_dicom[df_dicom.SeriesDescription.isna()].image_path
 
-        self.full_mammo_dict = dict()
-        self.cropped_images_dict = dict()
-        self.roi_img_dict = dict()
-        self.nan_dict = dict()
+        self.full_mammo_dict = {}
+        self.cropped_images_dict = {}
+        self.roi_img_dict = {}
+        self.nan_dict = {}
 
         for dicom in full_mammo:
             key = dicom.split("/")[2]
@@ -567,7 +568,7 @@ class CBIS_DDSM_Calcification(CBIS_DDSM):
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img> Is the calcification benign, malignant or benign without callback?",
+                "content": "<img> Is the calcification benign, malignant or benign without callback?",
             }
         ]
         if prompt:
@@ -591,7 +592,7 @@ class CBIS_DDSM_Mass(CBIS_DDSM):
         formattedText = [
             {
                 "role": "user",
-                "content": f"<img> Is the mass benign, malignant or benign without callback?",
+                "content": "<img> Is the mass benign, malignant or benign without callback?",
             }
         ]
         if prompt:

@@ -3,11 +3,9 @@ import zipfile
 
 import pandas as pd
 from datasets import Dataset
-from torch.utils.data import DataLoader
 
 from multimedeval.taskFamilies import QA
-from multimedeval.tqdm_loggable import tqdm_logging
-from multimedeval.utils import Benchmark, EvalParams, download_file
+from multimedeval.utils import download_file
 
 
 class MedNLI(QA):

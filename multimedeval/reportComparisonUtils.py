@@ -1,5 +1,4 @@
 import os
-import pickle
 
 import dill
 import numpy as np

@@ -4,6 +4,7 @@ import logging
 import os
 from collections.abc import Callable
 from dataclasses import asdict
+from typing import Dict, List, Optional, Set, Type, Union
 
 import gdown
 import nltk
@@ -48,7 +49,7 @@ from multimedeval.vqa import SLAKE, VQA_RAD, DiffVQA, Path_VQA
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-TASKS: set[Benchmark] = {
+TASKS: Set[Type[Benchmark]] = {
     MedQA,
     PubMedQA,
     MedMCQA,
@@ -80,7 +81,7 @@ TASKS: set[Benchmark] = {
 }
 
 
-TASKS_REQUIREMENTS: dict[str, list[str]] = {
+TASKS_REQUIREMENTS: Dict[Type[Benchmark], List[str]] = {
     MIMIC_CXR_reportgen: ["RadGraph", "Chexbert"],
     MIMIC_CXR_ImageClassification: ["Chexbert"],
     MIMIC_III: ["RadGraph", "Chexbert"],
@@ -89,8 +90,8 @@ TASKS_REQUIREMENTS: dict[str, list[str]] = {
 
 
 class MultiMedEval(object):
-    def __init__(self, logger: logging.Logger = None):
-        self._config: SetupParams = None
+    def __init__(self, logger: Optional[logging.Logger] = None):
+        self._config: Optional[SetupParams] = None
         self._physionet_username = None
         self._physionet_password = None
 
@@ -107,8 +108,8 @@ class MultiMedEval(object):
         nltk.download("punkt", quiet=True)
         nltk.download("wordnet", quiet=True)
 
-        self.nameToTask: dict[str, Benchmark] = {}
-        self.nameToRequirements: dict[str, list[str]] = {}
+        self.nameToTask: Dict[str, Benchmark] = {}
+        self.nameToRequirements: Dict[str, List[str]] = {}
         for taskClass in TASKS:
             benchmark: Benchmark = taskClass(engine=self, logger=self.logger)
             self.nameToTask[benchmark.taskName] = benchmark
@@ -122,16 +123,16 @@ class MultiMedEval(object):
             }
 
     def setup(self, setupParams: SetupParams, verbose: bool = True):
-        self.logger.info(f"Starting the setup of MultiMedEval.")
+        self.logger.info("Starting the setup of MultiMedEval.")
         self._config = setupParams
-        tasksToSkip = []
+        tasksToSkip: List[str] = []
         # if len(self.getConfig()["tasks_to_prepare"]) > 0:
         #     tasksToSkip = [x for x in self.nameToTask if x not in self.getConfig()["tasks_to_prepare"]]
 
         progressBar = tqdm_logging(
             logger=self.logger, total=len(self.nameToTask) + 2, dynamic_ncols=True
         )
-        progressBar.set_description(f"Setup RadGraph")
+        progressBar.set_description("Setup RadGraph")
         try:
             self._prepare_radgraph()
         except Exception as e:
@@ -140,7 +141,7 @@ class MultiMedEval(object):
             self.tasksReady["RadGraph"] = {"ready": True}
         progressBar.update(1)
 
-        progressBar.set_description(f"Setup Chexbert")
+        progressBar.set_description("Setup Chexbert")
         try:
             self._prepare_chexbert()
         except Exception as e:
@@ -176,14 +177,17 @@ class MultiMedEval(object):
                     else self.tasksReady[taskName]["error"]
                 )
                 ready = "Ready" if self.tasksReady[taskName]["ready"] else "Problem"
-                finalMessage += "\n" + taskName.ljust(35) + ready.ljust(20) + error
+                finalMessage += "\n" + taskName.ljust(35) + ready.ljust(20) + str(error)
 
         self.logger.info(finalMessage)
 
         return self.tasksReady
 
     def eval(
-        self, name: str | list[str], batcher: Callable, evalParams: EvalParams = None
+        self,
+        name: Union[str, List[str]],
+        batcher: Callable,
+        evalParams: Optional[EvalParams] = None,
     ):
         if batcher is None:
             raise Exception(
@@ -193,8 +197,8 @@ class MultiMedEval(object):
         self.evalParams = evalParams if evalParams is not None else EvalParams()
         self.batcher = batcher
 
-        if not os.path.exists(evalParams.run_name):
-            os.mkdir(evalParams.run_name)
+        if not os.path.exists(self.evalParams.run_name):
+            os.mkdir(self.evalParams.run_name)
 
         # evaluate on evaluation [name], either takes string or list of strings
         if isinstance(name, list):
@@ -263,6 +267,8 @@ class MultiMedEval(object):
             if task.taskName == "MIMIC-CXR Report Generation"
             else {}
         )
+
+        logging.Logger
 
         predictions = []
         for batch in tqdm_logging(self.logger, dataloader, desc="Running inference"):
@@ -338,12 +344,12 @@ class MultiMedEval(object):
     def _prepare_radgraph(self):
         # Check if deepspeed is installed and initialized
         try:
-            from deepspeed.comm.comm import is_initialized
+            from deepspeed.comm.comm import is_initialized  # noqa
 
             # Test if deepspeed is initialized
             if not is_initialized():
                 raise Exception("Deepspeed is not initialized.")
-        except:
+        except ImportError:
             pass
         else:
             raise Exception("Deepspeed is initialized.")
@@ -372,14 +378,14 @@ class MultiMedEval(object):
 
         # Check if deepspeed is installed and initialized
         try:
-            from deepspeed.comm.comm import is_initialized
+            from deepspeed.comm.comm import is_initialized  # noqa
 
             # Test if deepspeed is initialized
             if not is_initialized():
                 raise Exception("Deepspeed is not initialized.")
 
             deepspeedEnabled = True
-        except:
+        except ImportError:
             deepspeedEnabled = False
 
         self.encoder = encode(output, verbose=False, deepspeed=deepspeedEnabled)
@@ -393,7 +399,7 @@ class MultiMedEval(object):
 
         return total_len
 
-    def get_dataloader(self, dataset, params: EvalParams = None):
+    def get_dataloader(self, dataset, params: Optional[EvalParams] = None):
         if params is None:
             params = self.evalParams
         if params.dataloader_fn is not None:

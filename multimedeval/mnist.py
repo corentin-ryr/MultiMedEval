@@ -1,4 +1,5 @@
 import os
+from typing import List, Union
 
 from medmnist.dataset import (
     OCTMNIST,
@@ -6,7 +7,6 @@ from medmnist.dataset import (
     BreastMNIST,
     ChestMNIST,
     DermaMNIST,
-    MedMNIST2D,
     OrganAMNIST,
     OrganCMNIST,
     OrganSMNIST,
@@ -53,7 +53,7 @@ class MNIST(ImageClassification):
         self.taskName = mnistName
         self.modality = NAME_TO_MNIST[mnistName]["modality"]
 
-        self.question = None
+        self.question = ""
 
     def setup(self):
         self.cacheDir = self.engine.getConfig()[self.cachedirName]
@@ -85,7 +85,7 @@ class MNIST(ImageClassification):
         )
         self.trainDataset = wrapperGenerator(self.trainDataset)
 
-    def getCorrectAnswer(self, sample, fullText=False) -> int:
+    def getCorrectAnswer(self, sample, fullText=False) -> Union[int, str, List[int]]:
         label = sample["label"].tolist()
 
         if fullText:
@@ -119,7 +119,7 @@ class MNIST(ImageClassification):
 
         return (formattedText, [sample["image"]])
 
-    def getPredictedAnswer(self, answer) -> int:
+    def getPredictedAnswer(self, answer) -> Union[int, List[int]]:
         """Converts the free form text output to the answer index
 
         Args:

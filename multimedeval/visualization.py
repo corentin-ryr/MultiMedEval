@@ -1,5 +1,6 @@
 import math
 from pathlib import Path
+from typing import Dict, List
 
 import pandas as pd
 
@@ -7,7 +8,7 @@ from multimedeval.utils import Benchmark
 
 
 class BenchmarkVisualizer:
-    def __init__(self, datasets: list[Benchmark]) -> None:
+    def __init__(self, datasets: List[Benchmark]) -> None:
         self.datasets = datasets
 
         self.folderName = "visualizations"
@@ -45,7 +46,7 @@ class BenchmarkVisualizer:
         fig = px.sunburst(
             df, path=["title", "modality", "task", "dataset"], values="size"
         )
-        fig.update_layout(margin=dict(t=0, l=0, r=0, b=0))
+        fig.update_layout(margin={"t": 0, "l": 0, "r": 0, "b": 0})
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 
         # fig.update_layout(title_text=f"Modality (Total samples: {totalSamples})")
@@ -83,7 +84,7 @@ class BenchmarkVisualizer:
         fig = px.sunburst(
             df, path=["title", "task", "modality", "dataset"], values="size"
         )
-        fig.update_layout(margin=dict(t=0, l=0, r=0, b=0))
+        fig.update_layout(margin={"t": 0, "l": 0, "r": 0, "b": 0})
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 
         # fig.update_layout(title_text=f"Task (Total samples: {totalSamples})")
@@ -105,7 +106,7 @@ class BenchmarkVisualizer:
             # Get scoringType if present else nan
             try:
                 scoringType = dataset.scoringType
-            except:
+            except AttributeError:
                 scoringType = "NaN"
 
             data.append(
@@ -138,19 +139,19 @@ class BenchmarkVisualizer:
         fig = go.Figure(
             data=[
                 go.Table(
-                    header=dict(
-                        values=["Modality", "Dataset", "Size"],
-                        font=dict(size=14),
-                        align="left",
-                    ),
-                    cells=dict(
-                        values=[
+                    header={
+                        "values": ["Modality", "Dataset", "Size"],
+                        "font": {"size": 14},
+                        "align": "left",
+                    },
+                    cells={
+                        "values": [
                             df["modality"],
                             df["dataset"],
                             df["size"],
                         ],
-                        align="left",
-                    ),
+                        "align": "left",
+                    },
                 )
             ]
         )
@@ -168,7 +169,6 @@ class BenchmarkVisualizer:
         print("======================= Creating sankey diagram =======================")
         import random
 
-        import plotly.express as px
         import plotly.graph_objects as go
         from colour import Color
 
@@ -211,7 +211,7 @@ class BenchmarkVisualizer:
             )
             indexToColor[labelToIdx[dataset.taskName]] = datasetColor
 
-        for idx, modality in enumerate(modalities):
+        for modality in modalities:
             # Get all the tasks that have this modality
             taskColors = []
             taskWeights = []
@@ -275,19 +275,19 @@ class BenchmarkVisualizer:
         fig = go.Figure(
             data=[
                 go.Sankey(
-                    node=dict(
-                        pad=15,
-                        thickness=50,
-                        line=dict(color="black", width=0.5),
-                        label=labels,
-                        color=colors,
-                    ),
-                    link=dict(
-                        source=source,
-                        target=target,
-                        value=value,
-                        color=linksColor,
-                    ),
+                    node={
+                        "pad": 15,
+                        "thickness": 50,
+                        "line": {"color": "black", "width": 0.5},
+                        "label": labels,
+                        "color": colors,
+                    },
+                    link={
+                        "source": source,
+                        "target": target,
+                        "value": value,
+                        "color": linksColor,
+                    },
                 )
             ]
         )
@@ -300,7 +300,7 @@ class BenchmarkVisualizer:
                 yref="paper",
                 text=column_name,
                 showarrow=False,
-                font=dict(family="Helvetica", size=25, color="black"),
+                font={"family": "Helvetica", "size": 25, "color": "black"},
                 align="center",
             )
 
@@ -321,7 +321,7 @@ class BenchmarkVisualizer:
         )
 
         # Reduce margins
-        fig.update_layout(margin=dict(t=50, l=20, r=20, b=20))
+        fig.update_layout(margin=Dict(t=50, l=20, r=20, b=20))
         # Increase font size of the labels
 
         fig.write_image(
@@ -330,9 +330,9 @@ class BenchmarkVisualizer:
 
     def _importPlotly(self):
         try:
-            import kaleido
-            import plotly
-            import tabulate
+            import kaleido  # noqa
+            import plotly  # noqa
+            import tabulate  # noqa #type: ignore
         except ImportError:
             print(
                 "Please install plotly and kaleido with `pip install plotly kaleido tabulate` to generate the visualizations."

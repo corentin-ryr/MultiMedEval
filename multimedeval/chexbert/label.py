@@ -1,14 +1,10 @@
-import argparse
-import os
 from collections import OrderedDict
 
-import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 from tqdm import tqdm
 
-from multimedeval.chexbert.constants import *
+from multimedeval.chexbert.constants import BATCH_SIZE, CONDITIONS, NUM_WORKERS, PAD_IDX
 from multimedeval.chexbert.datasets.unlabeled_dataset import UnlabeledDataset
 from multimedeval.chexbert.models.bert_encoder import bert_encoder
 from multimedeval.chexbert.models.bert_labeler import bert_labeler
@@ -69,7 +65,7 @@ class label:
         if torch.cuda.device_count() > 0:  # works even if only 1 GPU available
             if verbose:
                 print("Using", torch.cuda.device_count(), "GPUs!")
-            model = nn.DataParallel(model)  # to utilize multiple GPU's
+            model = nn.DataParallel(model)  # type: ignore  # to utilize multiple GPU's
             model = model.to(device)
             checkpoint = torch.load(checkpoint_path)
             model.load_state_dict(
@@ -92,7 +88,6 @@ class label:
         ld = load_unlabeled_data(df)
 
         y_pred = [[] for _ in range(len(CONDITIONS))]
-        rep = {}
 
         if self.verbose:
             print(
@@ -100,11 +95,10 @@ class label:
             )
             print("The batch size is %d" % BATCH_SIZE)
         with torch.no_grad():
-            for i, data in enumerate(tqdm(ld, disable=not self.verbose)):
+            for data in tqdm(ld, disable=not self.verbose):
                 batch = data["imp"]  # (batch_size, max_len)
                 batch = batch.to(self.device)
                 src_len = data["len"]
-                batch_size = batch.shape[0]
                 attn_mask = generate_attention_masks(batch, src_len, self.device)
 
                 out = self.model(batch, attn_mask)
@@ -127,13 +121,14 @@ class encode:
             with deepspeed.zero.GatheredParameters(
                 model.parameters(),
             ):
+                checkpoint = torch.load(checkpoint_path)
                 model.load_state_dict(checkpoint["model_state_dict"], strict=False)
         else:
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             if torch.cuda.device_count() > 0:  # works even if only 1 GPU available
                 if verbose:
                     print("Using", torch.cuda.device_count(), "GPUs!")
-                model = nn.DataParallel(model)  # to utilize multiple GPU's
+                model = nn.DataParallel(model)  # type: ignore  # to utilize multiple GPU's
                 model = model.to(device)
                 checkpoint = torch.load(checkpoint_path)
                 model.load_state_dict(
@@ -165,7 +160,7 @@ class encode:
             )
             print("The batch size is %d" % BATCH_SIZE)
         with torch.no_grad():
-            for i, data in enumerate(tqdm(ld, disable=not self.verbose)):
+            for data in tqdm(ld, disable=not self.verbose):
                 batch = data["imp"]  # (batch_size, max_len)
                 batch = batch.to(self.device)
                 src_len = data["len"]

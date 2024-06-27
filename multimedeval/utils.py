@@ -7,7 +7,7 @@ import string
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import requests
@@ -59,9 +59,6 @@ class Benchmark(ABC):
     def __getitem__(self, idx):
         return {"idx": idx, "sample": self.dataset[idx]}
 
-    def __len__(self):
-        return len(self.dataset)
-
     @abstractmethod
     def evaluate(self, predictions):
         pass
@@ -83,19 +80,19 @@ class EvalParams:
         ImportError: raises an import error if tensorboard is not installed.
     """
 
-    batch_size: Optional[int] = 128
-    run_name: Optional[str] = f"run {datetime.now()}"
-    fewshot: Optional[bool] = False
-    num_workers: Optional[int] = 0
-    tensorboardWriter: Optional[Any] = None
-    tensorboardStep: Optional[int] = 0
-    mimic_cxr_include_indication_section: Optional[bool] = False
-    dataloader_fn: Optional[Any] = None
+    batch_size: int = 128
+    run_name: str = f"run {datetime.now()}"
+    fewshot: bool = False
+    num_workers: int = 0
+    tensorboardWriter: Any = None
+    tensorboardStep: int = 0
+    mimic_cxr_include_indication_section: bool = False
+    dataloader_fn: Any = None
 
     def __post_init__(self):
         if self.tensorboardWriter is not None:
             try:
-                from torch.utils.tensorboard import SummaryWriter
+                from torch.utils.tensorboard import SummaryWriter  # noqa
             except ImportError:
                 raise ImportError(
                     "Please install tensorboard using `pip install tensorboard`"
@@ -135,31 +132,31 @@ class SetupParams:
 
     """
 
-    MedQA_dir: Optional[str | os.PathLike] = None
-    PubMedQA_dir: Optional[str | os.PathLike] = None
-    MedMCQA_dir: Optional[str | os.PathLike] = None
-    VQA_RAD_dir: Optional[str | os.PathLike] = None
-    Path_VQA_dir: Optional[str | os.PathLike] = None
-    SLAKE_dir: Optional[str | os.PathLike] = None
-    MIMIC_III_dir: Optional[str | os.PathLike] = None
-    MedNLI_dir: Optional[str | os.PathLike] = None
-    MIMIC_CXR_dir: Optional[str | os.PathLike] = None
-    VinDr_Mammo_dir: Optional[str | os.PathLike] = None
-    Pad_UFES_20_dir: Optional[str | os.PathLike] = None
-    CBIS_DDSM_dir: Optional[str | os.PathLike] = None
-    MNIST_Oct_dir: Optional[str | os.PathLike] = None
-    MNIST_Path_dir: Optional[str | os.PathLike] = None
-    MNIST_Blood_dir: Optional[str | os.PathLike] = None
-    MNIST_Breast_dir: Optional[str | os.PathLike] = None
-    MNIST_Derma_dir: Optional[str | os.PathLike] = None
-    MNIST_OrganC_dir: Optional[str | os.PathLike] = None
-    MNIST_OrganS_dir: Optional[str | os.PathLike] = None
-    MNIST_Pneumonia_dir: Optional[str | os.PathLike] = None
-    MNIST_Retina_dir: Optional[str | os.PathLike] = None
-    MNIST_Tissue_dir: Optional[str | os.PathLike] = None
-    DiffVQA_dir: Optional[str | os.PathLike] = None
-    MMLU_dir: Optional[str | os.PathLike] = None
-    CheXBert_dir: Optional[str | os.PathLike] = None
+    MedQA_dir: Optional[Union[str, os.PathLike]] = None
+    PubMedQA_dir: Optional[Union[str, os.PathLike]] = None
+    MedMCQA_dir: Optional[Union[str, os.PathLike]] = None
+    VQA_RAD_dir: Optional[Union[str, os.PathLike]] = None
+    Path_VQA_dir: Optional[Union[str, os.PathLike]] = None
+    SLAKE_dir: Optional[Union[str, os.PathLike]] = None
+    MIMIC_III_dir: Optional[Union[str, os.PathLike]] = None
+    MedNLI_dir: Optional[Union[str, os.PathLike]] = None
+    MIMIC_CXR_dir: Optional[Union[str, os.PathLike]] = None
+    VinDr_Mammo_dir: Optional[Union[str, os.PathLike]] = None
+    Pad_UFES_20_dir: Optional[Union[str, os.PathLike]] = None
+    CBIS_DDSM_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_Oct_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_Path_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_Blood_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_Breast_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_Derma_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_OrganC_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_OrganS_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_Pneumonia_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_Retina_dir: Optional[Union[str, os.PathLike]] = None
+    MNIST_Tissue_dir: Optional[Union[str, os.PathLike]] = None
+    DiffVQA_dir: Optional[Union[str, os.PathLike]] = None
+    MMLU_dir: Optional[Union[str, os.PathLike]] = None
+    CheXBert_dir: Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     device: Optional[str] = "cuda"
@@ -176,8 +173,8 @@ class SetupParams:
 
 @dataclass
 class EvaluationOutput:
-    metrics: dict[str, float]
-    answer_log: Optional[list[tuple]] = None
+    metrics: Dict[str, float]
+    answer_log: Optional[List[tuple]] = None
 
 
 def remove_punctuation(input_string: str):
@@ -315,9 +312,9 @@ def section_text(text):
     """
     p_section = re.compile(r"\n ([A-Z ()/,-]+):\s", re.DOTALL)
 
-    sections = list()
-    section_names = list()
-    section_idx = list()
+    sections = []
+    section_names = []
+    section_idx = []
 
     idx = 0
     s = p_section.search(text, idx)
@@ -591,8 +588,6 @@ def download_file(url: str, fname: str, username=None, password=None):
             bar.update(size)
 
 
-import re
-
 contractions = {
     "aint": "ain't",
     "arent": "aren't",
@@ -731,8 +726,8 @@ manual_map = {
     "ten": "10",
 }
 articles = ["a", "an", "the"]
-period_strip = re.compile("(?!<=\d)(\.)(?!\d)")
-comma_strip = re.compile("(\d)(\,)(\d)")
+period_strip = re.compile("(?!<=\d)(\.)(?!\d)")  # noqa
+comma_strip = re.compile("(\d)(\,)(\d)")  # noqa
 punct = [
     ";",
     r"/",
@@ -763,7 +758,7 @@ def cleanStr(token):
     _token = token
     for p in punct:
         if (p + " " in token or " " + p in token) or (
-            re.search(comma_strip, token) != None
+            re.search(comma_strip, token) is not None
         ):
             _token = _token.replace(p, "")
         else:

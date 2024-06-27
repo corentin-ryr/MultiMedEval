@@ -1,4 +1,3 @@
-import pandas as pd
 from datasets import Dataset, load_dataset
 from torchmetrics.text import BLEUScore
 
@@ -16,9 +15,7 @@ class MedQA(QA):
         cacheDir = self.engine.getConfig()["MedQA_dir"]
 
         if cacheDir is None:
-            raise Exception(
-                "No path for MedQA dataset provided in the config file. Skipping the task."
-            )
+            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
 
         self.dataset = load_dataset(
             "bigbio/med_qa",
@@ -44,9 +41,7 @@ class MedQA(QA):
 
         formattedQuestion = f"{question}\n"
         formattedQuestion += (
-            "Options:\n"
-            + "\n".join([f'{option["key"]}: {option["value"]}.' for option in options])
-            + "\n"
+            "Options:\n" + "\n".join([f'{option["key"]}: {option["value"]}.' for option in options]) + "\n"
         )
         formattedQuestion += "What is the correct answer?"
 
@@ -68,10 +63,7 @@ class MedQA(QA):
         if len(pred) == 0:
             return "Invalid answer"
 
-        options = [
-            cleanStr(f'{option["key"]} {option["value"]}')
-            for option in sample["options"]
-        ]
+        options = [cleanStr(f'{option["key"]} {option["value"]}') for option in sample["options"]]
         # Compute the BLEU score for each option
         scores = [self.bleuScorer([pred], [[option]]) for option in options]
 
@@ -94,9 +86,7 @@ class PubMedQA(QA):
         cacheDir = self.engine.getConfig()["PubMedQA_dir"]
 
         if cacheDir is None:
-            raise Exception(
-                "No path for MedQA dataset provided in the config file. Skipping the task."
-            )
+            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
 
         self.dataset = load_dataset(
             "bigbio/pubmed_qa",
@@ -164,9 +154,7 @@ class MedMCQA(QA):
         cacheDir = self.engine.getConfig()["MedMCQA_dir"]
 
         if cacheDir is None:
-            raise Exception(
-                "No path for MedQA dataset provided in the config file. Skipping the task."
-            )
+            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
 
         self.dataset = load_dataset("medmcqa", split="validation", cache_dir=cacheDir)
 
@@ -211,17 +199,12 @@ class MedMCQA(QA):
             return "Invalid answer"
 
         # Compute the BLEU score for each option
-        scores = [
-            self.bleuScorer([pred], [[cleanStr(option)]])
-            for option in self._getOptions(sample)
-        ]
+        scores = [self.bleuScorer([pred], [[cleanStr(option)]]) for option in self._getOptions(sample)]
 
         if max(scores) == 0:
             return "Invalid answer"
 
-        pred = str(
-            scores.index(max(scores)) + 1
-        )  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
+        pred = str(scores.index(max(scores)) + 1)  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
         return pred
 
 
@@ -236,78 +219,74 @@ class MMLU(QA):
         cacheDir = self.engine.getConfig()["MMLU_dir"]
 
         if cacheDir is None:
-            raise Exception(
-                "No path for MMLU dataset provided in the config file. Skipping the task."
-            )
+            raise Exception("No path for MMLU dataset provided in the config file. Skipping the task.")
 
-        subsets = [
-            "abstract_algebra",
-            "anatomy",
-            "astronomy",
-            "business_ethics",
-            "clinical_knowledge",
-            "college_biology",
-            "college_chemistry",
-            "college_computer_science",
-            "college_mathematics",
-            "college_medicine",
-            "college_physics",
-            "computer_security",
-            "conceptual_physics",
-            "econometrics",
-            "electrical_engineering",
-            "elementary_mathematics",
-            "formal_logic",
-            "global_facts",
-            "high_school_biology",
-            "high_school_chemistry",
-            "high_school_computer_science",
-            "high_school_european_history",
-            "high_school_geography",
-            "high_school_government_and_politics",
-            "high_school_macroeconomics",
-            "high_school_mathematics",
-            "high_school_microeconomics",
-            "high_school_physics",
-            "high_school_psychology",
-            "high_school_statistics",
-            "high_school_us_history",
-            "high_school_world_history",
-            "human_aging",
-            "human_sexuality",
-            "international_law",
-            "jurisprudence",
-            "logical_fallacies",
-            "machine_learning",
-            "management",
-            "marketing",
-            "medical_genetics",
-            "miscellaneous",
-            "moral_disputes",
-            "moral_scenarios",
-            "nutrition",
-            "philosophy",
-            "prehistory",
-            "professional_accounting",
-            "professional_law",
-            "professional_medicine",
-            "professional_psychology",
-            "public_relations",
-            "security_studies",
-            "sociology",
-            "us_foreign_policy",
-            "virology",
-            "world_religions",
-        ]
+        # subsets = [
+        #     "abstract_algebra",
+        #     "anatomy",
+        #     "astronomy",
+        #     "business_ethics",
+        #     "clinical_knowledge",
+        #     "college_biology",
+        #     "college_chemistry",
+        #     "college_computer_science",
+        #     "college_mathematics",
+        #     "college_medicine",
+        #     "college_physics",
+        #     "computer_security",
+        #     "conceptual_physics",
+        #     "econometrics",
+        #     "electrical_engineering",
+        #     "elementary_mathematics",
+        #     "formal_logic",
+        #     "global_facts",
+        #     "high_school_biology",
+        #     "high_school_chemistry",
+        #     "high_school_computer_science",
+        #     "high_school_european_history",
+        #     "high_school_geography",
+        #     "high_school_government_and_politics",
+        #     "high_school_macroeconomics",
+        #     "high_school_mathematics",
+        #     "high_school_microeconomics",
+        #     "high_school_physics",
+        #     "high_school_psychology",
+        #     "high_school_statistics",
+        #     "high_school_us_history",
+        #     "high_school_world_history",
+        #     "human_aging",
+        #     "human_sexuality",
+        #     "international_law",
+        #     "jurisprudence",
+        #     "logical_fallacies",
+        #     "machine_learning",
+        #     "management",
+        #     "marketing",
+        #     "medical_genetics",
+        #     "miscellaneous",
+        #     "moral_disputes",
+        #     "moral_scenarios",
+        #     "nutrition",
+        #     "philosophy",
+        #     "prehistory",
+        #     "professional_accounting",
+        #     "professional_law",
+        #     "professional_medicine",
+        #     "professional_psychology",
+        #     "public_relations",
+        #     "security_studies",
+        #     "sociology",
+        #     "us_foreign_policy",
+        #     "virology",
+        #     "world_religions",
+        # ]
 
         # self.dataset = []
         # for subset in subsets:
         #     currentSubset = load_dataset("cais/mmlu", subset, split="test", cache_dir=cacheDir)
         #     self.dataset += currentSubset.to_list()[: len(currentSubset) // 4]
 
-        self.dataset = load_dataset(
-            "cais/mmlu", "all", split="test", cache_dir=cacheDir
-        )
+        self.dataset = load_dataset("cais/mmlu", "all", split="test", cache_dir=cacheDir)
         self.dataset = self.dataset.to_pandas()
 
         def keep_quarter(group):
@@ -317,9 +296,7 @@ class MMLU(QA):
         self.dataset = self.dataset.groupby("subject").apply(keep_quarter)
         self.dataset = Dataset.from_pandas(self.dataset)
 
-        self.trainDataset = load_dataset(
-            "cais/mmlu", "all", split="dev", cache_dir=cacheDir
-        )
+        self.trainDataset = load_dataset("cais/mmlu", "all", split="dev", cache_dir=cacheDir)
 
         self.bleuScorer = BLEUScore(n_gram=1)
 
@@ -358,10 +335,7 @@ class MMLU(QA):
             return "Invalid answer"
 
         # Compute the BLEU score for each option
-        scores = [
-            self.bleuScorer([pred], [[cleanStr(option)]])
-            for option in self._getOptions(sample)
-        ]
+        scores = [self.bleuScorer([pred], [[cleanStr(option)]]) for option in self._getOptions(sample)]
 
         if max(scores) == 0:
             return "Invalid answer"
