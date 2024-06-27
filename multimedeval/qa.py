@@ -1,8 +1,9 @@
-from datasets import load_dataset, Dataset
-from multimedeval.utils import cleanStr
-from torchmetrics.text import BLEUScore
-from multimedeval.taskFamilies import QA
 import pandas as pd
+from datasets import Dataset, load_dataset
+from torchmetrics.text import BLEUScore
+
+from multimedeval.taskFamilies import QA
+from multimedeval.utils import cleanStr
 
 
 class MedQA(QA):
@@ -15,14 +16,24 @@ class MedQA(QA):
         cacheDir = self.engine.getConfig()["MedQA_dir"]
 
         if cacheDir is None:
-            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
+            raise Exception(
+                "No path for MedQA dataset provided in the config file. Skipping the task."
+            )
 
         self.dataset = load_dataset(
-            "bigbio/med_qa", name="med_qa_en_source", split="test", cache_dir=cacheDir, trust_remote_code=True
+            "bigbio/med_qa",
+            name="med_qa_en_source",
+            split="test",
+            cache_dir=cacheDir,
+            trust_remote_code=True,
         )
 
         self.trainDataset = load_dataset(
-            "bigbio/med_qa", name="med_qa_en_source", split="train", cache_dir=cacheDir, trust_remote_code=True
+            "bigbio/med_qa",
+            name="med_qa_en_source",
+            split="train",
+            cache_dir=cacheDir,
+            trust_remote_code=True,
         )
 
         self.bleuScorer = BLEUScore(n_gram=1)
@@ -33,7 +44,9 @@ class MedQA(QA):
 
         formattedQuestion = f"{question}\n"
         formattedQuestion += (
-            "Options:\n" + "\n".join([f'{option["key"]}: {option["value"]}.' for option in options]) + "\n"
+            "Options:\n"
+            + "\n".join([f'{option["key"]}: {option["value"]}.' for option in options])
+            + "\n"
         )
         formattedQuestion += "What is the correct answer?"
 
@@ -55,7 +68,10 @@ class MedQA(QA):
         if len(pred) == 0:
             return "Invalid answer"
 
-        options = [cleanStr(f'{option["key"]} {option["value"]}') for option in sample["options"]]
+        options = [
+            cleanStr(f'{option["key"]} {option["value"]}')
+            for option in sample["options"]
+        ]
         # Compute the BLEU score for each option
         scores = [self.bleuScorer([pred], [[option]]) for option in options]
 
@@ -78,7 +94,9 @@ class PubMedQA(QA):
         cacheDir = self.engine.getConfig()["PubMedQA_dir"]
 
         if cacheDir is None:
-            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
+            raise Exception(
+                "No path for MedQA dataset provided in the config file. Skipping the task."
+            )
 
         self.dataset = load_dataset(
             "bigbio/pubmed_qa",
@@ -146,7 +164,9 @@ class MedMCQA(QA):
         cacheDir = self.engine.getConfig()["MedMCQA_dir"]
 
         if cacheDir is None:
-            raise Exception("No path for MedQA dataset provided in the config file. Skipping the task.")
+            raise Exception(
+                "No path for MedQA dataset provided in the config file. Skipping the task."
+            )
 
         self.dataset = load_dataset("medmcqa", split="validation", cache_dir=cacheDir)
 
@@ -191,12 +211,17 @@ class MedMCQA(QA):
             return "Invalid answer"
 
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer([pred], [[cleanStr(option)]]) for option in self._getOptions(sample)]
+        scores = [
+            self.bleuScorer([pred], [[cleanStr(option)]])
+            for option in self._getOptions(sample)
+        ]
 
         if max(scores) == 0:
             return "Invalid answer"
 
-        pred = str(scores.index(max(scores)) + 1)  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
+        pred = str(
+            scores.index(max(scores)) + 1
+        )  # +1 because the options are 1, 2, 3, 4 and not 0, 1, 2, 3
         return pred
 
 
@@ -211,7 +236,9 @@ class MMLU(QA):
         cacheDir = self.engine.getConfig()["MMLU_dir"]
 
         if cacheDir is None:
-            raise Exception("No path for MMLU dataset provided in the config file. Skipping the task.")
+            raise Exception(
+                "No path for MMLU dataset provided in the config file. Skipping the task."
+            )
 
         subsets = [
             "abstract_algebra",
@@ -278,24 +305,28 @@ class MMLU(QA):
         #     currentSubset = load_dataset("cais/mmlu", subset, split="test", cache_dir=cacheDir)
         #     self.dataset += currentSubset.to_list()[: len(currentSubset) // 4]
 
-        self.dataset = load_dataset("cais/mmlu", "all", split="test", cache_dir=cacheDir)
+        self.dataset = load_dataset(
+            "cais/mmlu", "all", split="test", cache_dir=cacheDir
+        )
         self.dataset = self.dataset.to_pandas()
 
         def keep_quarter(group):
             quarter_len = len(group) // 4  # Calculate the length of a quarter
             return group.head(quarter_len)  # Keep the first quarter of rows
-            
-        self.dataset = self.dataset.groupby('subject').apply(keep_quarter)
+
+        self.dataset = self.dataset.groupby("subject").apply(keep_quarter)
         self.dataset = Dataset.from_pandas(self.dataset)
 
-        self.trainDataset = load_dataset("cais/mmlu", "all", split="dev", cache_dir=cacheDir)
+        self.trainDataset = load_dataset(
+            "cais/mmlu", "all", split="dev", cache_dir=cacheDir
+        )
 
         self.bleuScorer = BLEUScore(n_gram=1)
 
     def format_question(self, sample, prompt=False):
         question = sample["question"]
         options = self._getOptions(sample)
-        answer = sample["answer"] # Answer is the index of the correct option
+        answer = sample["answer"]  # Answer is the index of the correct option
 
         formattedQuestion = f"{question}\n"
         formattedQuestion += "\n".join(options) + "\n"
@@ -327,7 +358,10 @@ class MMLU(QA):
             return "Invalid answer"
 
         # Compute the BLEU score for each option
-        scores = [self.bleuScorer([pred], [[cleanStr(option)]]) for option in self._getOptions(sample)]
+        scores = [
+            self.bleuScorer([pred], [[cleanStr(option)]])
+            for option in self._getOptions(sample)
+        ]
 
         if max(scores) == 0:
             return "Invalid answer"

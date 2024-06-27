@@ -1,9 +1,10 @@
-import torch
-import pandas as pd
 import numpy as np
+import pandas as pd
+import torch
+from torch.utils.data import DataLoader, Dataset
 from transformers import BertTokenizer
+
 from multimedeval.chexbert import bert_tokenizer
-from torch.utils.data import Dataset, DataLoader
 
 
 class UnlabeledDataset(Dataset):
@@ -16,7 +17,9 @@ class UnlabeledDataset(Dataset):
         """
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         impressions = bert_tokenizer.get_impressions_from_pandas(df)
-        self.encoded_imp = bert_tokenizer.tokenize(impressions, tokenizer, verbose=verbose)
+        self.encoded_imp = bert_tokenizer.tokenize(
+            impressions, tokenizer, verbose=verbose
+        )
 
     def __len__(self):
         """Compute the length of the dataset

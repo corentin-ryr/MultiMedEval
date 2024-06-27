@@ -1,8 +1,9 @@
-import pandas as pd
-from transformers import BertTokenizer, AutoTokenizer
-import json
-from tqdm import tqdm
 import argparse
+import json
+
+import pandas as pd
+from tqdm import tqdm
+from transformers import AutoTokenizer, BertTokenizer
 
 
 def get_impressions_from_pandas(df):
@@ -18,7 +19,8 @@ def tokenize(impressions, tokenizer, verbose=True):
 
     # raise Exception
     new_impressions = []
-    if verbose: print("\nTokenizing report impressions. All reports are cut off at 512 tokens.")
+    if verbose:
+        print("\nTokenizing report impressions. All reports are cut off at 512 tokens.")
     for i in tqdm(range(impressions.shape[0]), disable=not verbose):
         tokenized_imp = tokenizer.tokenize(impressions.iloc[i])
         if tokenized_imp:  # not an empty report

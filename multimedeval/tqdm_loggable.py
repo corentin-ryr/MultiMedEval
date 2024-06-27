@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 from tqdm.auto import tqdm as tqdm_auto
 
 
-
-
 class tqdm_logging(tqdm_auto):
     """A tqdm implementation that outputs to Python logger.
 
@@ -24,11 +22,8 @@ class tqdm_logging(tqdm_auto):
     - `Implementing structured logging <https://docs.python.org/3/howto/logging-cookbook.html#implementing-structured-logging>`_.
     """
 
-
-
     #: What log level all tqdm_logging instances will use
     log_level = logging.INFO
-
 
     #: How often to post a log message
     #: Default to every 10 seconds
@@ -36,10 +31,8 @@ class tqdm_logging(tqdm_auto):
 
     def __init__(self, logger, *args, **kwargs):
         self.last_log_message_at = datetime(1970, 1, 1)
-        self.logger:logging.Logger = logger
+        self.logger: logging.Logger = logger
         super(tqdm_logging, self).__init__(*args, **kwargs)
-
-
 
     @classmethod
     def set_level(cls, log_level: int):
@@ -108,10 +101,13 @@ class tqdm_logging(tqdm_auto):
 
         # Taken from format_meter()
         remaining = (total - n) / rate if rate and total else 0
-        remaining_str = tqdm_auto.format_interval(remaining) if rate else '?'
+        remaining_str = tqdm_auto.format_interval(remaining) if rate else "?"
         try:
-            eta_dt = (datetime.now() + timedelta(seconds=remaining)
-                      if rate and total else datetime.utcfromtimestamp(0))
+            eta_dt = (
+                datetime.now() + timedelta(seconds=remaining)
+                if rate and total
+                else datetime.utcfromtimestamp(0)
+            )
         except OverflowError:
             eta_dt = datetime.max
 
@@ -146,7 +142,6 @@ class tqdm_logging(tqdm_auto):
             "eta": eta_dt.isoformat(),
             "remaining": remaining,
         }
-
 
         self.logger.log(
             self.log_level,

@@ -1,43 +1,50 @@
-from multimedeval.utils import EvalParams, fileWriterFactory, Benchmark, SetupParams, EvaluationOutput
+import getpass
+import json
+import logging
+import os
+from collections.abc import Callable
+from dataclasses import asdict
 
-from multimedeval.qa import MedQA, PubMedQA, MedMCQA, MMLU
-from multimedeval.vqa import VQA_RAD, Path_VQA, SLAKE, DiffVQA
-from multimedeval.mimic import MIMIC_CXR_reportgen
+import gdown
+import nltk
+from radgraph import F1RadGraph
+from torch.utils.data import DataLoader
+
+from multimedeval.chexbert.label import encode, label
+from multimedeval.dynamicDatasets import findDatasets
 from multimedeval.imageClassification import (
-    MIMIC_CXR_ImageClassification,
-    VinDr_Mammo,
-    Pad_UFES_20,
-    CBIS_DDSM_Mass,
     CBIS_DDSM_Calcification,
+    CBIS_DDSM_Mass,
+    MIMIC_CXR_ImageClassification,
+    Pad_UFES_20,
+    VinDr_Mammo,
 )
-from multimedeval.mimic_iii import MIMIC_III
 from multimedeval.mednli import MedNLI
+from multimedeval.mimic import MIMIC_CXR_reportgen
+from multimedeval.mimic_iii import MIMIC_III
 from multimedeval.mnist import (
-    MNIST_Oct,
-    MNIST_Path,
     MNIST_Blood,
     MNIST_Breast,
     MNIST_Derma,
+    MNIST_Oct,
     MNIST_OrganC,
     MNIST_OrganS,
+    MNIST_Path,
     MNIST_Pneumonia,
     MNIST_Retina,
     MNIST_Tissue,
 )
-import os
-import gdown
+from multimedeval.qa import MMLU, MedMCQA, MedQA, PubMedQA
 from multimedeval.tqdm_loggable import tqdm_logging
-import getpass
-import nltk
+from multimedeval.utils import (
+    Benchmark,
+    EvalParams,
+    EvaluationOutput,
+    SetupParams,
+    fileWriterFactory,
+)
 from multimedeval.visualization import BenchmarkVisualizer
-from collections.abc import Callable
-from radgraph import F1RadGraph
-from multimedeval.chexbert.label import encode, encode, label
-from dataclasses import asdict
-import logging
-from multimedeval.dynamicDatasets import findDatasets
-from torch.utils.data import DataLoader
-import json
+from multimedeval.vqa import SLAKE, VQA_RAD, DiffVQA, Path_VQA
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -109,7 +116,10 @@ class MultiMedEval(object):
                 TASKS_REQUIREMENTS[taskClass] if taskClass in TASKS_REQUIREMENTS else []
             )
 
-            self.tasksReady[benchmark.taskName] = {"ready": False, "error": "Not setup yet"}
+            self.tasksReady[benchmark.taskName] = {
+                "ready": False,
+                "error": "Not setup yet",
+            }
 
     def setup(self, setupParams: SetupParams, verbose: bool = True):
         self.logger.info(f"Starting the setup of MultiMedEval.")
@@ -118,7 +128,9 @@ class MultiMedEval(object):
         # if len(self.getConfig()["tasks_to_prepare"]) > 0:
         #     tasksToSkip = [x for x in self.nameToTask if x not in self.getConfig()["tasks_to_prepare"]]
 
-        progressBar = tqdm_logging(logger=self.logger, total=len(self.nameToTask) + 2, dynamic_ncols=True)
+        progressBar = tqdm_logging(
+            logger=self.logger, total=len(self.nameToTask) + 2, dynamic_ncols=True
+        )
         progressBar.set_description(f"Setup RadGraph")
         try:
             self._prepare_radgraph()
@@ -158,7 +170,11 @@ class MultiMedEval(object):
             # Log a table of the tasks and their status
             finalMessage += "Task".ljust(35) + "Status".ljust(20) + "Error"
             for taskName in self.tasksReady:
-                error = "No error." if "error" not in self.tasksReady[taskName] else self.tasksReady[taskName]["error"]
+                error = (
+                    "No error."
+                    if "error" not in self.tasksReady[taskName]
+                    else self.tasksReady[taskName]["error"]
+                )
                 ready = "Ready" if self.tasksReady[taskName]["ready"] else "Problem"
                 finalMessage += "\n" + taskName.ljust(35) + ready.ljust(20) + error
 
@@ -166,9 +182,13 @@ class MultiMedEval(object):
 
         return self.tasksReady
 
-    def eval(self, name: str | list[str], batcher: Callable, evalParams: EvalParams = None):
+    def eval(
+        self, name: str | list[str], batcher: Callable, evalParams: EvalParams = None
+    ):
         if batcher is None:
-            raise Exception("The engine was not initialized with a batcher, please provide a batcher to the engine")
+            raise Exception(
+                "The engine was not initialized with a batcher, please provide a batcher to the engine"
+            )
 
         self.evalParams = evalParams if evalParams is not None else EvalParams()
         self.batcher = batcher
@@ -199,7 +219,11 @@ class MultiMedEval(object):
         listRequirements = [name] + self.nameToRequirements[name]
         for req in listRequirements:
             if not self.tasksReady[req]["ready"]:
-                error = self.tasksReady[req]["error"] if "error" in self.tasksReady[req] else "No error message"
+                error = (
+                    self.tasksReady[req]["error"]
+                    if "error" in self.tasksReady[req]
+                    else "No error message"
+                )
 
                 self.logger.warn(f"Task {name} requires {req} to be ready: {error}")
                 return None
@@ -210,7 +234,10 @@ class MultiMedEval(object):
         taskResult: EvaluationOutput = evaluation.evaluate(predictions)
 
         if taskResult.answer_log is not None:
-            fileWriterFactory("csv")(taskResult.answer_log, f"{self.evalParams.run_name}/{evaluation.taskName}")
+            fileWriterFactory("csv")(
+                taskResult.answer_log,
+                f"{self.evalParams.run_name}/{evaluation.taskName}",
+            )
 
         try:
             with open(f"{self.evalParams.run_name}/results.json", "r") as f:
@@ -226,7 +253,9 @@ class MultiMedEval(object):
         return taskResult.metrics
 
     def _run_inference(self, task: Benchmark):
-        self.logger.info(f"======================== Running inference on {task.taskName} ========================")
+        self.logger.info(
+            f"======================== Running inference on {task.taskName} ========================"
+        )
 
         dataloader = self.get_dataloader(task)
         kwargs_format_question = (
@@ -242,7 +271,9 @@ class MultiMedEval(object):
                 sample = el["sample"]
                 text, img = task.format_question(sample, **kwargs_format_question)
                 if self.evalParams.fewshot and task.getPrompt() is not None:
-                    batchPrompts.append((task.getPrompt()[0] + text, task.getPrompt()[1] + img))
+                    batchPrompts.append(
+                        (task.getPrompt()[0] + text, task.getPrompt()[1] + img)
+                    )
                 else:
                     batchPrompts.append((text, img))
 
@@ -255,7 +286,9 @@ class MultiMedEval(object):
 
     def visualization(self):
         benchmarks = [
-            self.nameToTask[x] for x in self.tasksReady if (self.tasksReady[x]["ready"] and x in self.nameToTask)
+            self.nameToTask[x]
+            for x in self.tasksReady
+            if (self.tasksReady[x]["ready"] and x in self.nameToTask)
         ]
         visualizer = BenchmarkVisualizer(benchmarks)
         visualizer.sunburstModalities()
@@ -279,7 +312,9 @@ class MultiMedEval(object):
 
     def getConfig(self) -> dict:
         if self._config is None:
-            raise Exception("The engine was not setup, please run the setup method first.")
+            raise Exception(
+                "The engine was not setup, please run the setup method first."
+            )
 
         return asdict(self._config)
 
@@ -295,7 +330,9 @@ class MultiMedEval(object):
         for metric in metrics:
             metricValue = metrics[metric]
             writer.add_scalar(
-                f"{runName}/{taskName}/{metric}", metricValue, global_step=self.evalParams.tensorboardStep
+                f"{runName}/{taskName}/{metric}",
+                metricValue,
+                global_step=self.evalParams.tensorboardStep,
             )
 
     def _prepare_radgraph(self):
@@ -312,7 +349,9 @@ class MultiMedEval(object):
             raise Exception("Deepspeed is initialized.")
 
         device = -1 if self.getConfig()["device"] != "cuda" else 0
-        self.radgraph = F1RadGraph(reward_level="partial", cuda=device, model_type="radgraph")
+        self.radgraph = F1RadGraph(
+            reward_level="partial", cuda=device, model_type="radgraph"
+        )
 
     def _prepare_chexbert(self):
         # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
@@ -361,7 +400,10 @@ class MultiMedEval(object):
             return params.dataloader_fn(dataset)
 
         dataloader = DataLoader(
-            dataset, batch_size=params.batch_size, num_workers=params.num_workers, collate_fn=lambda x: x
+            dataset,
+            batch_size=params.batch_size,
+            num_workers=params.num_workers,
+            collate_fn=lambda x: x,
         )
 
         return dataloader

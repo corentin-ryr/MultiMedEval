@@ -1,11 +1,22 @@
-from multimedeval.utils import Benchmark, cleanStr, exact_entity_token_if_rel_exists_reward, EvaluationOutput
-from torchmetrics.text import BLEUScore, ROUGEScore
 from abc import abstractmethod
-from nltk.stem import WordNetLemmatizer
-from torchmetrics import F1Score, AUROC, Accuracy
-import torch
+
 import pandas as pd
-from multimedeval.reportComparisonUtils import compute_bertscore, compute_composite, compute_meteor
+import torch
+from nltk.stem import WordNetLemmatizer
+from torchmetrics import AUROC, Accuracy, F1Score
+from torchmetrics.text import BLEUScore, ROUGEScore
+
+from multimedeval.reportComparisonUtils import (
+    compute_bertscore,
+    compute_composite,
+    compute_meteor,
+)
+from multimedeval.utils import (
+    Benchmark,
+    EvaluationOutput,
+    cleanStr,
+    exact_entity_token_if_rel_exists_reward,
+)
 
 
 class QA(Benchmark):
@@ -38,7 +49,15 @@ class QA(Benchmark):
                 correct_answers += 1
             total_answers += 1
 
-            answersLog.append((self.getCorrectAnswer(sample, fullText=True), answer, pred, gold, pred == gold))
+            answersLog.append(
+                (
+                    self.getCorrectAnswer(sample, fullText=True),
+                    answer,
+                    pred,
+                    gold,
+                    pred == gold,
+                )
+            )
 
             # break
 
@@ -65,7 +84,17 @@ class VQA(Benchmark):
         pass
 
     def evaluate(self, predictions):
-        answersLog = [["correct", "predicted", "F1", "BLEU", "recall", "correct tokens", "predicted tokens"]]
+        answersLog = [
+            [
+                "correct",
+                "predicted",
+                "F1",
+                "BLEU",
+                "recall",
+                "correct tokens",
+                "predicted tokens",
+            ]
+        ]
         bleuScores = []
         f1 = []
         recall = []
@@ -90,9 +119,15 @@ class VQA(Benchmark):
                 else 0
             )
             currentRecall = (
-                len(predictedTokens.intersection(correctTokens)) / len(correctTokens) if len(correctTokens) > 0 else 0
+                len(predictedTokens.intersection(correctTokens)) / len(correctTokens)
+                if len(correctTokens) > 0
+                else 0
             )
-            currentF1 = 2 * (currentPrecision * currentRecall) / (currentPrecision + currentRecall + 1e-8)
+            currentF1 = (
+                2
+                * (currentPrecision * currentRecall)
+                / (currentPrecision + currentRecall + 1e-8)
+            )
             f1.append(currentF1)
             recall.append(currentRecall)
 
@@ -107,7 +142,8 @@ class VQA(Benchmark):
                     correctTokens.add("not")
 
                 closedQRecall = (
-                    len(predictedTokens.intersection(correctTokens)) / len(correctTokens)
+                    len(predictedTokens.intersection(correctTokens))
+                    / len(correctTokens)
                     if len(correctTokens) > 0
                     else 0
                 )
@@ -141,12 +177,20 @@ class VQA(Benchmark):
             "bleu": sum(bleuScores) / len(bleuScores) if len(bleuScores) > 0 else 0,
             "F1": sum(f1) / len(f1) if len(f1) > 0 else 0,
             "recall": sum(recall) / len(recall) if len(recall) > 0 else 0,
-            "closedQuestionsAccuracy": closedQuestionsCorrect / sum(closedQuestions) if sum(closedQuestions) > 0 else 0,
+            "closedQuestionsAccuracy": (
+                closedQuestionsCorrect / sum(closedQuestions)
+                if sum(closedQuestions) > 0
+                else 0
+            ),
             "openQuestionsRecall": (
-                sum(openQuestionsRecall) / len(openQuestionsRecall) if len(openQuestionsRecall) > 0 else 0
+                sum(openQuestionsRecall) / len(openQuestionsRecall)
+                if len(openQuestionsRecall) > 0
+                else 0
             ),
             "openQuestionsAccuracy": (
-                openQuestionsAccuracy / len(openQuestionsRecall) if len(openQuestionsRecall) > 0 else 0
+                openQuestionsAccuracy / len(openQuestionsRecall)
+                if len(openQuestionsRecall) > 0
+                else 0
             ),
         }
 
@@ -186,7 +230,9 @@ class ImageClassification(Benchmark):
 
         scorerArgs = {"task": self.scoringType, "average": "macro"}
         scorerArgs.update(
-            {"num_classes": self.num_classes} if self.scoringType == "multiclass" else {"num_labels": self.num_classes}
+            {"num_classes": self.num_classes}
+            if self.scoringType == "multiclass"
+            else {"num_labels": self.num_classes}
         )
         f1Scorer = F1Score(**scorerArgs)
         aurocScorer = AUROC(**scorerArgs)
@@ -208,13 +254,19 @@ class ImageClassification(Benchmark):
             groundTruth.append(gt)
 
             answersLog.append(
-                (f"{self.getCorrectAnswer(sample, fullText=True)} (index {gt})", f"{answer} (index {pred})", gt == pred)
+                (
+                    f"{self.getCorrectAnswer(sample, fullText=True)} (index {gt})",
+                    f"{answer} (index {pred})",
+                    gt == pred,
+                )
             )
 
         # Convert pred and gt to tensor
         predictedAnswers = torch.tensor(predictedAnswers)
         if self.scoringType == "multiclass":
-            predictedAnswers = torch.nn.functional.one_hot(predictedAnswers, num_classes=self.num_classes)
+            predictedAnswers = torch.nn.functional.one_hot(
+                predictedAnswers, num_classes=self.num_classes
+            )
         predictedAnswers = predictedAnswers.to(torch.float32)
         groundTruth = torch.tensor(groundTruth)
 
@@ -249,9 +301,13 @@ class ReportComparison(Benchmark):
         f1_radgraph = []
         for hyp, ref in zip(hypReports, refReports):
             # Compute the F1-radgraph score
-            (_, _, hyp_annotation_lists, ref_annotation_lists) = self.engine.radgraph(refs=[ref], hyps=[hyp])
+            (_, _, hyp_annotation_lists, ref_annotation_lists) = self.engine.radgraph(
+                refs=[ref], hyps=[hyp]
+            )
             f1_radgraph.append(
-                exact_entity_token_if_rel_exists_reward(hyp_annotation_lists[0], ref_annotation_lists[0])
+                exact_entity_token_if_rel_exists_reward(
+                    hyp_annotation_lists[0], ref_annotation_lists[0]
+                )
             )
         return torch.tensor(f1_radgraph)
 
@@ -279,7 +335,9 @@ class ReportComparison(Benchmark):
 
         bleu_scores = torch.tensor(bleu2Scores)
 
-        radcliq_v0_scores = compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph)
+        radcliq_v0_scores = compute_composite(
+            bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph
+        )
 
         meteor_scores = compute_meteor(hypReports, refReports)
 
@@ -327,7 +385,8 @@ class ReportComparison(Benchmark):
             "bleu1": sum(bleu1Scores) / len(bleu1Scores),
             "bleu4": sum(bleu4Scores) / len(bleu4Scores),
             "f1-radgraph": sum(f1_radgraph) / len(f1_radgraph),
-            "CheXBert vector similarity": sum(chexbert_similarity) / len(chexbert_similarity),
+            "CheXBert vector similarity": sum(chexbert_similarity)
+            / len(chexbert_similarity),
             "f1-bertscore": sum(f1_bertscore_unscaled) / len(f1_bertscore_unscaled),
             "radcliq": sum(radcliq_v0_scores) / len(radcliq_v0_scores),
             "meteor": sum(meteor_scores) / len(meteor_scores),

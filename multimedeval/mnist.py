@@ -1,34 +1,50 @@
-from multimedeval.taskFamilies import ImageClassification
-from medmnist.dataset import OCTMNIST, PathMNIST, PneumoniaMNIST, RetinaMNIST, BloodMNIST, ChestMNIST, OrganAMNIST, OrganCMNIST, DermaMNIST, BreastMNIST, TissueMNIST, OrganSMNIST, MedMNIST2D
 import os
+
+from medmnist.dataset import (
+    OCTMNIST,
+    BloodMNIST,
+    BreastMNIST,
+    ChestMNIST,
+    DermaMNIST,
+    MedMNIST2D,
+    OrganAMNIST,
+    OrganCMNIST,
+    OrganSMNIST,
+    PathMNIST,
+    PneumoniaMNIST,
+    RetinaMNIST,
+    TissueMNIST,
+)
+
+from multimedeval.taskFamilies import ImageClassification
 from multimedeval.utils import cleanStr
 
 NAME_TO_MNIST = {
-    "OCTMNIST": {"class": OCTMNIST, "modality": "OCT" },
-    "PathMNIST": {"class": PathMNIST, "modality": "Pathology" },
-    "PneumoniaMNIST": {"class": PneumoniaMNIST, "modality": "X-Ray" },
-    "RetinaMNIST": {"class": RetinaMNIST, "modality": "Fundus Camera" },
-    "BloodMNIST": {"class": BloodMNIST, "modality": "Microscope" },
-    "ChestMNIST": {"class": ChestMNIST, "modality": "X-Ray" },
-    "OrganAMNIST": {"class": OrganAMNIST, "modality": "CT" },
-    "OrganCMNIST": {"class": OrganCMNIST, "modality": "CT" },
-    "OrganSMNIST": {"class": OrganSMNIST, "modality": "CT" },
-    "DermaMNIST": {"class": DermaMNIST, "modality": "Dermatology" },
-    "BreastMNIST": {"class": BreastMNIST, "modality": "Ultrasound" },
-    "TissueMNIST": {"class": TissueMNIST, "modality": "Microscope" },
+    "OCTMNIST": {"class": OCTMNIST, "modality": "OCT"},
+    "PathMNIST": {"class": PathMNIST, "modality": "Pathology"},
+    "PneumoniaMNIST": {"class": PneumoniaMNIST, "modality": "X-Ray"},
+    "RetinaMNIST": {"class": RetinaMNIST, "modality": "Fundus Camera"},
+    "BloodMNIST": {"class": BloodMNIST, "modality": "Microscope"},
+    "ChestMNIST": {"class": ChestMNIST, "modality": "X-Ray"},
+    "OrganAMNIST": {"class": OrganAMNIST, "modality": "CT"},
+    "OrganCMNIST": {"class": OrganCMNIST, "modality": "CT"},
+    "OrganSMNIST": {"class": OrganSMNIST, "modality": "CT"},
+    "DermaMNIST": {"class": DermaMNIST, "modality": "Dermatology"},
+    "BreastMNIST": {"class": BreastMNIST, "modality": "Ultrasound"},
+    "TissueMNIST": {"class": TissueMNIST, "modality": "Microscope"},
 }
 
-class wrapperGenerator():
+
+class wrapperGenerator:
     def __init__(self, dataset):
         self.dataset = dataset
 
     def __getitem__(self, index):
-            sample = self.dataset[index]
-            return {"image": sample[0], "label": sample[1]}
-    
+        sample = self.dataset[index]
+        return {"image": sample[0], "label": sample[1]}
+
     def __len__(self):
         return len(self.dataset)
-
 
 
 class MNIST(ImageClassification):
@@ -43,13 +59,17 @@ class MNIST(ImageClassification):
         self.cacheDir = self.engine.getConfig()[self.cachedirName]
 
         if self.cacheDir is None:
-            raise Exception(f"Skipping {self.taskName} because the cache directory is not set.")
+            raise Exception(
+                f"Skipping {self.taskName} because the cache directory is not set."
+            )
 
         if not os.path.exists(self.cacheDir):
             os.makedirs(self.cacheDir, exist_ok=True)
 
-        self.dataset = NAME_TO_MNIST[self.taskName]["class"](split="test", download=True, root=self.cacheDir)
-        self.options:dict[str, str] = self.dataset.info["label"]
+        self.dataset = NAME_TO_MNIST[self.taskName]["class"](
+            split="test", download=True, root=self.cacheDir
+        )
+        self.options: dict[str, str] = self.dataset.info["label"]
         # Add 1 to the key of the options
         self.options = {str(int(key) + 1): value for key, value in self.options.items()}
 
@@ -57,26 +77,30 @@ class MNIST(ImageClassification):
         self.scoringType = self.dataset.info["task"].split(",")[0].replace("-", "")
         if self.scoringType in ["binaryclass", "ordinalregression"]:
             self.scoringType = "multiclass"
-        
+
         self.dataset = wrapperGenerator(self.dataset)
 
-        self.trainDataset = NAME_TO_MNIST[self.taskName]["class"](split="train", download=True, root=self.cacheDir)
+        self.trainDataset = NAME_TO_MNIST[self.taskName]["class"](
+            split="train", download=True, root=self.cacheDir
+        )
         self.trainDataset = wrapperGenerator(self.trainDataset)
 
     def getCorrectAnswer(self, sample, fullText=False) -> int:
         label = sample["label"].tolist()
-        
+
         if fullText:
             return ",".join([self.options[str(label + 1)] for label in label])
-        
+
         if len(label) == 1:
             label = label[0]
-        
+
         return label
 
     def format_question(self, sample, prompt=False):
         question = "<img> Options:\n"
-        question += " \n ".join([f"{option}: {self.options[option]}" for option in self.options])
+        question += " \n ".join(
+            [f"{option}: {self.options[option]}" for option in self.options]
+        )
         question += " \n Which options correspond to the image?"
 
         formattedText = [
@@ -86,7 +110,12 @@ class MNIST(ImageClassification):
             }
         ]
         if prompt:
-            formattedText.append({"role": "assistant", "content": f"{self.getCorrectAnswer(sample, fullText=True)}"})
+            formattedText.append(
+                {
+                    "role": "assistant",
+                    "content": f"{self.getCorrectAnswer(sample, fullText=True)}",
+                }
+            )
 
         return (formattedText, [sample["image"]])
 
@@ -102,7 +131,9 @@ class MNIST(ImageClassification):
         """
         answer = cleanStr(answer)
         # Find the best bleu score between the answer and the options
-        options = [cleanStr(f"{option}: {self.options[option]}") for option in self.options]
+        options = [
+            cleanStr(f"{option}: {self.options[option]}") for option in self.options
+        ]
         scores = [self.bleu([answer], [[option]]) for option in options]
 
         if self.scoringType == "multiclass":
@@ -110,7 +141,6 @@ class MNIST(ImageClassification):
         else:
             # for each 1 if above a threshold, 0 otherwise
             return [1 if score > 0.5 else 0 for score in scores]
-
 
 
 class MNIST_Oct(MNIST):
@@ -161,11 +191,13 @@ class MNIST_Blood(MNIST):
 #         self.question = "Which organ is present in the image?"
 #         self.cachedirName = "MedMNIST_dir"]
 
+
 class MNIST_OrganC(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("OrganCMNIST", **kwargs)
         self.question = "Which organ is present in the image?"
         self.cachedirName = "MNIST_OrganC_dir"
+
 
 class MNIST_Derma(MNIST):
     def __init__(self, **kwargs) -> None:
@@ -173,26 +205,28 @@ class MNIST_Derma(MNIST):
         self.question = "Which skin disease is present in the image?"
         self.cachedirName = "MNIST_Derma_dir"
 
+
 class MNIST_Breast(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("BreastMNIST", **kwargs)
-        self.question = "Does this breast ultrasound show sign of malignant tumor or is it benign?"
+        self.question = (
+            "Does this breast ultrasound show sign of malignant tumor or is it benign?"
+        )
         self.cachedirName = "MNIST_Breast_dir"
+
 
 class MNIST_Tissue(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("TissueMNIST", **kwargs)
         self.question = "What kind of tissue is represented in the image?"
         self.cachedirName = "MNIST_Tissue_dir"
-    
+
     def __len__(self):
         return super().__len__() // 4
+
 
 class MNIST_OrganS(MNIST):
     def __init__(self, **kwargs) -> None:
         super().__init__("OrganSMNIST", **kwargs)
         self.question = "Which organ is present in the image?"
         self.cachedirName = "MNIST_OrganS_dir"
-
-
-    

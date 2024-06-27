@@ -1,8 +1,9 @@
-from multimedeval import MultiMedEval, SetupParams, EvalParams
 import json
 import os
+
 import pytest
 
+from multimedeval import EvalParams, MultiMedEval, SetupParams
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
@@ -23,13 +24,23 @@ def test_mednli(batcherAnswer, expectedAccuracy):
         return [batcherAnswer for _ in range(len(prompts))]
 
     engine = MultiMedEval()
-    config = json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+    config = (
+        json.load(open("tests/test_config.json"))
+        if IN_GITHUB_ACTIONS
+        else json.load(open("MedMD_config.json"))
+    )
     if IN_GITHUB_ACTIONS:
         config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
         config["physionet_password"] = os.getenv("PHYSIONET_PASSWORD")
 
     try:
-        engine.setup(SetupParams(MedNLI_dir=config["MedNLI_dir"], physionet_username=config["physionet_username"], physionet_password=config["physionet_password"]))
+        engine.setup(
+            SetupParams(
+                MedNLI_dir=config["MedNLI_dir"],
+                physionet_username=config["physionet_username"],
+                physionet_password=config["physionet_password"],
+            )
+        )
     except:
         assert False
 

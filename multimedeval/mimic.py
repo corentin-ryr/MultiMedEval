@@ -1,11 +1,13 @@
 import os
+import subprocess
+from zipfile import ZipFile
+
+import datasets
 import pandas as pd
 from PIL import Image
-import datasets
+
 from multimedeval.taskFamilies import ReportComparison
 from multimedeval.utils import remove_punctuation, section_text
-from zipfile import ZipFile
-import subprocess
 
 
 class MIMIC_CXR_reportgen(ReportComparison):
@@ -34,19 +36,33 @@ class MIMIC_CXR_reportgen(ReportComparison):
         self.studyToDicoms = {}
         for _, row in split.iterrows():
             samplePath = os.path.join(
-                self.path, "files", "p" + str(row["subject_id"])[:2], "p" + str(row["subject_id"])
+                self.path,
+                "files",
+                "p" + str(row["subject_id"])[:2],
+                "p" + str(row["subject_id"]),
             )
-            with open(os.path.join(samplePath, "s" + str(row["study_id"]) + ".txt"), "r") as f:
+            with open(
+                os.path.join(samplePath, "s" + str(row["study_id"]) + ".txt"), "r"
+            ) as f:
                 report, categories, _ = section_text(f.read())
 
             if "findings" not in categories:
                 continue
 
             reportFindings = report[categories.index("findings")]
-            reportIndication = report[categories.index("indication")] if "indication" in categories else ""
+            reportIndication = (
+                report[categories.index("indication")]
+                if "indication" in categories
+                else ""
+            )
 
             self.dataset.append(
-                [str(row["subject_id"]), str(row["study_id"]), str(reportFindings), str(reportIndication)]
+                [
+                    str(row["subject_id"]),
+                    str(row["study_id"]),
+                    str(reportFindings),
+                    str(reportIndication),
+                ]
             )
 
             if str(row["study_id"]) not in self.studyToDicoms:
@@ -55,7 +71,10 @@ class MIMIC_CXR_reportgen(ReportComparison):
                 self.studyToDicoms[str(row["study_id"])].append(str(row["dicom_id"]))
 
         # Convert the dataset to a pandas dataframe
-        self.dataset = pd.DataFrame(columns=["subject_id", "study_id", "findings", "indications"], data=self.dataset)
+        self.dataset = pd.DataFrame(
+            columns=["subject_id", "study_id", "findings", "indications"],
+            data=self.dataset,
+        )
         self.dataset = self.dataset.drop_duplicates()
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
@@ -67,7 +86,13 @@ class MIMIC_CXR_reportgen(ReportComparison):
         radiology_dict = {}
 
         # Define the keys to look for
-        keys_to_find = ["INDICATION", "COMPARISON", "TECHNIQUE", "FINDINGS", "IMPRESSION"]
+        keys_to_find = [
+            "INDICATION",
+            "COMPARISON",
+            "TECHNIQUE",
+            "FINDINGS",
+            "IMPRESSION",
+        ]
 
         currentField = None
         # Iterate through each line in the report
@@ -92,20 +117,32 @@ class MIMIC_CXR_reportgen(ReportComparison):
 
     def format_question(self, sample, include_indication=False):
 
-        samplePath = os.path.join(self.path, "files", "p" + sample["subject_id"][:2], "p" + sample["subject_id"])
+        samplePath = os.path.join(
+            self.path,
+            "files",
+            "p" + sample["subject_id"][:2],
+            "p" + sample["subject_id"],
+        )
 
         dicomIndices = self.studyToDicoms[sample["study_id"]]
 
         imagesPath = [
-            os.path.join(samplePath, "s" + sample["study_id"], dicomIndex + ".jpg") for dicomIndex in dicomIndices
+            os.path.join(samplePath, "s" + sample["study_id"], dicomIndex + ".jpg")
+            for dicomIndex in dicomIndices
         ]
 
         # indication = sample["indications"].strip().replace('\n', ' ').replace('  ', ' ')
 
         imgTags = "<img> " * len(imagesPath)
 
-        question = (sample["indications"] + " ") if ("indications" in sample and include_indication) else ""
-        question += f"Can you provide a radiology report for this medical image? {imgTags}"
+        question = (
+            (sample["indications"] + " ")
+            if ("indications" in sample and include_indication)
+            else ""
+        )
+        question += (
+            f"Can you provide a radiology report for this medical image? {imgTags}"
+        )
 
         formattedText = [
             {
@@ -122,7 +159,11 @@ class MIMIC_CXR_reportgen(ReportComparison):
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv")):
+        if os.path.exists(
+            os.path.join(
+                self.path, "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv"
+            )
+        ):
             self.path = os.path.join(self.path, "mimic-cxr-jpg", "2.0.0")
             return
 

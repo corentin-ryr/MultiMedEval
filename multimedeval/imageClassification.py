@@ -1,20 +1,21 @@
-from multimedeval.utils import cleanStr
-from multimedeval.tqdm_loggable import tqdm_logging
 import os
-import pandas as pd
-import datasets
-from PIL import Image
-import pydicom
-import numpy as np
+import shutil
+import subprocess
 import urllib.request
 import zipfile
-import shutil
 from pathlib import Path
-from multimedeval.utils import download_file
 from zipfile import ZipFile
-import subprocess
-from multimedeval.taskFamilies import ImageClassification
+
+import datasets
+import numpy as np
+import pandas as pd
+import pydicom
 from datasets import load_dataset
+from PIL import Image
+
+from multimedeval.taskFamilies import ImageClassification
+from multimedeval.tqdm_loggable import tqdm_logging
+from multimedeval.utils import cleanStr, download_file
 
 
 class MIMIC_CXR_ImageClassification(ImageClassification):
@@ -31,22 +32,34 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         self.path = self.engine.getConfig()["MIMIC_CXR_dir"]
 
         if self.path is None:
-            raise ValueError("Skipping MIMIC-CXR Image classification because the cache directory is not set.")
-        
+            raise ValueError(
+                "Skipping MIMIC-CXR Image classification because the cache directory is not set."
+            )
+
         self._generate_dataset()
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
-        chexbertMimic = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-chexpert.csv"))
+        chexbertMimic = pd.read_csv(
+            os.path.join(self.path, "mimic-cxr-2.0.0-chexpert.csv")
+        )
 
         testSplit = split[split.split == "test"]
-        chexbertMimicTest = chexbertMimic[chexbertMimic.study_id.isin(testSplit.study_id)]
-        chexbertMimicTest = chexbertMimicTest.merge(testSplit, on=["study_id", "subject_id"])
+        chexbertMimicTest = chexbertMimic[
+            chexbertMimic.study_id.isin(testSplit.study_id)
+        ]
+        chexbertMimicTest = chexbertMimicTest.merge(
+            testSplit, on=["study_id", "subject_id"]
+        )
         self.dataset = datasets.Dataset.from_pandas(chexbertMimicTest)
 
         trainSplit = split[split.split == "train"]
-        chexbertMimicTrain = chexbertMimic[chexbertMimic.study_id.isin(trainSplit.study_id)]
-        chexbertMimicTrain = chexbertMimicTrain.merge(trainSplit, on=["study_id", "subject_id"])
+        chexbertMimicTrain = chexbertMimic[
+            chexbertMimic.study_id.isin(trainSplit.study_id)
+        ]
+        chexbertMimicTrain = chexbertMimicTrain.merge(
+            trainSplit, on=["study_id", "subject_id"]
+        )
         self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
 
         self.labelNames = [
@@ -75,9 +88,14 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
     def format_question(self, sample, prompt=False):
         samplePath = os.path.join(
-            self.path, "files", "p" + str(sample["subject_id"])[:2], "p" + str(sample["subject_id"])
+            self.path,
+            "files",
+            "p" + str(sample["subject_id"])[:2],
+            "p" + str(sample["subject_id"]),
         )
-        imagePath = os.path.join(samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg")
+        imagePath = os.path.join(
+            samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg"
+        )
         question = "<img> List the conditions that can be seen in this picture."
         formattedText = [
             {
@@ -95,7 +113,10 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
     def getPredictedAnswer(self, answer: str) -> int:
         df = pd.DataFrame(columns=["Report Impression"], data=[answer])
         labels = [element[0] == 1 for element in self.engine.labeler(df)]
-        labels = [int(labels[self.labelNames.index(condition)]) for condition in self.conditions]
+        labels = [
+            int(labels[self.labelNames.index(condition)])
+            for condition in self.conditions
+        ]
 
         return labels
 
@@ -106,13 +127,19 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         labels = [int(sample[condition] == 1) for condition in self.conditions]
 
         if fullText:
-            return ", ".join([self.conditions[idx] for idx, label in enumerate(labels) if label])
+            return ", ".join(
+                [self.conditions[idx] for idx, label in enumerate(labels) if label]
+            )
 
         return labels
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv")):
+        if os.path.exists(
+            os.path.join(
+                self.path, "mimic-cxr-jpg", "2.0.0", "mimic-cxr-2.0.0-split.csv"
+            )
+        ):
             self.path = os.path.join(self.path, "mimic-cxr-jpg", "2.0.0")
             return
 
@@ -143,7 +170,9 @@ class VinDr_Mammo(ImageClassification):
         self.path = self.engine.getConfig()["VinDr_Mammo_dir"]
 
         if self.path is None:
-            raise ValueError("Skipping VinDr Mammo because the cache directory is not set.")
+            raise ValueError(
+                "Skipping VinDr Mammo because the cache directory is not set."
+            )
 
         self._generate_dataset()
 
@@ -173,9 +202,15 @@ class VinDr_Mammo(ImageClassification):
         ]
 
         if prompt:
-            formattedText.append({"role": "assistant", "content": f"{sample['finding_birads']}"})
+            formattedText.append(
+                {"role": "assistant", "content": f"{sample['finding_birads']}"}
+            )
 
-        dicom = pydicom.dcmread(os.path.join(self.path, "images", sample["study_id"], f"{sample['image_id']}.dicom"))
+        dicom = pydicom.dcmread(
+            os.path.join(
+                self.path, "images", sample["study_id"], f"{sample['image_id']}.dicom"
+            )
+        )
 
         dicom.BitsStored = 16
         data = dicom.pixel_array
@@ -212,9 +247,18 @@ class VinDr_Mammo(ImageClassification):
     def _generate_dataset(self):
         # Check if the path already exists and if so return
         if os.path.exists(
-            os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0", "finding_annotations.csv")
+            os.path.join(
+                self.path,
+                "physionet.org",
+                "files",
+                "vindr-mammo",
+                "1.0.0",
+                "finding_annotations.csv",
+            )
         ):
-            self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
+            self.path = os.path.join(
+                self.path, "physionet.org", "files", "vindr-mammo", "1.0.0"
+            )
             return
 
         os.makedirs(self.path, exist_ok=True)
@@ -234,7 +278,9 @@ class VinDr_Mammo(ImageClassification):
         with ZipFile(os.path.join(self.path, "vindr_mammo.zip"), "r") as zipObj:
             zipObj.extractall(self.path)
 
-        self.path = os.path.join(self.path, "physionet.org", "files", "vindr-mammo", "1.0.0")
+        self.path = os.path.join(
+            self.path, "physionet.org", "files", "vindr-mammo", "1.0.0"
+        )
 
 
 class Pad_UFES_20(ImageClassification):
@@ -250,7 +296,9 @@ class Pad_UFES_20(ImageClassification):
         self.path = self.engine.getConfig()["Pad_UFES_20_dir"]
 
         if self.path is None:
-            raise ValueError("Skipping Pad-UFES 20 because the cache directory is not set.")
+            raise ValueError(
+                "Skipping Pad-UFES 20 because the cache directory is not set."
+            )
 
         # Check if the folder contains the zip file
         if not os.path.exists(os.path.join(self.path, "pad_ufes_20.zip")):
@@ -269,7 +317,9 @@ class Pad_UFES_20(ImageClassification):
             "NEV": "Nevus (NEV)",
         }
 
-        splitDset = load_dataset("croyer/Pad-UFES-20-split", cache_dir=self.path, split="test")
+        splitDset = load_dataset(
+            "croyer/Pad-UFES-20-split", cache_dir=self.path, split="test"
+        )
         split = set(splitDset["ids"])
 
         # split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "padufessplit.csv"))
@@ -281,7 +331,6 @@ class Pad_UFES_20(ImageClassification):
 
         self.trainDataset = dataset[~dataset["lesion_id"].isin(split)]
         self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
-
 
     def format_question(self, sample, prompt=False):
         patientInfo = {
@@ -298,8 +347,16 @@ class Pad_UFES_20(ImageClassification):
             "has sewage system": sample["has_sewage_system"],
         }
         # Create a sentence out of the patient information don't include Nones
-        patientInfo = "Patient history: " + ", ".join([f"{key} {value}" for key, value in patientInfo.items() if value is not None])
-        options = "Options:\n" + "\n".join([self.mapAcronymToName[option] for option in self.options])
+        patientInfo = "Patient history: " + ", ".join(
+            [
+                f"{key} {value}"
+                for key, value in patientInfo.items()
+                if value is not None
+            ]
+        )
+        options = "Options:\n" + "\n".join(
+            [self.mapAcronymToName[option] for option in self.options]
+        )
 
         formattedText = [
             {
@@ -309,7 +366,12 @@ class Pad_UFES_20(ImageClassification):
         ]
 
         if prompt:
-            formattedText.append({"role": "assistant", "content": f"{self.mapAcronymToName[sample['diagnostic']]} ({sample['diagnostic']})"})
+            formattedText.append(
+                {
+                    "role": "assistant",
+                    "content": f"{self.mapAcronymToName[sample['diagnostic']]} ({sample['diagnostic']})",
+                }
+            )
 
         image = Image.open(os.path.join(self.path, "images", sample["img_id"]))
         return (formattedText, [image])
@@ -335,22 +397,35 @@ class Pad_UFES_20(ImageClassification):
         # Download the file
         self.logger.info("Downloading the dataset...")
         url = "https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/zr7vgbcyr2-1.zip"
-        with tqdm_logging(logger=self.logger, unit="B", unit_scale=True, unit_divisor=1024, miniters=1, desc=url.split("/")[-1]) as t:
+        with tqdm_logging(
+            logger=self.logger,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            miniters=1,
+            desc=url.split("/")[-1],
+        ) as t:
             os.makedirs(dataFolder, exist_ok=True)
             urllib.request.urlretrieve(
-                url, os.path.join(dataFolder, "pad_ufes_20.zip"), reporthook=lambda x, y, z: t.update(y)
+                url,
+                os.path.join(dataFolder, "pad_ufes_20.zip"),
+                reporthook=lambda x, y, z: t.update(y),
             )
 
         # Extract the file
         self.logger.info("Extracting the dataset...")
-        with zipfile.ZipFile(os.path.join(dataFolder, "pad_ufes_20.zip"), "r") as zip_ref:
+        with zipfile.ZipFile(
+            os.path.join(dataFolder, "pad_ufes_20.zip"), "r"
+        ) as zip_ref:
             zip_ref.extractall(f"{dataFolder}")
 
         self.logger.info("Extracting the images...")
         for file in os.listdir(os.path.join(dataFolder, "images")):
             if not file.endswith(".zip"):
                 continue
-            with zipfile.ZipFile(os.path.join(dataFolder, "images", file), "r") as zip_ref:
+            with zipfile.ZipFile(
+                os.path.join(dataFolder, "images", file), "r"
+            ) as zip_ref:
                 zip_ref.extractall(os.path.join(dataFolder, "images"))
                 os.remove(os.path.join(dataFolder, "images", file))
 
@@ -360,12 +435,12 @@ class Pad_UFES_20(ImageClassification):
                 continue
             for image in os.listdir(os.path.join(dataFolder, "images", file)):
                 shutil.copyfile(
-                    os.path.join(dataFolder, "images", file, image), os.path.join(dataFolder, "images", image)
+                    os.path.join(dataFolder, "images", file, image),
+                    os.path.join(dataFolder, "images", image),
                 )
                 os.remove(os.path.join(dataFolder, "images", file, image))
 
             os.rmdir(os.path.join(dataFolder, "images", file))
-
 
 
 class CBIS_DDSM(ImageClassification):
@@ -382,7 +457,9 @@ class CBIS_DDSM(ImageClassification):
         self.path = self.engine.getConfig()["CBIS_DDSM_dir"]
 
         if self.path is None:
-            raise ValueError("Skipping CBIS-DDSM because the cache directory is not set.")
+            raise ValueError(
+                "Skipping CBIS-DDSM because the cache directory is not set."
+            )
 
         # Download the file at address https://huggingface.co/datasets/Reverb/CBIS-DDSM/resolve/main/CBIS-DDSM.7z?download=true
         self._generate_dataset()
@@ -390,8 +467,12 @@ class CBIS_DDSM(ImageClassification):
         # Open the calc_case_description_test_set.csv file with pandas
         df_dicom = pd.read_csv(os.path.join(self.path, "csv", "dicom_info.csv"))
 
-        cropped_images = df_dicom[df_dicom.SeriesDescription == "cropped images"].image_path
-        full_mammo = df_dicom[df_dicom.SeriesDescription == "full mammogram images"].image_path
+        cropped_images = df_dicom[
+            df_dicom.SeriesDescription == "cropped images"
+        ].image_path
+        full_mammo = df_dicom[
+            df_dicom.SeriesDescription == "full mammogram images"
+        ].image_path
         roi_img = df_dicom[df_dicom.SeriesDescription == "ROI mask images"].image_path
         nan_img = df_dicom[df_dicom.SeriesDescription.isna()].image_path
 
@@ -415,13 +496,19 @@ class CBIS_DDSM(ImageClassification):
 
         self.options = ["BENIGN", "MALIGNANT", "BENIGN_WITHOUT_CALLBACK"]
 
-        self.dataset = pd.read_csv(os.path.join(self.path, "csv", f"{self.abnormality}_case_description_test_set.csv"))
+        self.dataset = pd.read_csv(
+            os.path.join(
+                self.path, "csv", f"{self.abnormality}_case_description_test_set.csv"
+            )
+        )
         self.dataset = self.dataset[["pathology", "cropped image file path"]]
         self._fix_image_path(self.dataset)
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
         self.trainDataset = pd.read_csv(
-            os.path.join(self.path, "csv", f"{self.abnormality}_case_description_train_set.csv")
+            os.path.join(
+                self.path, "csv", f"{self.abnormality}_case_description_train_set.csv"
+            )
         )
         self.trainDataset = self.trainDataset[["pathology", "cropped image file path"]]
         self._fix_image_path(self.trainDataset)
@@ -442,7 +529,7 @@ class CBIS_DDSM(ImageClassification):
     def _generate_dataset(self):
         if os.path.exists(os.path.join(self.path, "csv")):
             return
-        
+
         from kaggle.api.kaggle_api_extended import KaggleApi
 
         api = KaggleApi()
@@ -450,7 +537,9 @@ class CBIS_DDSM(ImageClassification):
 
         os.makedirs(self.path, exist_ok=True)
 
-        api.dataset_download_files("awsaf49/cbis-ddsm-breast-cancer-image-dataset", path=self.path, unzip=True)
+        api.dataset_download_files(
+            "awsaf49/cbis-ddsm-breast-cancer-image-dataset", path=self.path, unzip=True
+        )
 
     def _fix_image_path(self, data: pd.DataFrame):
         """correct dicom paths to correct image paths"""
@@ -482,7 +571,9 @@ class CBIS_DDSM_Calcification(CBIS_DDSM):
             }
         ]
         if prompt:
-            formattedText.append({"role": "assistant", "content": f"{sample['pathology'].lower()}"})
+            formattedText.append(
+                {"role": "assistant", "content": f"{sample['pathology'].lower()}"}
+            )
 
         image = Image.open(os.path.join(self.path, "images", path))
         return (formattedText, [image])
@@ -504,7 +595,9 @@ class CBIS_DDSM_Mass(CBIS_DDSM):
             }
         ]
         if prompt:
-            formattedText.append({"role": "assistant", "content": f"{sample['pathology'].lower()}"})
+            formattedText.append(
+                {"role": "assistant", "content": f"{sample['pathology'].lower()}"}
+            )
 
         image = Image.open(os.path.join(self.path, "images", path))
         return (formattedText, [image])
