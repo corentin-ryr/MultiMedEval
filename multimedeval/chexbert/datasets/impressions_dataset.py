@@ -6,7 +6,7 @@
 
 # class ImpressionsDataset(Dataset):
 #         """The dataset to contain report impressions and their labels."""
-        
+
 #         def __init__(self, csv_path, list_path):
 #                 """ Initialize the dataset object
 #                 @param csv_path (string): path to the csv file containing labels

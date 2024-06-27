@@ -1,2 +1,1 @@
-from multimedeval.chexbert import datasets
-from multimedeval.chexbert import models
+from multimedeval.chexbert import datasets, models

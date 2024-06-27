@@ -1,10 +1,12 @@
-from multimedeval import EvalParams, MultiMedEval, SetupParams
 import json
 import logging
-import pytest
 import os
-from multimedeval.vqa import VQA_RAD
+
+import pytest
+
+from multimedeval import EvalParams, MultiMedEval, SetupParams
 from multimedeval.utils import cleanStr
+from multimedeval.vqa import VQA_RAD
 
 logging.basicConfig(level=logging.INFO)
 
@@ -17,7 +19,9 @@ class TestVQAPreprocessing:
         self.engine = MultiMedEval()
 
         config = (
-            json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+            json.load(open("tests/test_config.json"))
+            if IN_GITHUB_ACTIONS
+            else json.load(open("MedMD_config.json"))
         )
 
         self.engine.setup(SetupParams(VQA_RAD_dir=config["VQA_RAD_dir"]))
@@ -26,8 +30,14 @@ class TestVQAPreprocessing:
     @pytest.mark.parametrize(
         "text, expectedSet",
         [
-            ("are regions of the brain infarcted?", {"are", "regions", "of", "brain", "infarcted"}),
-            ("is this image in the transverse plane?", {"is", "this", "image", "in", "transverse", "plane"}),
+            (
+                "are regions of the brain infarcted?",
+                {"are", "regions", "of", "brain", "infarcted"},
+            ),
+            (
+                "is this image in the transverse plane?",
+                {"is", "this", "image", "in", "transverse", "plane"},
+            ),
             ("mri-dwi", {"mri", "dwi"}),
             (
                 "The image includes a variety of diseases related to the respiratory system. Some of these diseases are pneumonia, chronic obstructive pulmonary disease (COPD), asthma, and lung cancer.",
@@ -80,7 +90,7 @@ class TestVQAPreprocessing:
                     "it",
                     "and",
                     "dwi",
-                    "as"
+                    "as",
                 },
             ),
         ],

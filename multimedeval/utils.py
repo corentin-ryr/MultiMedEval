@@ -1,31 +1,30 @@
-from dataclasses import dataclass
-import string
-from datetime import datetime
 import csv
 import json
-import numpy as np
-import re
-from abc import abstractmethod, ABC
-import torch
-import requests
-from tqdm import tqdm
-import re
-import requests
-import os
-from typing import Optional
-from typing import Any
 import logging
+import os
+import re
+import string
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Optional
+
+import numpy as np
+import requests
+import torch
+from tqdm import tqdm
+
 
 class Benchmark(ABC):
     def __init__(self, engine, logger) -> None:
-        self.taskName:str = "None"
+        self.taskName: str = "None"
         self.engine = engine
-        self.modality:str = "None"
-        self.task:str = "None"
+        self.modality: str = "None"
+        self.task: str = "None"
         self._prompt = None
         self.trainDataset = None
         self.dataset = None
-        self.logger:logging.Logger = logger
+        self.logger: logging.Logger = logger
 
     def getPrompt(self):
         if not self.trainDataset:
@@ -62,7 +61,7 @@ class Benchmark(ABC):
 
     def __len__(self):
         return len(self.dataset)
-    
+
     @abstractmethod
     def evaluate(self, predictions):
         pass
@@ -73,7 +72,7 @@ class EvalParams:
     """Dataclass defining the parameters for evaluation.
 
     Args:
-        batch_size: The size of the batches sent to the user's batcher Callable. 
+        batch_size: The size of the batches sent to the user's batcher Callable.
         run_name: The name to use for the folder where the output will be stored.
         fewshot: A boolean indicating whether the evaluation is few-shot.
         num_workers: The number of workers for the dataloader.
@@ -83,11 +82,12 @@ class EvalParams:
     Raises:
         ImportError: raises an import error if tensorboard is not installed.
     """
+
     batch_size: Optional[int] = 128
     run_name: Optional[str] = f"run {datetime.now()}"
     fewshot: Optional[bool] = False
     num_workers: Optional[int] = 0
-    tensorboardWriter:Optional[Any] = None
+    tensorboardWriter: Optional[Any] = None
     tensorboardStep: Optional[int] = 0
     mimic_cxr_include_indication_section: Optional[bool] = False
     dataloader_fn: Optional[Any] = None
@@ -97,7 +97,10 @@ class EvalParams:
             try:
                 from torch.utils.tensorboard import SummaryWriter
             except ImportError:
-                raise ImportError("Please install tensorboard using `pip install tensorboard`")
+                raise ImportError(
+                    "Please install tensorboard using `pip install tensorboard`"
+                )
+
 
 @dataclass
 class SetupParams:
@@ -129,35 +132,34 @@ class SetupParams:
         CheXBert_dir: The path to the CheXpert dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
-        
+
     """
 
-
-    MedQA_dir: Optional[str|os.PathLike] = None
-    PubMedQA_dir: Optional[str|os.PathLike] = None
-    MedMCQA_dir: Optional[str|os.PathLike] = None
-    VQA_RAD_dir: Optional[str|os.PathLike] = None
-    Path_VQA_dir: Optional[str|os.PathLike] = None
-    SLAKE_dir: Optional[str|os.PathLike] = None
-    MIMIC_III_dir: Optional[str|os.PathLike] = None
-    MedNLI_dir: Optional[str|os.PathLike] = None
-    MIMIC_CXR_dir: Optional[str|os.PathLike] = None
-    VinDr_Mammo_dir: Optional[str|os.PathLike] = None
-    Pad_UFES_20_dir: Optional[str|os.PathLike] = None
-    CBIS_DDSM_dir: Optional[str|os.PathLike] = None
-    MNIST_Oct_dir: Optional[str|os.PathLike] = None
-    MNIST_Path_dir: Optional[str|os.PathLike] = None
-    MNIST_Blood_dir: Optional[str|os.PathLike] = None
-    MNIST_Breast_dir: Optional[str|os.PathLike] = None
-    MNIST_Derma_dir: Optional[str|os.PathLike] = None
-    MNIST_OrganC_dir: Optional[str|os.PathLike] = None
-    MNIST_OrganS_dir: Optional[str|os.PathLike] = None
-    MNIST_Pneumonia_dir: Optional[str|os.PathLike] = None
-    MNIST_Retina_dir: Optional[str|os.PathLike] = None
-    MNIST_Tissue_dir: Optional[str|os.PathLike] = None
-    DiffVQA_dir: Optional[str|os.PathLike] = None
-    MMLU_dir: Optional[str|os.PathLike] = None
-    CheXBert_dir:Optional[str|os.PathLike] = None
+    MedQA_dir: Optional[str | os.PathLike] = None
+    PubMedQA_dir: Optional[str | os.PathLike] = None
+    MedMCQA_dir: Optional[str | os.PathLike] = None
+    VQA_RAD_dir: Optional[str | os.PathLike] = None
+    Path_VQA_dir: Optional[str | os.PathLike] = None
+    SLAKE_dir: Optional[str | os.PathLike] = None
+    MIMIC_III_dir: Optional[str | os.PathLike] = None
+    MedNLI_dir: Optional[str | os.PathLike] = None
+    MIMIC_CXR_dir: Optional[str | os.PathLike] = None
+    VinDr_Mammo_dir: Optional[str | os.PathLike] = None
+    Pad_UFES_20_dir: Optional[str | os.PathLike] = None
+    CBIS_DDSM_dir: Optional[str | os.PathLike] = None
+    MNIST_Oct_dir: Optional[str | os.PathLike] = None
+    MNIST_Path_dir: Optional[str | os.PathLike] = None
+    MNIST_Blood_dir: Optional[str | os.PathLike] = None
+    MNIST_Breast_dir: Optional[str | os.PathLike] = None
+    MNIST_Derma_dir: Optional[str | os.PathLike] = None
+    MNIST_OrganC_dir: Optional[str | os.PathLike] = None
+    MNIST_OrganS_dir: Optional[str | os.PathLike] = None
+    MNIST_Pneumonia_dir: Optional[str | os.PathLike] = None
+    MNIST_Retina_dir: Optional[str | os.PathLike] = None
+    MNIST_Tissue_dir: Optional[str | os.PathLike] = None
+    DiffVQA_dir: Optional[str | os.PathLike] = None
+    MMLU_dir: Optional[str | os.PathLike] = None
+    CheXBert_dir: Optional[str | os.PathLike] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     device: Optional[str] = "cuda"
@@ -170,6 +172,7 @@ class SetupParams:
 
             elif self.device == "mps" and not torch.backends.mps.is_available():
                 self.device = "cpu"
+
 
 @dataclass
 class EvaluationOutput:
@@ -210,7 +213,9 @@ def fileWriterFactory(fileType):
     return SUPPORTED_FILETYPES[fileType]
 
 
-def exact_entity_token_if_rel_exists_reward(hypothesis_annotation_list, reference_annotation_list):
+def exact_entity_token_if_rel_exists_reward(
+    hypothesis_annotation_list, reference_annotation_list
+):
     candidates = []
     for annotation_list in [hypothesis_annotation_list, reference_annotation_list]:
         candidate = []
@@ -226,18 +231,34 @@ def exact_entity_token_if_rel_exists_reward(hypothesis_annotation_list, referenc
     hypothesis_relation_token_list, reference_relation_token_list = candidates
 
     precision = (
-        sum([1 for x in hypothesis_relation_token_list if (x in reference_relation_token_list)])
+        sum(
+            [
+                1
+                for x in hypothesis_relation_token_list
+                if (x in reference_relation_token_list)
+            ]
+        )
         / len(hypothesis_relation_token_list)
         if len(hypothesis_relation_token_list) > 0
         else 0.0
     )
     recall = (
-        sum([1 for x in reference_relation_token_list if (x in hypothesis_relation_token_list)])
+        sum(
+            [
+                1
+                for x in reference_relation_token_list
+                if (x in hypothesis_relation_token_list)
+            ]
+        )
         / len(reference_relation_token_list)
         if len(reference_relation_token_list) > 0
         else 0.0
     )
-    f1_score = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+    f1_score = (
+        (2 * precision * recall / (precision + recall))
+        if (precision + recall) > 0
+        else 0.0
+    )
 
     return f1_score
 
@@ -541,7 +562,6 @@ def custom_mimic_cxr_rules():
 # def cleanStr(text: str):
 #     tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
 #     return re.sub(" +", " ", tempStr)
-
 
 
 def download_file(url: str, fname: str, username=None, password=None):

@@ -1,12 +1,12 @@
 import os
-import torch
-from nltk.tokenize import word_tokenize
-from nltk.translate.meteor_score import meteor_score
-from bert_score import BERTScorer
-import dill
 import pickle
 
+import dill
 import numpy as np
+import torch
+from bert_score import BERTScorer
+from nltk.tokenize import word_tokenize
+from nltk.translate.meteor_score import meteor_score
 
 
 class CompositeMetric:
@@ -82,4 +82,3 @@ def compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgrap
         dim=1,
     )
     return composite_metric_v0_model.predict(input_data)
-

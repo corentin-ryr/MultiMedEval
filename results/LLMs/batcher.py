@@ -1,16 +1,18 @@
+import json
+import time
+
 import torch
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    MistralModel,
     BitsAndBytesConfig,
+    GenerationConfig,
     LlamaForCausalLM,
     LlamaTokenizer,
-    GenerationConfig,
+    MistralModel,
 )
-import time
-from multimedeval import MultiMedEval, SetupParams, EvalParams
-import json
+
+from multimedeval import EvalParams, MultiMedEval, SetupParams
 
 
 class batcherMistral:
@@ -30,20 +32,32 @@ class batcherMistral:
             quantization_config=nf4_config,
             device_map=self.device,
         )
-        self.tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            "mistralai/Mistral-7B-Instruct-v0.1"
+        )
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def __call__(self, prompts):
         model_inputs = [
-            self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts
+            self.tokenizer.apply_chat_template(
+                messages[0], return_tensors="pt", tokenize=False
+            )
+            for messages in prompts
         ]
         model_inputs = self.tokenizer(
-            model_inputs, padding="max_length", truncation=True, max_length=1024, return_tensors="pt"
+            model_inputs,
+            padding="max_length",
+            truncation=True,
+            max_length=1024,
+            return_tensors="pt",
         )
         model_inputs = {k: v.to("cuda") for k, v in model_inputs.items()}
 
         generated_ids = self.model.generate(
-            **model_inputs, max_new_tokens=200, do_sample=True, pad_token_id=self.tokenizer.pad_token_id
+            **model_inputs,
+            max_new_tokens=200,
+            do_sample=True,
+            pad_token_id=self.tokenizer.pad_token_id,
         )
 
         # Remove the first 1024 tokens (prompt)
@@ -84,7 +98,10 @@ class batcherLlama:
 
     def __call__(self, prompts):
         model_inputs = [
-            self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts
+            self.tokenizer.apply_chat_template(
+                messages[0], return_tensors="pt", tokenize=False
+            )
+            for messages in prompts
         ]
 
         print(model_inputs)
@@ -100,11 +117,15 @@ class batcherLlama:
             tokens = {k: v.to("cuda") for k, v in tokens.items()}
 
             startTime = time.time()
-            answerTokens = self.model.generate(**tokens, max_new_tokens=100, generation_config=self.generation_config)
+            answerTokens = self.model.generate(
+                **tokens, max_new_tokens=100, generation_config=self.generation_config
+            )
             execTime = time.time() - startTime
 
             answerTokens = answerTokens[:, tokens["input_ids"].shape[1] :]
-            answers = self.tokenizer.batch_decode(answerTokens, skip_special_tokens=True)
+            answers = self.tokenizer.batch_decode(
+                answerTokens, skip_special_tokens=True
+            )
 
         numberTokens = torch.count_nonzero(answerTokens > 2)
         print(
@@ -151,7 +172,9 @@ class batcherMedAlpaca(batcherLlama):
 
 class batcherPMCLlama(batcherLlama):
     def loadModelAndTokenizer(self):
-        self.tokenizer: LlamaTokenizer = LlamaTokenizer.from_pretrained("axiong/PMC_LLaMA_13B", padding_side="left")
+        self.tokenizer: LlamaTokenizer = LlamaTokenizer.from_pretrained(
+            "axiong/PMC_LLaMA_13B", padding_side="left"
+        )
 
         nf4_config = BitsAndBytesConfig(load_in_8bit=True)
 
@@ -169,10 +192,16 @@ class batcherPMCLlama(batcherLlama):
     def __call__(self, prompts):
         instruction = "You're a doctor, kindly address the medical queries according to the patient's account. Answer with the best option directly."
 
-        prompts = [[{"role": "system", "content": instruction}] + prompt[0] for prompt in prompts]
+        prompts = [
+            [{"role": "system", "content": instruction}] + prompt[0]
+            for prompt in prompts
+        ]
 
         input_str = [
-            self.tokenizer.apply_chat_template(prompt, return_tensors="pt", tokenize=False) for prompt in prompts
+            self.tokenizer.apply_chat_template(
+                prompt, return_tensors="pt", tokenize=False
+            )
+            for prompt in prompts
         ]
 
         model_inputs = self.tokenizer(
@@ -185,7 +214,10 @@ class batcherPMCLlama(batcherLlama):
         model_inputs = {k: v.to("cuda") for k, v in model_inputs.items()}
 
         topk_output = self.model.generate(
-            **model_inputs, max_new_tokens=1000, top_k=50, pad_token_id=self.tokenizer.pad_token_id
+            **model_inputs,
+            max_new_tokens=1000,
+            top_k=50,
+            pad_token_id=self.tokenizer.pad_token_id,
         )
 
         # Remove the first 1024 tokens (prompt)

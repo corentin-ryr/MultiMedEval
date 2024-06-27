@@ -1,14 +1,16 @@
-import os
-import pandas as pd
-from multimedeval.tqdm_loggable import tqdm_logging
-import datasets
-import re
-from torchmetrics.text import BLEUScore, ROUGEScore
-from multimedeval.utils import download_file
 import gzip
+import os
+import re
 import shutil
+
+import datasets
+import pandas as pd
 from datasets import load_dataset
+from torchmetrics.text import BLEUScore, ROUGEScore
+
 from multimedeval.taskFamilies import ReportComparison
+from multimedeval.tqdm_loggable import tqdm_logging
+from multimedeval.utils import download_file
 
 
 def get_final_report(text):
@@ -85,7 +87,9 @@ class MIMIC_III(ReportComparison):
 
         reports_csv = []
         # Open the NOTEEVENTS.csv file and keep the reports that are in the mapping in the reports_csv list
-        reports_csv = pd.read_csv(os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False)
+        reports_csv = pd.read_csv(
+            os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False
+        )
         reports_csv = reports_csv.fillna(-1)
 
         expToReport = {}
@@ -151,10 +155,16 @@ class MIMIC_III(ReportComparison):
 
             assert (len(impressions_list_clean)) == (len(findings_list_clean))
 
-            expToReport[EXP] = {"impression": impressions_list_clean, "findings": findings_list_clean, "ids": ids_list}
+            expToReport[EXP] = {
+                "impression": impressions_list_clean,
+                "findings": findings_list_clean,
+                "ids": ids_list,
+            }
 
         # Open the split csv
-        splitDset = load_dataset("croyer/MIMIC-III-split", cache_dir=self.path, split="test")
+        splitDset = load_dataset(
+            "croyer/MIMIC-III-split", cache_dir=self.path, split="test"
+        )
         split = set(splitDset["ids"])
 
         # split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mimiciiisplit.csv"))
@@ -181,7 +191,6 @@ class MIMIC_III(ReportComparison):
 
         self.dataset = datasets.Dataset.from_list(datasetTest)
 
-
     def getCorrectAnswer(self, sample, fullText=False):
         return sample["impression"]
 
@@ -196,14 +205,22 @@ class MIMIC_III(ReportComparison):
         ]
         return (formattedText, [])
 
-
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv")):
-            self.path = os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4")
+        if os.path.exists(
+            os.path.join(
+                self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv"
+            )
+        ):
+            self.path = os.path.join(
+                self.path, "physionet.org", "files", "mimiciii", "1.4"
+            )
             return
 
-        os.makedirs(os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4"), exist_ok=True)
+        os.makedirs(
+            os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4"),
+            exist_ok=True,
+        )
 
         username, password = self.engine.getPhysioNetCredentials()
         # wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz'
@@ -211,7 +228,14 @@ class MIMIC_III(ReportComparison):
 
         download_file(
             "https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz",
-            os.path.join(self.path, "physionet.org", "files", "mimiciii", "1.4", "NOTEEVENTS.csv.gz"),
+            os.path.join(
+                self.path,
+                "physionet.org",
+                "files",
+                "mimiciii",
+                "1.4",
+                "NOTEEVENTS.csv.gz",
+            ),
             username,
             password,
         )
@@ -600,7 +624,8 @@ section_map = {
         "ct abdomen w/o iv contast",
         "ct of the abdomen without iv constrast",
         "ct of the abdomen without iv contrast",
-        "ct of the abdomen without iv contrast administration" "ct abdomen without iv contrast",
+        "ct of the abdomen without iv contrast administration"
+        "ct abdomen without iv contrast",
         "ct of the abdomen without iv contrast",
         "ct of the abdomen with no iv contrast",
         "ct of the abdomen with no iv contrast administration",
@@ -608,7 +633,14 @@ section_map = {
         "ct abdomen without iv contrast findings",
         "ct abdomen, without iv contrast",
     ],
-    "abdomen": ["abdomen ", "adbomen", "abodmen", "ct abdmone", "ct abdomen", "ct abdomen "],
+    "abdomen": [
+        "abdomen ",
+        "adbomen",
+        "abodmen",
+        "ct abdmone",
+        "ct abdomen",
+        "ct abdomen ",
+    ],
     "indication": [" indication"],
     "subcutaneous tissues": ["subcutaneous tissue"],
     "comment": [" comment"],
@@ -901,7 +933,10 @@ findings_mapping = {
         ("ct cervical spine without iv contrast", 20),
         ("ct t-spine", 18),
         ("ct thoracic spine", 17),
-        ("non-contrast ct of the cervical spine with coronal and sagittal reformats", 17),
+        (
+            "non-contrast ct of the cervical spine with coronal and sagittal reformats",
+            17,
+        ),
         ("ct of the thoracic spine", 16),
         ("thoracic spine", 16),
         ("ct c spine", 15),

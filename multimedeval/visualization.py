@@ -1,7 +1,9 @@
-from multimedeval.utils import Benchmark
-import pandas as pd
-from pathlib import Path
 import math
+from pathlib import Path
+
+import pandas as pd
+
+from multimedeval.utils import Benchmark
 
 
 class BenchmarkVisualizer:
@@ -15,7 +17,9 @@ class BenchmarkVisualizer:
 
     def sunburstModalities(self):
         self._importPlotly()
-        print("======================= Creating sunburst modalities =======================")
+        print(
+            "======================= Creating sunburst modalities ======================="
+        )
         import plotly.express as px
 
         title = "Modality"
@@ -34,14 +38,20 @@ class BenchmarkVisualizer:
                 }
             )
             totalSamples += len(dataset)
-        df = pd.DataFrame(columns=["title", "modality", "task", "dataset", "size"], data=data)
+        df = pd.DataFrame(
+            columns=["title", "modality", "task", "dataset", "size"], data=data
+        )
 
-        fig = px.sunburst(df, path=["title", "modality", "task", "dataset"], values="size")
+        fig = px.sunburst(
+            df, path=["title", "modality", "task", "dataset"], values="size"
+        )
         fig.update_layout(margin=dict(t=0, l=0, r=0, b=0))
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 
         # fig.update_layout(title_text=f"Modality (Total samples: {totalSamples})")
-        fig.write_image(Path(self.folderName, "modalities.png"), scale=1.0, width=750, height=750)
+        fig.write_image(
+            Path(self.folderName, "modalities.png"), scale=1.0, width=750, height=750
+        )
         # fig.write_html(Path(self.folderName, "modalities.html"))
 
     def sunburstTasks(self):
@@ -66,19 +76,27 @@ class BenchmarkVisualizer:
             )
             totalSamples += len(dataset)
 
-        df = pd.DataFrame(columns=["title", "modality", "task", "dataset", "size"], data=data)
+        df = pd.DataFrame(
+            columns=["title", "modality", "task", "dataset", "size"], data=data
+        )
 
-        fig = px.sunburst(df, path=["title", "task", "modality", "dataset"], values="size")
+        fig = px.sunburst(
+            df, path=["title", "task", "modality", "dataset"], values="size"
+        )
         fig.update_layout(margin=dict(t=0, l=0, r=0, b=0))
         fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
 
         # fig.update_layout(title_text=f"Task (Total samples: {totalSamples})")
-        fig.write_image(Path(self.folderName, "tasks.png"), scale=1.0, width=750, height=750)
+        fig.write_image(
+            Path(self.folderName, "tasks.png"), scale=1.0, width=750, height=750
+        )
         # fig.write_html(Path(self.folderName, "tasks.html"))
 
     def tableImageClassification(self):
         self._importPlotly()
-        print("======================= Creating table image classification =======================")
+        print(
+            "======================= Creating table image classification ======================="
+        )
         import plotly.graph_objects as go
 
         # Create a dataframe with column "modality", "task", "dataset" and "size"
@@ -100,7 +118,9 @@ class BenchmarkVisualizer:
                 }
             )
 
-        df = pd.DataFrame(columns=["modality", "task", "task type", "dataset", "size"], data=data)
+        df = pd.DataFrame(
+            columns=["modality", "task", "task type", "dataset", "size"], data=data
+        )
 
         # Only keep the image classification task datasets
         # df = df[df["task"] == "Image Classification"]
@@ -135,15 +155,21 @@ class BenchmarkVisualizer:
             ]
         )
         fig.update_layout(title_text="Image Classification")
-        fig.write_image(Path(self.folderName, "image_classification.png"), scale=1.0, width=1920, height=1080)
+        fig.write_image(
+            Path(self.folderName, "image_classification.png"),
+            scale=1.0,
+            width=1920,
+            height=1080,
+        )
         # fig.write_html(Path(self.folderName, "image_classification.html"))
 
     def sankeyDiagram(self):
         self._importPlotly()
         print("======================= Creating sankey diagram =======================")
-        import plotly.graph_objects as go
-        import plotly.express as px
         import random
+
+        import plotly.express as px
+        import plotly.graph_objects as go
         from colour import Color
 
         # The labels are the name of the datasets, the name of the tasks and the name of the modalities
@@ -168,19 +194,21 @@ class BenchmarkVisualizer:
                 labelToIdx[dataset.modality] = len(labelToIdx)
                 modalities.add(dataset.modality)
 
-
-        indexToColor:dict[int, Color] = {}
+        indexToColor: dict[int, Color] = {}
         mainColors = ["#D6B656", "#6C8EBF", "#B85450", "#82B366", "#9673A6", "#D79B00"]
         for idx, task in enumerate(tasks):
             indexToColor[labelToIdx[task]] = Color(mainColors[idx])
 
         for dataset in self.datasets:
             # Sample a color based on the task of the dataset
-            taskColor:Color = indexToColor[labelToIdx[dataset.task]]
+            taskColor: Color = indexToColor[labelToIdx[dataset.task]]
 
             # Sample small variation of the color for the dataset
             rangeColor = 1 / len(tasks) / 4
-            datasetColor = Color(taskColor, hue=taskColor.get_hue() + random.uniform(-rangeColor, rangeColor) % 1)
+            datasetColor = Color(
+                taskColor,
+                hue=taskColor.get_hue() + random.uniform(-rangeColor, rangeColor) % 1,
+            )
             indexToColor[labelToIdx[dataset.taskName]] = datasetColor
 
         for idx, modality in enumerate(modalities):
@@ -208,21 +236,40 @@ class BenchmarkVisualizer:
             source.append(labelToIdx[dataset.taskName])
             target.append(labelToIdx[dataset.task])
             value.append(len(dataset))
-            linksColor.append(self._averageCircular([indexToColor[labelToIdx[dataset.taskName]].get_hue(), indexToColor[labelToIdx[dataset.task]].get_hue()]))
+            linksColor.append(
+                self._averageCircular(
+                    [
+                        indexToColor[labelToIdx[dataset.taskName]].get_hue(),
+                        indexToColor[labelToIdx[dataset.task]].get_hue(),
+                    ]
+                )
+            )
 
             # Add the link between the task and the modality
             source.append(labelToIdx[dataset.task])
             target.append(labelToIdx[dataset.modality])
             value.append(len(dataset))
-            linksColor.append(self._averageCircular([indexToColor[labelToIdx[dataset.task]].get_hue(), indexToColor[labelToIdx[dataset.modality]].get_hue()]))
+            linksColor.append(
+                self._averageCircular(
+                    [
+                        indexToColor[labelToIdx[dataset.task]].get_hue(),
+                        indexToColor[labelToIdx[dataset.modality]].get_hue(),
+                    ]
+                )
+            )
 
         for idx in range(len(linksColor)):
             tempColor = Color(hsl=(linksColor[idx], 0.5, 0.7)).rgb
-            linksColor[idx] = f"rgb({tempColor[0] * 255}, {tempColor[1] * 255}, {tempColor[2] * 255})"
+            linksColor[idx] = (
+                f"rgb({tempColor[0] * 255}, {tempColor[1] * 255}, {tempColor[2] * 255})"
+            )
 
         labels = list(labelToIdx.keys())
         colors = [indexToColor[labelToIdx[label]].rgb for label in labels]
-        colors = [f"rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})" for color in colors]
+        colors = [
+            f"rgb({color[0] * 255}, {color[1] * 255}, {color[2] * 255})"
+            for color in colors
+        ]
 
         # Create the figure
         fig = go.Figure(
@@ -277,18 +324,21 @@ class BenchmarkVisualizer:
         fig.update_layout(margin=dict(t=50, l=20, r=20, b=20))
         # Increase font size of the labels
 
-        fig.write_image(Path(self.folderName, "sankey.png"), scale=1.0, width=1500, height=700)
+        fig.write_image(
+            Path(self.folderName, "sankey.png"), scale=1.0, width=1500, height=700
+        )
 
     def _importPlotly(self):
         try:
-            import plotly
             import kaleido
+            import plotly
             import tabulate
         except ImportError:
-            print("Please install plotly and kaleido with `pip install plotly kaleido tabulate` to generate the visualizations.")
-            
-            exit(1)
+            print(
+                "Please install plotly and kaleido with `pip install plotly kaleido tabulate` to generate the visualizations."
+            )
 
+            exit(1)
 
     def _averageCircular(self, angles, weights=None):
         # Convert angles to Cartesian coordinates
@@ -298,7 +348,7 @@ class BenchmarkVisualizer:
         # Calculate the weighted sums
         if weights is None:
             weights = [1] * len(x_coords)
-            
+
         weighted_sum_x = sum(w * x for w, x in zip(weights, x_coords))
         weighted_sum_y = sum(w * y for w, y in zip(weights, y_coords))
 

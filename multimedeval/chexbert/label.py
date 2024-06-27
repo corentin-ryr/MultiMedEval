@@ -1,17 +1,18 @@
-import os
 import argparse
+import os
+from collections import OrderedDict
+
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
-import pandas as pd
-import numpy as np
-from multimedeval.chexbert.utils import generate_attention_masks
-from multimedeval.chexbert.models.bert_labeler import bert_labeler
-from multimedeval.chexbert.models.bert_encoder import bert_encoder
-
-from collections import OrderedDict
-from multimedeval.chexbert.datasets.unlabeled_dataset import UnlabeledDataset
-from multimedeval.chexbert.constants import *
 from tqdm import tqdm
+
+from multimedeval.chexbert.constants import *
+from multimedeval.chexbert.datasets.unlabeled_dataset import UnlabeledDataset
+from multimedeval.chexbert.models.bert_encoder import bert_encoder
+from multimedeval.chexbert.models.bert_labeler import bert_labeler
+from multimedeval.chexbert.utils import generate_attention_masks
 
 
 def collate_fn_no_labels(sample_list):
@@ -27,14 +28,18 @@ def collate_fn_no_labels(sample_list):
                                  each sequence in batch
     """
     tensor_list = [s["imp"] for s in sample_list]
-    batched_imp = torch.nn.utils.rnn.pad_sequence(tensor_list, batch_first=True, padding_value=PAD_IDX)
+    batched_imp = torch.nn.utils.rnn.pad_sequence(
+        tensor_list, batch_first=True, padding_value=PAD_IDX
+    )
     len_list = [s["len"] for s in sample_list]
     idx_list = [s["idx"] for s in sample_list]
     batch = {"imp": batched_imp, "len": len_list, "idx": idx_list}
     return batch
 
 
-def load_unlabeled_data(df, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=False):
+def load_unlabeled_data(
+    df, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=False
+):
     """Create UnlabeledDataset object for the input reports
     @param df (string): dataframe containing reports
     @param batch_size (int): the batch size. As per the BERT repository, the max batch size
@@ -48,7 +53,11 @@ def load_unlabeled_data(df, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuf
     collate_fn = collate_fn_no_labels
     dset = UnlabeledDataset(df, verbose=False)
     loader = torch.utils.data.DataLoader(
-        dset, batch_size=batch_size, shuffle=shuffle, num_workers=0, collate_fn=collate_fn
+        dset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=0,
+        collate_fn=collate_fn,
     )
     return loader
 
@@ -63,7 +72,9 @@ class label:
             model = nn.DataParallel(model)  # to utilize multiple GPU's
             model = model.to(device)
             checkpoint = torch.load(checkpoint_path)
-            model.load_state_dict(checkpoint["model_state_dict"], strict=False)  # TODO check if it works
+            model.load_state_dict(
+                checkpoint["model_state_dict"], strict=False
+            )  # TODO check if it works
         else:
             checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
             new_state_dict = OrderedDict()
@@ -84,7 +95,9 @@ class label:
         rep = {}
 
         if self.verbose:
-            print("\nBegin report impression labeling. The progress bar counts the # of batches completed:")
+            print(
+                "\nBegin report impression labeling. The progress bar counts the # of batches completed:"
+            )
             print("The batch size is %d" % BATCH_SIZE)
         with torch.no_grad():
             for i, data in enumerate(tqdm(ld, disable=not self.verbose)):
@@ -123,9 +136,13 @@ class encode:
                 model = nn.DataParallel(model)  # to utilize multiple GPU's
                 model = model.to(device)
                 checkpoint = torch.load(checkpoint_path)
-                model.load_state_dict(checkpoint["model_state_dict"], strict=False)  # TODO check if it works
+                model.load_state_dict(
+                    checkpoint["model_state_dict"], strict=False
+                )  # TODO check if it works
             else:
-                checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
+                checkpoint = torch.load(
+                    checkpoint_path, map_location=torch.device("cpu")
+                )
                 new_state_dict = OrderedDict()
                 for k, v in checkpoint["model_state_dict"].items():
                     name = k[7:]  # remove `module.`
@@ -143,7 +160,9 @@ class encode:
         rep = []
 
         if self.verbose:
-            print("\nBegin report impression labeling. The progress bar counts the # of batches completed:")
+            print(
+                "\nBegin report impression labeling. The progress bar counts the # of batches completed:"
+            )
             print("The batch size is %d" % BATCH_SIZE)
         with torch.no_grad():
             for i, data in enumerate(tqdm(ld, disable=not self.verbose)):

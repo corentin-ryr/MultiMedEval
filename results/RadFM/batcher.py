@@ -1,20 +1,21 @@
-from tqdm import tqdm
-
-from Model.RadFM.multimodality_model import MultiLLaMAForCausalLM
-import torch
-from transformers import LlamaTokenizer, GenerationConfig, AddedToken
-
-from torchvision import transforms
 import datetime
-from accelerate import init_empty_weights
-from accelerate.utils import load_and_quantize_model, BnbQuantizationConfig
-import torch.nn.functional as F
-from multimedeval import MultiMedEval, SetupParams, EvalParams
 import json
 import logging
 import os
 
+import torch
+import torch.nn.functional as F
+from accelerate import init_empty_weights
+from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
+from Model.RadFM.multimodality_model import MultiLLaMAForCausalLM
+from torchvision import transforms
+from tqdm import tqdm
+from transformers import AddedToken, GenerationConfig, LlamaTokenizer
+
+from multimedeval import EvalParams, MultiMedEval, SetupParams
+
 logging.basicConfig(level=logging.INFO)
+
 
 def cleanModel(original_model_path, cleaned_model_path):
     model = MultiLLaMAForCausalLM(
@@ -23,14 +24,18 @@ def cleanModel(original_model_path, cleaned_model_path):
 
     print(f"{datetime.datetime.now()} Model created")
 
-    ckpt = torch.load( os.path.join(original_model_path, "pytorch_model.bin"), map_location="cpu")
+    ckpt = torch.load(
+        os.path.join(original_model_path, "pytorch_model.bin"), map_location="cpu"
+    )
 
     model.load_state_dict(ckpt, strict=False)
 
     print(f"{datetime.datetime.now()} Checkpoint loaded")
 
-    torch.save(model.state_dict(), os.path.join(cleaned_model_path, "pytorch_model.bin"))
-    
+    torch.save(
+        model.state_dict(), os.path.join(cleaned_model_path, "pytorch_model.bin")
+    )
+
     print(f"{datetime.datetime.now()} Clean model saved")
 
 
@@ -50,17 +55,25 @@ def get_tokenizer(tokenizer_path, max_img_size=100, image_num=32):
         text_tokenizer.padding_side = "left"
         text_tokenizer.truncation_side = "left"
         special_token = {"additional_special_tokens": ["<image>"]}
-        text_tokenizer.add_special_tokens(special_token, replace_additional_special_tokens=False)
+        text_tokenizer.add_special_tokens(
+            special_token, replace_additional_special_tokens=False
+        )
         special_token = {"additional_special_tokens": ["</image>"]}
-        text_tokenizer.add_special_tokens(special_token, replace_additional_special_tokens=False)
+        text_tokenizer.add_special_tokens(
+            special_token, replace_additional_special_tokens=False
+        )
 
         for i in tqdm(range(max_img_size)):
             image_padding_token = ""
             for j in range(image_num):
                 image_token = "<image" + str(i * image_num + j) + ">"
                 image_padding_token = image_padding_token + image_token
-                special_token["additional_special_tokens"] = ["<image" + str(i * image_num + j) + ">"]
-                text_tokenizer.add_special_tokens(special_token, replace_additional_special_tokens=False)
+                special_token["additional_special_tokens"] = [
+                    "<image" + str(i * image_num + j) + ">"
+                ]
+                text_tokenizer.add_special_tokens(
+                    special_token, replace_additional_special_tokens=False
+                )
             image_padding_tokens.append(image_padding_token)
         text_tokenizer.pad_token_id = 0
         text_tokenizer.bos_token_id = 1
@@ -108,12 +121,17 @@ def combine_and_preprocess(question, image_list, image_padding_tokens):
         target_W = 512
         target_D = 4
         # This can be different for 3D and 2D images. For demonstration we here set this as the default sizes for 2D images.
-        images.append(torch.nn.functional.interpolate(image, size=(target_H, target_W, target_D)))
+        images.append(
+            torch.nn.functional.interpolate(image, size=(target_H, target_W, target_D))
+        )
 
         if position is not None:
             ## add img placeholder to text
             new_qestions[position] = (
-                "<image>" + image_padding_tokens[padding_index] + "</image>" + new_qestions[position]
+                "<image>"
+                + image_padding_tokens[padding_index]
+                + "</image>"
+                + new_qestions[position]
             )
             padding_index += 1
 
@@ -139,9 +157,10 @@ class RadFMBatcher:
             cleanModel(original_model_path, cleaned_model_path)
             print(f"{datetime.datetime.now()} Finish cleaning model")
 
-
         print(f"{datetime.datetime.now()} Setup tokenizer")
-        self.text_tokenizer, self.image_padding_tokens = get_tokenizer(cleaned_model_path)
+        self.text_tokenizer, self.image_padding_tokens = get_tokenizer(
+            cleaned_model_path
+        )
         print(f"{datetime.datetime.now()} Finish loading tokenizer")
 
         with init_empty_weights():
@@ -172,7 +191,10 @@ class RadFMBatcher:
         )
 
     def __call__(self, prompts):
-        model_inputs = [apply_chat_template(messages[0], self.text_tokenizer) for messages in prompts]
+        model_inputs = [
+            apply_chat_template(messages[0], self.text_tokenizer)
+            for messages in prompts
+        ]
 
         texts = []
         visions = []
@@ -187,9 +209,13 @@ class RadFMBatcher:
                 # Remove the <img> token
                 question = question.replace("<img>", "", 1)
 
-                imagesFormatted.append({"img_file": images.pop(0), "position": start_pos})
+                imagesFormatted.append(
+                    {"img_file": images.pop(0), "position": start_pos}
+                )
 
-            text, vision_x = combine_and_preprocess(question, imagesFormatted, self.image_padding_tokens)
+            text, vision_x = combine_and_preprocess(
+                question, imagesFormatted, self.image_padding_tokens
+            )
 
             texts.append(text)
 
@@ -219,11 +245,15 @@ class RadFMBatcher:
             attention_mask = outputTokenizer["attention_mask"].to("cuda")
 
             # with profiler.profile(with_stack=True, profile_memory=True) as prof:
-            generation = self.model.generate(lang_x, visions, self.generation_config, attention_mask=attention_mask)
+            generation = self.model.generate(
+                lang_x, visions, self.generation_config, attention_mask=attention_mask
+            )
 
             # print(prof.key_averages(group_by_stack_n=5).table(sort_by='self_cuda_memory_usage', row_limit=10))
 
-            generated_texts = self.text_tokenizer.batch_decode(generation, skip_special_tokens=True)
+            generated_texts = self.text_tokenizer.batch_decode(
+                generation, skip_special_tokens=True
+            )
 
         return generated_texts
 
@@ -237,7 +267,15 @@ if __name__ == "__main__":
     setupParams = SetupParams(**json.load(open("MedMD_config.json")))
     mmb.setup(setupParams)
 
-    mmb.eval([], batcher, EvalParams(batch_size=32, run_name="results_radfm", fewshot=False, mimic_cxr_include_indication_section=True))
-
+    mmb.eval(
+        [],
+        batcher,
+        EvalParams(
+            batch_size=32,
+            run_name="results_radfm",
+            fewshot=False,
+            mimic_cxr_include_indication_section=True,
+        ),
+    )
 
     print("Done")

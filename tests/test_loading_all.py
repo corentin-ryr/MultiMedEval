@@ -1,8 +1,10 @@
-from multimedeval import EvalParams, MultiMedEval, SetupParams
 import json
 import logging
-import pytest
 import os
+
+import pytest
+
+from multimedeval import EvalParams, MultiMedEval, SetupParams
 
 logging.basicConfig(level=logging.INFO)
 
@@ -49,7 +51,9 @@ class TestLoadingAll:
     @pytest.mark.order(1)
     def test_loading_all(self):
         config = (
-            json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+            json.load(open("tests/test_config.json"))
+            if IN_GITHUB_ACTIONS
+            else json.load(open("MedMD_config.json"))
         )
         tasksToPrepare = TASKS
 
@@ -90,7 +94,9 @@ class TestLoadingAll:
             assert task in results
 
         # Check that the results.json file contains the results
-        assert os.path.exists(os.path.join(self.engine.evalParams.run_name, "results.json"))
+        assert os.path.exists(
+            os.path.join(self.engine.evalParams.run_name, "results.json")
+        )
 
         with open(os.path.join(self.engine.evalParams.run_name, "results.json")) as f:
             results = json.load(f)

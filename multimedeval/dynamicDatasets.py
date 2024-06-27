@@ -1,10 +1,11 @@
-from multimedeval.utils import Benchmark
-from multimedeval.taskFamilies import VQA, QA, ImageClassification, ReportComparison
-import os
 import json
+import os
+
 from PIL import Image
-from multimedeval.utils import cleanStr
 from torchmetrics.text import BLEUScore
+
+from multimedeval.taskFamilies import QA, VQA, ImageClassification, ReportComparison
+from multimedeval.utils import Benchmark, cleanStr
 
 
 def make_constructor(newClass, dataset, datasetName, datasetSamples):
@@ -14,7 +15,9 @@ def make_constructor(newClass, dataset, datasetName, datasetSamples):
         self.taskName = datasetName
         self.modality = datasetSamples["modality"]
         self.dataset = datasetSamples["samples"]
+
     return constructor
+
 
 def setup(self):
     pass
@@ -23,20 +26,22 @@ def setup(self):
 def format_question(self, sample, prompt=False):
 
     if "images" in sample:
-        images = [Image.open(os.path.join(self.path, imagePath)) for imagePath in sample["images"]]
+        images = [
+            Image.open(os.path.join(self.path, imagePath))
+            for imagePath in sample["images"]
+        ]
     else:
         images = []
-    
+
     question = " ".join(["<img>" for _ in images]) + " " + sample["question"]
 
     if "options" in sample:
         question += " " + " ".join(sample["options"])
 
     formattedPrompt = [{"role": "user", "content": question}]
-    
+
     if prompt:
         formattedPrompt.append({"role": "assistant", "content": sample["answer"]})
-
 
     return (formattedPrompt, images)
 
@@ -69,7 +74,9 @@ def findDatasets():
     if not os.path.exists(additionalDatasetsPath):
         return []
 
-    additionalDatasets = [f.path for f in os.scandir(additionalDatasetsPath) if f.is_dir()]
+    additionalDatasets = [
+        f.path for f in os.scandir(additionalDatasetsPath) if f.is_dir()
+    ]
 
     print("Found the following additional datasets:" + str(additionalDatasets))
 
@@ -95,18 +102,23 @@ def findDatasets():
             attributes["getPredictedAnswer"] = getPredictedAnswer
             attributes["bleuScorer"] = BLEUScore(n_gram=1)
         elif taskFamily == "ImageClassification":
-            raise NotImplementedError("ImageClassification task family not implemented yet")
+            raise NotImplementedError(
+                "ImageClassification task family not implemented yet"
+            )
             parentClass = ImageClassification
         elif taskFamily == "ReportComparison":
-            raise NotImplementedError("ReportComparison task family not implemented yet")
+            raise NotImplementedError(
+                "ReportComparison task family not implemented yet"
+            )
             parentClass = ReportComparison
         else:
             raise ValueError("Task family not recognized")
 
         newClass = type(datasetName, (parentClass,), attributes)
 
-        newClass.__init__ = make_constructor(newClass, dataset, datasetName, datasetSamples)
+        newClass.__init__ = make_constructor(
+            newClass, dataset, datasetName, datasetSamples
+        )
         dynamicDatasets.append(newClass)
-
 
     return dynamicDatasets

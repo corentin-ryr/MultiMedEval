@@ -1,14 +1,15 @@
-from multimedeval import MultiMedEval, SetupParams, EvalParams
-import json
 import argparse
+import json
 import logging
 from abc import abstractmethod
 
+from multimedeval import EvalParams, MultiMedEval, SetupParams
+
 logging.basicConfig(level=logging.INFO)
 
-from RadFM.batcher import RadFMBatcher
-from LLMs.batcher import batcherLlama, batcherMedAlpaca, batcherMistral, batcherPMCLlama
 from llava_med.batcher import batcherLLaVA_Med
+from LLMs.batcher import batcherLlama, batcherMedAlpaca, batcherMistral, batcherPMCLlama
+from RadFM.batcher import RadFMBatcher
 
 BATCHERS = {
     "RadFM": RadFMBatcher,
@@ -39,7 +40,10 @@ def main(batcherName):
         [],
         batcher,
         EvalParams(
-            batch_size=32, run_name=f"results_{batcherName}", fewshot=False, mimic_cxr_include_indication_section=True
+            batch_size=32,
+            run_name=f"results_{batcherName}",
+            fewshot=False,
+            mimic_cxr_include_indication_section=True,
         ),
     )
 
@@ -54,6 +58,8 @@ if __name__ == "__main__":
     batcherName = args.batcher
 
     if batcherName not in BATCHERS:
-        raise Exception(f"Batcher {batcherName} not found. Available batchers: {list(BATCHERS.keys())}")
+        raise Exception(
+            f"Batcher {batcherName} not found. Available batchers: {list(BATCHERS.keys())}"
+        )
 
     main(batcherName)

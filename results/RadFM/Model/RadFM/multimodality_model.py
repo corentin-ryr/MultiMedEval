@@ -1,16 +1,18 @@
-from torch import nn
-from transformers.models.llama import LlamaForCausalLM, LlamaModel, LlamaConfig
-from transformers import AutoConfig
-from .my_embedding_layer import MyEmbedding
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-import tqdm.auto as tqdm
-import torch.nn as nn
-import torch
-from torch.utils.checkpoint import checkpoint
-from torch.autograd import Variable
-import numpy as np
 import json
 import time
+
+import numpy as np
+import torch
+import torch.nn as nn
+import tqdm.auto as tqdm
+from torch import nn
+from torch.autograd import Variable
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from torch.utils.checkpoint import checkpoint
+from transformers import AutoConfig
+from transformers.models.llama import LlamaConfig, LlamaForCausalLM, LlamaModel
+
+from .my_embedding_layer import MyEmbedding
 
 
 class MultiLLaMAForCausalLM(nn.Module):
@@ -36,14 +38,18 @@ class MultiLLaMAForCausalLM(nn.Module):
         self.voc_size = 32000
         self.embedding_layer.requires_grad_(False)
 
-    def forward(self, lang_x, vision_x, attention_mask, labels, loss_reweight, key_words_query):
+    def forward(
+        self, lang_x, vision_x, attention_mask, labels, loss_reweight, key_words_query
+    ):
         if labels.shape == lang_x.shape:
             self.embedding_layer.flag = "Text"
             # lang_x = lang_x.to(vision_x.dtype)
             # lang_x = lang_x + torch.zeros(1, dtype=lang_x.dtype, device=lang_x.device, requires_grad=True)
             # vision_x = vision_x + torch.zeros(1, dtype=vision_x.dtype, device=vision_x.device, requires_grad=True)
             # input_embedding = checkpoint(self.embedding_layer, lang_x, vision_x)
-            input_embedding, loss_match = self.embedding_layer(lang_x, vision_x, key_words_query)  # ,loss_matching
+            input_embedding, loss_match = self.embedding_layer(
+                lang_x, vision_x, key_words_query
+            )  # ,loss_matching
             output = self.lang_model(
                 inputs_embeds=input_embedding,
                 attention_mask=attention_mask,
@@ -66,7 +72,9 @@ class MultiLLaMAForCausalLM(nn.Module):
                 shift_labels = shift_labels.to(shift_logits.device)
                 shift_loss_reweight = shift_loss_reweight.to(shift_logits.device)
                 loss_reg = loss_fct(shift_logits, shift_labels)
-                loss_reg = torch.sum(shift_loss_reweight * loss_reg) / torch.sum(shift_loss_reweight)
+                loss_reg = torch.sum(shift_loss_reweight * loss_reg) / torch.sum(
+                    shift_loss_reweight
+                )
             loss = loss_reg
             if loss_match != None:
                 loss = 0.8 * loss + 0.2 * loss_match
@@ -75,7 +83,11 @@ class MultiLLaMAForCausalLM(nn.Module):
             total = len(labels)
             predictions = torch.argmax(logits, dim=-1)
             labels = labels[..., 1:].contiguous()
-            Acc = torch.sum(torch.all(torch.logical_or(predictions == labels, labels == -100), dim=-1))
+            Acc = torch.sum(
+                torch.all(
+                    torch.logical_or(predictions == labels, labels == -100), dim=-1
+                )
+            )
             Accuracy = Acc / total
 
             return dict(
@@ -95,7 +107,11 @@ class MultiLLaMAForCausalLM(nn.Module):
             input_embedding, _ = self.embedding_layer(lang_x, vision_x)
 
             generation = self.lang_model.generate(
-                inputs_embeds=input_embedding, max_new_tokens=200, top_k=50, generation_config=generation_config, attention_mask=attention_mask
+                inputs_embeds=input_embedding,
+                max_new_tokens=200,
+                top_k=50,
+                generation_config=generation_config,
+                attention_mask=attention_mask,
             )
 
         return generation

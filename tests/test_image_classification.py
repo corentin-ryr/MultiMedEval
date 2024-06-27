@@ -1,8 +1,9 @@
-from multimedeval import MultiMedEval, SetupParams, EvalParams
 import json
 import os
+
 import pytest
 
+from multimedeval import EvalParams, MultiMedEval, SetupParams
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
@@ -17,13 +18,19 @@ IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
         ("normal", 0.25, 0.1, 0.5),
     ],
 )
-def test_image_classification(batcherAnswer, expectedAccuracy, expectedMacroF1, expectedMacroAUC):
+def test_image_classification(
+    batcherAnswer, expectedAccuracy, expectedMacroF1, expectedMacroAUC
+):
 
     def batcher(prompts):
         return [batcherAnswer for _ in range(len(prompts))]
 
     engine = MultiMedEval()
-    config = json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+    config = (
+        json.load(open("tests/test_config.json"))
+        if IN_GITHUB_ACTIONS
+        else json.load(open("MedMD_config.json"))
+    )
     engine.setup(SetupParams(MNIST_Oct_dir=config["MNIST_Oct_dir"]))
 
     results = engine.eval(["OCTMNIST"], batcher, EvalParams())

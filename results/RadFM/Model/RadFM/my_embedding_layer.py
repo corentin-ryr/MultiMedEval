@@ -1,18 +1,20 @@
+import random
+
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch
-from .helpers import PerceiverResampler
-from .utils import get_visual_encoder
-from einops import rearrange, repeat
-from einops_exts import rearrange_many
 import torchvision
-from .vit_3d import ViT
+from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
-from .transformer_decoder import TransformerDecoder, TransformerDecoderLayer
-from torch.utils.checkpoint import checkpoint
+from einops_exts import rearrange_many
 from torch.autograd import Variable
-import random
-from transformers import AutoTokenizer, AutoModel, AutoConfig, BertModel
+from torch.utils.checkpoint import checkpoint
+from transformers import AutoConfig, AutoModel, AutoTokenizer, BertModel
+
+from .helpers import PerceiverResampler
+from .transformer_decoder import TransformerDecoder, TransformerDecoderLayer
+from .utils import get_visual_encoder
+from .vit_3d import ViT
 
 
 class MyEmbedding(nn.Module):
@@ -104,9 +106,9 @@ class MyEmbedding(nn.Module):
             embedding_weight = torch.cat([self.weight, self.figure_token_weight], dim=0)
             embedding_weight = embedding_weight.unsqueeze(0).repeat(B, 1, 1)
             embedding_weight = torch.cat([embedding_weight, vision_x], dim=1)
-            
+
             text_input = (
-                F.one_hot(text_input, embedding_weight.shape[1]) # embedding_weight
+                F.one_hot(text_input, embedding_weight.shape[1])  # embedding_weight
                 .to(vision_x.dtype)
                 .to(vision_x.device)
             )
