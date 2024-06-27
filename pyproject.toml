@@ -43,7 +43,17 @@ dev = [
     "plotly",
     "kaleido",
     "tabulate",
-    "colour"
+    "colour",
+    "flake8",
+    "black",
+    "pylint",
+    "pre-commit",
+    "mypy",
+    "isort",
+    "flake8-bugbear",
+    "flake8-comprehensions",
+    "flake8-executable",
+    "flake8-pyi"
 ]
 
 [tool.pytest.ini_options]
@@ -53,3 +63,18 @@ testpaths = "tests"
 [tool.coverage.run]
 omit = ["multimedeval/chexbert/*", "multimedeval/tqdm_loggable.py"]
 
+[tool.isort]
+profile = "black"
+line_length = 88
+py_version=38
+
+[tool.mypy]
+pretty = true
+# strict = true
+ignore_missing_imports = true
+no_implicit_optional = true
+python_version = "3.8"
+
+[[tool.mypy.overrides]]
+module = "numpy"
+ignore_missing_imports = true
