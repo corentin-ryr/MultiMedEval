@@ -244,7 +244,7 @@ class MIMICIII(ReportComparison):
             exist_ok=True,
         )
 
-        username, password = self.engine.getPhysioNetCredentials()
+        username, password = self.engine.get_physionet_credentials()
 
         download_file(
             "https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz",

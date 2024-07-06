@@ -335,6 +335,7 @@ class MultiMedEval:
             for x, task_item in self.tasks_ready.items()
             if (task_item["ready"] and x in self.name_to_task)
         ]
+        print(benchmarks)
         visualizer = BenchmarkVisualizer(benchmarks)
         visualizer.sunburst_modalities()
         visualizer.sunburst_tasks()

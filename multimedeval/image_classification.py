@@ -163,7 +163,7 @@ class MIMICCXRImageClassification(ImageClassification):
 
         os.makedirs(self.path, exist_ok=True)
 
-        username, password = self.engine.getPhysioNetCredentials()
+        username, password = self.engine.get_physionet_credentials()
         wget_command = f'wget -r -c -np -nc --directory-prefix "{self.path}" \
             --user "{username}" \
             --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/'
@@ -307,7 +307,7 @@ class VinDrMammo(ImageClassification):
 
         os.makedirs(self.path, exist_ok=True)
 
-        username, password = self.engine.getPhysioNetCredentials()
+        username, password = self.engine.get_physionet_credentials()
 
         download_file(
             "https://physionet.org/content/vindr-mammo/get-zip/1.0.0/",

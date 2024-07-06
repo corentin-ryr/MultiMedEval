@@ -159,7 +159,7 @@ class MIMICCXRReportgen(ReportComparison):
 
         os.makedirs(self.path, exist_ok=True)
 
-        username, password = self.engine.getPhysioNetCredentials()
+        username, password = self.engine.get_physionet_credentials()
         wget_command = (
             f'wget -r -c -np -nc --directory-prefix "{self.path}" '
             f'--user "{username}" --password "{password}" '

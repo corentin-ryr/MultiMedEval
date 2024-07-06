@@ -328,7 +328,7 @@ class DiffVQA(VQA):
 
         os.makedirs(os.path.join(self.path, "DiffVQA"), exist_ok=True)
 
-        username, password = self.engine.getPhysioNetCredentials()
+        username, password = self.engine.get_physionet_credentials()
 
         download_file(
             "https://physionet.org/files/medical-diff-vqa/1.0.0/mimic_pair_questions.csv?download",

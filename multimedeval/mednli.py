@@ -124,7 +124,7 @@ class MedNLI(QA):
 
         os.makedirs(self.path, exist_ok=True)
 
-        username, password = self.engine.getPhysioNetCredentials()
+        username, password = self.engine.get_physionet_credentials()
 
         download_file(
             "https://physionet.org/content/mednli/get-zip/1.0.0/",
