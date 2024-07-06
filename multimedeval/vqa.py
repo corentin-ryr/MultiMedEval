@@ -23,7 +23,7 @@ class VQARad(VQA):
 
     def setup(self):
         """Setup the VQA-Rad task. Downloads the dataset if not already downloaded."""
-        cache_dir = self.engine.getConfig()["vqa_rad_dir"]
+        cache_dir = self.engine.get_config()["vqa_rad_dir"]
 
         if cache_dir is None:
             raise ValueError(
@@ -84,7 +84,7 @@ class PathVQA(VQA):
 
     def setup(self):
         """Setup the Path-VQA task. Downloads the dataset if not already downloaded."""
-        cache_dir = self.engine.getConfig()["path_vqa_dir"]
+        cache_dir = self.engine.get_config()["path_vqa_dir"]
 
         if cache_dir is None:
             raise ValueError(
@@ -144,7 +144,7 @@ class SLAKE(VQA):
 
     def setup(self):
         """Setup the SLAKE task. Downloads the dataset if not already downloaded."""
-        self.path = self.engine.getConfig()["slake_dir"]
+        self.path = self.engine.get_config()["slake_dir"]
 
         if self.path is None:
             raise ValueError(
@@ -246,9 +246,9 @@ class DiffVQA(VQA):
 
     def setup(self):
         """Setup the DiffVQA task. Downloads the dataset if not already downloaded."""
-        self.path = self.engine.getConfig()["diff_vqa_dir"]
+        self.path = self.engine.get_config()["diff_vqa_dir"]
 
-        self.mimic_path = self.engine.getConfig()["mimic_cxr_dir"]
+        self.mimic_path = self.engine.get_config()["mimic_cxr_dir"]
 
         if self.path is None or self.mimic_path is None:
             raise ValueError(

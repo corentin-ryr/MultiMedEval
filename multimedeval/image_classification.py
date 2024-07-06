@@ -38,7 +38,7 @@ class MIMICCXRImageClassification(ImageClassification):
         self.scoring_type = "multilabel"
 
         self.num_classes = 5
-        self.path = self.engine.getConfig()["mimic_cxr_dir"]
+        self.path = self.engine.get_config()["mimic_cxr_dir"]
 
         if self.path is None:
             raise ValueError(
@@ -190,7 +190,7 @@ class VinDrMammo(ImageClassification):
 
     def setup(self):
         """Setup the VinDr Mammo Image Classification task."""
-        self.path = self.engine.getConfig()["vindr_mammo_dir"]
+        self.path = self.engine.get_config()["vindr_mammo_dir"]
 
         if self.path is None:
             raise ValueError(
@@ -339,7 +339,7 @@ class PadUFES20(ImageClassification):
         self.num_classes = 7
         self.scoring_type = "multiclass"
 
-        self.path = self.engine.getConfig()["pad_ufes_20_dir"]
+        self.path = self.engine.get_config()["pad_ufes_20_dir"]
 
         if self.path is None:
             raise ValueError(
@@ -530,7 +530,7 @@ class CBISDDSM(ImageClassification):
         self.scoring_type = "multiclass"
 
         # Get the dataset from Kaggle
-        self.path = self.engine.getConfig()["cbis_ddsm_dir"]
+        self.path = self.engine.get_config()["cbis_ddsm_dir"]
 
         if self.path is None:
             raise ValueError(

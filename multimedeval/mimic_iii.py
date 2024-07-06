@@ -81,7 +81,7 @@ class MIMICIII(ReportComparison):
 
     def setup(self):
         """Setups the MIMIC-III task family."""
-        path = self.engine.getConfig()["mimic_iii_dir"]
+        path = self.engine.get_config()["mimic_iii_dir"]
 
         if path is None:
             raise ValueError("mimic_iii_dir is not set in the config file")

@@ -27,7 +27,7 @@ class MIMICCXRReportgen(ReportComparison):
     def setup(self):
         """Setup the MIMIC-CXR Report Generation Task."""
         # Get the dataset ====================================================================
-        self.path = self.engine.getConfig()["mimic_cxr_dir"]
+        self.path = self.engine.get_config()["mimic_cxr_dir"]
 
         if self.path is None:
             raise ValueError("The path to the MIMIC-CXR dataset is not set")

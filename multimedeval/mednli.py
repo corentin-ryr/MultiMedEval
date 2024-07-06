@@ -22,7 +22,7 @@ class MedNLI(QA):
 
     def setup(self):
         """Setups the MedNLI task family."""
-        self.path = self.engine.getConfig()["mednli_dir"]
+        self.path = self.engine.get_config()["mednli_dir"]
 
         if self.path is None:
             raise ValueError(

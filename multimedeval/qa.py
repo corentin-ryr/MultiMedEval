@@ -19,7 +19,7 @@ class MedQA(QA):
 
     def setup(self):
         """Setup the MedQA task family."""
-        cache_dir = self.engine.getConfig()["medqa_dir"]
+        cache_dir = self.engine.get_config()["medqa_dir"]
 
         if cache_dir is None:
             raise ValueError(
@@ -126,7 +126,7 @@ class PubMedQA(QA):
 
     def setup(self):
         """Setup the PubMedQA task."""
-        cache_dir = self.engine.getConfig()["pubmedqa_dir"]
+        cache_dir = self.engine.get_config()["pubmedqa_dir"]
 
         if cache_dir is None:
             raise ValueError(
@@ -228,7 +228,7 @@ class MedMCQA(QA):
 
     def setup(self):
         """Setup the MedMCQA task."""
-        cache_dir = self.engine.getConfig()["medmcqa_dir"]
+        cache_dir = self.engine.get_config()["medmcqa_dir"]
 
         if cache_dir is None:
             raise ValueError(
@@ -330,7 +330,7 @@ class MMLU(QA):
 
     def setup(self):
         """Setup the MMLU task."""
-        cache_dir = self.engine.getConfig()["mmlu_dir"]
+        cache_dir = self.engine.get_config()["mmlu_dir"]
 
         if cache_dir is None:
             raise ValueError(
