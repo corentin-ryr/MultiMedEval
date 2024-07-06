@@ -12,7 +12,7 @@ IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 # @pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
 @pytest.mark.parametrize(
-    "batcherAnswer, expectedAccuracy, expectedMacroF1, expectedMacroAUC",
+    "batcher_answer, expected_accuracy, expected_macro_f1, expected_macro_auc",
     [
         ("choroidal neovascularization", 0.25, 0.1, 0.5),
         ("diabetic macular edema", 0.25, 0.1, 0.5),

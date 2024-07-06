@@ -56,24 +56,24 @@ class TestLoadingAll:
     @pytest.mark.order(1)
     def test_loading_all(self):
         """Tests loading all tasks."""
-        config = (
-            json.load(open("tests/test_config.json"))
-            if IN_GITHUB_ACTIONS
-            else json.load(open("MedMD_config.json"))
+        config_file_name = (
+            "tests/test_config.json" if IN_GITHUB_ACTIONS else "MedMD_config.json"
         )
-        tasksToPrepare = TASKS
+        with open(config_file_name, "r", encoding="utf-8") as file:
+            config = json.load(file)
+        tasks_to_prepare = TASKS
 
         if IN_GITHUB_ACTIONS:
             config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
             config["physionet_password"] = os.getenv("PHYSIONET_PASSWORD")
 
-        setupParams = SetupParams(**config)
-        tasksReady = self.engine.setup(setup_params=setupParams)
+        setup_params = SetupParams(**config)
+        tasks_ready = self.engine.setup(setup_params=setup_params)
 
-        for task in tasksToPrepare:
-            if task not in tasksReady:
+        for task in tasks_to_prepare:
+            if task not in tasks_ready:
                 raise AssertionError()
-            assert tasksReady[task]["ready"] is True
+            assert tasks_ready[task]["ready"] is True
 
         assert isinstance(len(self.engine), int)
 
@@ -93,24 +93,28 @@ class TestLoadingAll:
         Args:
             task : Name of the task.
         """
-        evalParams = EvalParams(batch_size=128, fewshot=True, num_workers=0)
+        eval_params = EvalParams(batch_size=128, fewshot=True, num_workers=0)
 
         tasks = [task]
 
         try:
-            results = self.engine.eval(tasks, batcher, eval_params=evalParams)
+            results = self.engine.eval(tasks, batcher, eval_params=eval_params)
         except Exception as e:
             raise AssertionError(f"Error in task {task}. {e}") from e
 
-        for task in tasks:
-            assert task in results
+        for current_task in tasks:
+            assert current_task in results
 
         # Check that the results.json file contains the results
         assert os.path.exists(
             os.path.join(self.engine.eval_params.run_name, "results.json")
         )
 
-        with open(os.path.join(self.engine.eval_params.run_name, "results.json")) as f:
+        with open(
+            os.path.join(self.engine.eval_params.run_name, "results.json"),
+            "r",
+            encoding="utf-8",
+        ) as f:
             results = json.load(f)
 
         assert task in results
