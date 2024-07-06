@@ -162,7 +162,7 @@ class MultiMedEval:
         progress_bar.set_description("Setup Chexbert")
         try:
             self._prepare_chexbert()
-        except ImportError as e:
+        except Exception as e:
             self.tasks_ready["Chexbert"] = {"ready": False, "error": str(e)}
         else:
             self.tasks_ready["Chexbert"] = {"ready": True}
