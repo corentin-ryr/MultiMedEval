@@ -111,15 +111,15 @@ def find_datasets():
         attributes = {
             "setup": setup,
             "format_question": format_question,
-            "getCorrectAnswer": get_correct_answer,
+            "get_correct_answer": get_correct_answer,
         }
 
         if task_family == "VQA":
             parentClass = VQA
         elif task_family == "QA":
             parentClass = QA
-            attributes["getPredictedAnswer"] = get_predicted_answer
-            attributes["bleuScorer"] = BLEUScore(n_gram=1)
+            attributes["get_predicted_answer"] = get_predicted_answer
+            attributes["bleu_scorer"] = BLEUScore(n_gram=1)
         elif task_family == "ImageClassification":
             raise NotImplementedError(
                 "ImageClassification task family not implemented yet"
