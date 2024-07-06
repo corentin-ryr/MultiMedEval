@@ -48,8 +48,8 @@ repos:
     hooks:
       - id: pylint
         name: Pylint
-        entry: pylint -j 0 src
-        pass_filenames: false
+        entry: pylint multimedeval
+        pass_filenames: true
         always_run: true
         language: system
         files: '\.py$'

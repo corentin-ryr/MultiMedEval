@@ -1,3 +1,5 @@
+"""Tests for the ReportComparison task."""
+
 import csv
 import json
 import logging
@@ -5,18 +7,17 @@ import os
 import subprocess
 
 import numpy as np
-import pytest
 from appdirs import user_cache_dir
 from scipy.stats import kendalltau
 from sklearn.utils import resample
 
-from multimedeval import EvalParams, MultiMedEval, SetupParams
-from multimedeval.mimic import MIMIC_CXR_reportgen
+from multimedeval import MultiMedEval, SetupParams
 
 logging.basicConfig(level=logging.INFO)
 
 
 def compute_kendall_tau(computed_scores, evaluator_scores):
+    """Compute Kendall Tau."""
     tau, _ = kendalltau(evaluator_scores, computed_scores)
 
     num_samples = len(computed_scores)
@@ -37,7 +38,7 @@ IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 # @pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
 def test_ReportComparison():
-
+    """Tests the ReportComparison task."""
     engine = MultiMedEval()
 
     config = (
@@ -52,13 +53,13 @@ def test_ReportComparison():
     try:
         success = engine.setup(
             SetupParams(
-                CheXBert_dir=config["CheXBert_dir"],
+                chexbert_dir=config["chexbert_dir"],
                 physionet_username=config["physionet_username"],
                 physionet_password=config["physionet_password"],
             )
         )
-    except:
-        assert False
+    except Exception as e:
+        raise AssertionError(f"Error in setup. {e}") from e
 
     print(f"Radgraph: {success['RadGraph']}")
     model_path = os.path.join(user_cache_dir("radgraph"))
@@ -68,10 +69,10 @@ def test_ReportComparison():
     for file in os.listdir(model_path):
         print(f"{file}: {os.path.getsize(os.path.join(model_path, file))}")
 
-    reportComparison = engine.nameToTask["MIMIC-CXR Report Generation"]
+    reportComparison = engine.name_to_task["MIMIC-CXR Report Generation"]
 
     # Download the files from Physionet
-    username, password = engine.getPhysioNetCredentials()
+    username, password = engine.get_physionet_credentials()
     wget_command = f'wget -r -c -np -nc --directory-prefix tests --user "{username}" --password "{password}" https://physionet.org/files/rexval-dataset/1.0.0/'
 
     subprocess.run(wget_command, shell=True, check=True)

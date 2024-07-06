@@ -1,3 +1,5 @@
+"""Tests the MedNLI task."""
+
 import json
 import os
 
@@ -19,6 +21,12 @@ IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
     ],
 )
 def test_mednli(batcherAnswer, expectedAccuracy):
+    """Tests the MedNLI task.
+
+    Args:
+        batcherAnswer: The answer from the batcher.
+        expectedAccuracy: The expected accuracy.
+    """
 
     def batcher(prompts):
         return [batcherAnswer for _ in range(len(prompts))]
@@ -36,19 +44,19 @@ def test_mednli(batcherAnswer, expectedAccuracy):
     try:
         engine.setup(
             SetupParams(
-                MedNLI_dir=config["MedNLI_dir"],
+                mednli_dir=config["mednli_dir"],
                 physionet_username=config["physionet_username"],
                 physionet_password=config["physionet_password"],
             )
         )
-    except:
-        assert False
+    except Exception as e:
+        raise AssertionError(f"Error in setup. {e}") from e
 
     results = engine.eval(["MedNLI"], batcher, EvalParams())
 
     print(results)
 
     if "MedNLI" not in results:
-        assert False
+        raise AssertionError()
 
     assert (results["MedNLI"]["accuracy"] - expectedAccuracy) < 0.01

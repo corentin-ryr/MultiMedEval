@@ -1,63 +1,52 @@
+"""Module for comparing reports."""
+
 import os
 
 import dill
-import numpy as np
 import torch
 from bert_score import BERTScorer
 from nltk.tokenize import word_tokenize
 from nltk.translate.meteor_score import meteor_score
 
+from multimedeval.utils import CompositeMetric
 
-class CompositeMetric:
-    """The RadCliQ-v1 composite metric.
 
-    Attributes:
-        scaler: Input normalizer.
-        coefs: Coefficients including the intercept.
+def compute_bertscore(hyp_reports, ref_reports, rescale=True):
+    """Computes the BERTScore F1 score for the given reports.
+
+    Args:
+        hypReports: The generated reports.
+        refReports: The reference reports.
+        rescale: Whether or not to rescale the bert score. Defaults to True.
+
+    Returns:
+        The BERTScore F1 scores.
     """
-
-    def __init__(self, scaler, coefs):
-        """Initializes the composite metric with a normalizer and coefficients.
-
-        Args:
-            scaler: Input normalizer.
-            coefs: Coefficients including the intercept.
-        """
-        self.scaler = scaler
-        self.coefs = coefs
-
-    def predict(self, x):
-        """Generates composite metric score for input.
-
-        Args:
-            x: Input data.
-
-        Returns:
-            Composite metric score.
-        """
-        norm_x = self.scaler.transform(x)
-        norm_x = np.concatenate((norm_x, np.ones((norm_x.shape[0], 1))), axis=1)
-        pred = norm_x @ self.coefs
-        return pred
-
-
-def compute_bertscore(hypReports, refReports, rescale=True):
     scorer = BERTScorer(
         model_type="distilroberta-base",
         batch_size=256,
         lang="en",
         rescale_with_baseline=rescale,
         idf=True,
-        idf_sents=hypReports,
+        idf_sents=hyp_reports,
     )
 
-    P, R, f1_bertscore = scorer.score(hypReports, refReports)
+    _, _, f1_bertscore = scorer.score(hyp_reports, ref_reports)
     return f1_bertscore
 
 
-def compute_meteor(hypReports, refReports):
+def compute_meteor(hyp_reports, ref_reports):
+    """Computes the METEOR score for the given reports.
+
+    Args:
+        hypReports: The generated reports.
+        refReports: The reference reports.
+
+    Returns:
+        The METEOR scores.
+    """
     meteor_scores = []
-    for ref, hyp in zip(refReports, hypReports):
+    for ref, hyp in zip(ref_reports, hyp_reports):
         # Tokenize the reference and hypothesis
         ref_tokens = word_tokenize(ref)
         hyp_tokens = word_tokenize(hyp)
@@ -69,7 +58,17 @@ def compute_meteor(hypReports, refReports):
 
 
 def compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgraph):
+    """Computes the composite metric score.
 
+    Args:
+        bleu_scores: BLEU scores.
+        f1_bertscore: BERTScore F1 scores.
+        chexbert_similarity: CheXBert similarity scores.
+        f1_radgraph: RadGraph F1 scores.
+
+    Returns:
+        Composite metric score.
+    """
     # Get the current path to the module
     module_path = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(module_path, "radcliq-v1.dill"), "rb") as f:

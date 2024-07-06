@@ -1,16 +1,9 @@
 import json
-import time
 
-import numpy as np
 import torch
 import torch.nn as nn
-import tqdm.auto as tqdm
-from torch import nn
-from torch.autograd import Variable
-from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
-from torch.utils.checkpoint import checkpoint
-from transformers import AutoConfig
-from transformers.models.llama import LlamaConfig, LlamaForCausalLM, LlamaModel
+from torch.nn import CrossEntropyLoss
+from transformers.models.llama import LlamaConfig, LlamaForCausalLM
 
 from .my_embedding_layer import MyEmbedding
 
@@ -19,7 +12,7 @@ class MultiLLaMAForCausalLM(nn.Module):
     def __init__(self, lang_model_path):
         super(MultiLLaMAForCausalLM, self).__init__()
 
-        with open(lang_model_path + "/config.json", "r") as f:
+        with open(lang_model_path + "/config.json", "r", encoding="utf-8") as f:
             config = json.load(f)
 
         self.lang_model = LlamaForCausalLM(LlamaConfig(**config))
@@ -76,7 +69,7 @@ class MultiLLaMAForCausalLM(nn.Module):
                     shift_loss_reweight
                 )
             loss = loss_reg
-            if loss_match != None:
+            if loss_match is not None:
                 loss = 0.8 * loss + 0.2 * loss_match
 
             logits = output["logits"][..., :-1, :].contiguous().detach()
@@ -90,13 +83,13 @@ class MultiLLaMAForCausalLM(nn.Module):
             )
             Accuracy = Acc / total
 
-            return dict(
-                # loss_reg = loss_reg,
+            return {  # loss_reg = loss_reg,
                 # loss_matching = loss_matching,
-                logits=Accuracy,
-                loss=output["loss"],
-            )
-        ### useless for now ignore the folowing codes ###
+                "logits": Accuracy,
+                "loss": output["loss"],
+            }
+
+        # useless for now ignore the folowing codes
         # if labels.shape == vision_x.shape:
         #    self.embedding_layer.flag = 'Seg'
         #    input_embedding = self.embedding_layer(lang_x, vision_x)

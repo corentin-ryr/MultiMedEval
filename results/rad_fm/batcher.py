@@ -1,3 +1,5 @@
+"""RadFM batcher for MultiMedEval."""
+
 import datetime
 import json
 import logging
@@ -7,19 +9,25 @@ import torch
 import torch.nn.functional as F
 from accelerate import init_empty_weights
 from accelerate.utils import BnbQuantizationConfig, load_and_quantize_model
-from Model.RadFM.multimodality_model import MultiLLaMAForCausalLM
 from torchvision import transforms
 from tqdm import tqdm
 from transformers import AddedToken, GenerationConfig, LlamaTokenizer
 
 from multimedeval import EvalParams, MultiMedEval, SetupParams
+from results.rad_fm.Model.multimodality_model import MultiLLaMAForCausalLM
 
 logging.basicConfig(level=logging.INFO)
 
 
-def cleanModel(original_model_path, cleaned_model_path):
+def clean_model(original_model_path, cleaned_model_path):
+    """Clean the RadFM model.
+
+    Args:
+        original_model_path: The path to the original model.
+        cleaned_model_path: The path to save the cleaned model.
+    """
     model = MultiLLaMAForCausalLM(
-        lang_model_path=original_model_path,  ### Build up model based on LLaMa-13B config
+        lang_model_path=original_model_path,  # Build up model based on LLaMa-13B config
     )
 
     print(f"{datetime.datetime.now()} Model created")
@@ -40,9 +48,16 @@ def cleanModel(original_model_path, cleaned_model_path):
 
 
 def get_tokenizer(tokenizer_path, max_img_size=100, image_num=32):
-    """
-    Initialize the image special tokens
-    max_img_size denotes the max image put length and image_num denotes how many patch embeddings the image will be encoded to
+    """Initialize the image special tokens.
+
+    Args:
+        tokenizer_path: The path to the tokenizer.
+        max_img_size: denotes the max image put length and image_num denotes how many\
+            patch embeddings the image will be encoded to. Defaults to 100.
+        image_num: denotes how many images the model will support. Defaults to 32.
+
+    Returns:
+        The tokenizer and the image padding tokens.
     """
     if isinstance(tokenizer_path, str):
         image_padding_tokens = []
@@ -83,17 +98,36 @@ def get_tokenizer(tokenizer_path, max_img_size=100, image_num=32):
 
 
 def apply_chat_template(conversation, tokenizer: LlamaTokenizer):
-    formattedConv = ""
+    """Apply the chat template to the conversation.
+
+    Args:
+        conversation: A Huggingface style conversation.
+        tokenizer: The tokenizer to use.
+
+    Returns:
+        The formatted string.
+    """
+    formatted_conv = ""
     for message in conversation:
         if message["role"] == "user":
             # formattedConv += message["content"].strip() + " " + tokenizer.bos_token
-            formattedConv += message["content"]
+            formatted_conv += message["content"]
         elif message["role"] == "assistant":
-            formattedConv += " " + message["content"] + tokenizer.eos_token
-    return formattedConv
+            formatted_conv += " " + message["content"] + tokenizer.eos_token
+    return formatted_conv
 
 
 def combine_and_preprocess(question, image_list, image_padding_tokens):
+    """Combine and preprocess the question and images.
+
+    Args:
+        question: The textual part of the input.
+        image_list: The list of images.
+        image_padding_tokens: The image padding tokens.
+
+    Returns:
+        The formatted text and images.
+    """
     # Only works for one sample (not a batch)
     transform = transforms.Compose(
         [
@@ -106,7 +140,7 @@ def combine_and_preprocess(question, image_list, image_padding_tokens):
         ]
     )
     images = []
-    new_qestions = [_ for _ in question]
+    new_qestions = question
     padding_index = 0
     for img in image_list:
         img_file = img["img_file"]
@@ -116,17 +150,18 @@ def combine_and_preprocess(question, image_list, image_padding_tokens):
         image = transform(image)
         image = image.unsqueeze(0).unsqueeze(-1)  # c,w,h,d
 
-        ## pre-process the img first
-        target_H = 512
-        target_W = 512
-        target_D = 4
-        # This can be different for 3D and 2D images. For demonstration we here set this as the default sizes for 2D images.
+        # pre-process the img first
+        target_h = 512
+        target_w = 512
+        target_d = 4
+        # This can be different for 3D and 2D images. For demonstration we here set this
+        # as the default sizes for 2D images.
         images.append(
-            torch.nn.functional.interpolate(image, size=(target_H, target_W, target_D))
+            torch.nn.functional.interpolate(image, size=(target_h, target_w, target_d))
         )
 
         if position is not None:
-            ## add img placeholder to text
+            # add img placeholder to text
             new_qestions[position] = (
                 "<image>"
                 + image_padding_tokens[padding_index]
@@ -148,13 +183,15 @@ def combine_and_preprocess(question, image_list, image_padding_tokens):
 
 
 class RadFMBatcher:
-    def __init__(self, original_model_path, cleaned_model_path) -> None:
+    """RadFM batcher for MultiMedEval."""
 
+    def __init__(self, original_model_path, cleaned_model_path) -> None:
+        """Initialize the RadFM batcher."""
         # Check if the model is already cleaned
         if not os.path.exists(os.path.join(cleaned_model_path, "pytorch_model.bin")):
             # Clean the model
             print(f"{datetime.datetime.now()} Start cleaning model")
-            cleanModel(original_model_path, cleaned_model_path)
+            clean_model(original_model_path, cleaned_model_path)
             print(f"{datetime.datetime.now()} Finish cleaning model")
 
         print(f"{datetime.datetime.now()} Setup tokenizer")
@@ -165,7 +202,7 @@ class RadFMBatcher:
 
         with init_empty_weights():
             model = MultiLLaMAForCausalLM(
-                lang_model_path=cleaned_model_path,  ### Build up model based on LLaMa-13B config
+                lang_model_path=cleaned_model_path,  # Build up model based on LLaMa-13B config
             )
 
         print(f"{datetime.datetime.now()} Model created")
@@ -191,6 +228,14 @@ class RadFMBatcher:
         )
 
     def __call__(self, prompts):
+        """Call the RadFM batcher.
+
+        Args:
+            prompts: The prompt to start the generation.
+
+        Returns:
+            The generated text.
+        """
         model_inputs = [
             apply_chat_template(messages[0], self.text_tokenizer)
             for messages in prompts
@@ -202,19 +247,19 @@ class RadFMBatcher:
         for idx, question in enumerate(model_inputs):
             images = prompts[idx][1]
 
-            imagesFormatted = []
+            images_formatted = []
             while "<img>" in question:
                 # Find the <img> token's position
                 start_pos = question.find("<img>")
                 # Remove the <img> token
                 question = question.replace("<img>", "", 1)
 
-                imagesFormatted.append(
+                images_formatted.append(
                     {"img_file": images.pop(0), "position": start_pos}
                 )
 
             text, vision_x = combine_and_preprocess(
-                question, imagesFormatted, self.image_padding_tokens
+                question, images_formatted, self.image_padding_tokens
             )
 
             texts.append(text)
@@ -234,22 +279,20 @@ class RadFMBatcher:
         visions = torch.cat(visions, dim=0).to(dtype=torch.float16)
 
         with torch.no_grad():
-            outputTokenizer = self.text_tokenizer(
+            output_tokenizer = self.text_tokenizer(
                 texts,
                 max_length=1024,
                 padding="max_length",
                 truncation=True,
                 return_tensors="pt",
             )
-            lang_x = outputTokenizer["input_ids"].to("cuda")
-            attention_mask = outputTokenizer["attention_mask"].to("cuda")
+            lang_x = output_tokenizer["input_ids"].to("cuda")
+            attention_mask = output_tokenizer["attention_mask"].to("cuda")
 
             # with profiler.profile(with_stack=True, profile_memory=True) as prof:
             generation = self.model.generate(
                 lang_x, visions, self.generation_config, attention_mask=attention_mask
             )
-
-            # print(prof.key_averages(group_by_stack_n=5).table(sort_by='self_cuda_memory_usage', row_limit=10))
 
             generated_texts = self.text_tokenizer.batch_decode(
                 generation, skip_special_tokens=True
@@ -259,12 +302,13 @@ class RadFMBatcher:
 
 
 if __name__ == "__main__":
-    # The two path are PATH/TO/MODEL/RadFM/Language_files and PATH/TO/MODEL/RadFM_cleaned/Language_files
-    batcher = RadFMBatcher(**json.load(open("configPaths.json")))
+    # The two path are PATH/TO/MODEL/RadFM/Language_files and
+    # PATH/TO/MODEL/RadFM_cleaned/Language_files
+    batcher = RadFMBatcher(**json.load(open("configPaths.json", encoding="utf-8")))
 
     mmb = MultiMedEval()
 
-    setupParams = SetupParams(**json.load(open("MedMD_config.json")))
+    setupParams = SetupParams(**json.load(open("MedMD_config.json", encoding="utf-8")))
     mmb.setup(setupParams)
 
     mmb.eval(

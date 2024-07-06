@@ -1,3 +1,5 @@
+"""The engine class."""
+
 import getpass
 import json
 import logging
@@ -11,41 +13,41 @@ import nltk
 from radgraph import F1RadGraph
 from torch.utils.data import DataLoader
 
-from multimedeval.chexbert.label import encode, label
-from multimedeval.dynamicDatasets import findDatasets
-from multimedeval.imageClassification import (
-    CBIS_DDSM_Calcification,
-    CBIS_DDSM_Mass,
-    MIMIC_CXR_ImageClassification,
-    Pad_UFES_20,
-    VinDr_Mammo,
+from multimedeval.chexbert.label import _encode, _label
+from multimedeval.dynamic_datasets import find_datasets
+from multimedeval.image_classification import (
+    CBISDDSMCalcification,
+    CBISDDSMMass,
+    MIMICCXRImageClassification,
+    PadUFES20,
+    VinDrMammo,
 )
 from multimedeval.mednli import MedNLI
-from multimedeval.mimic import MIMIC_CXR_reportgen
-from multimedeval.mimic_iii import MIMIC_III
+from multimedeval.mimic import MIMICCXRReportgen
+from multimedeval.mimic_iii import MIMICIII
 from multimedeval.mnist import (
-    MNIST_Blood,
-    MNIST_Breast,
-    MNIST_Derma,
-    MNIST_Oct,
-    MNIST_OrganC,
-    MNIST_OrganS,
-    MNIST_Path,
-    MNIST_Pneumonia,
-    MNIST_Retina,
-    MNIST_Tissue,
+    MNISTBlood,
+    MNISTBreast,
+    MNISTDerma,
+    MNISTOct,
+    MNISTOrganC,
+    MNISTOrganS,
+    MNISTPath,
+    MNISTPneumonia,
+    MNISTRetina,
+    MNISTTissue,
 )
 from multimedeval.qa import MMLU, MedMCQA, MedQA, PubMedQA
-from multimedeval.tqdm_loggable import tqdm_logging
+from multimedeval.tqdm_loggable import TqdmLogging
 from multimedeval.utils import (
     Benchmark,
     EvalParams,
     EvaluationOutput,
     SetupParams,
-    fileWriterFactory,
+    file_writer_factory,
 )
 from multimedeval.visualization import BenchmarkVisualizer
-from multimedeval.vqa import SLAKE, VQA_RAD, DiffVQA, Path_VQA
+from multimedeval.vqa import SLAKE, DiffVQA, PathVQA, VQARad
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -53,28 +55,28 @@ TASKS: Set[Type[Benchmark]] = {
     MedQA,
     PubMedQA,
     MedMCQA,
-    VQA_RAD,
-    Path_VQA,
+    VQARad,
+    PathVQA,
     DiffVQA,
     SLAKE,
-    MIMIC_CXR_reportgen,  # Setup not tested
-    MIMIC_III,
+    MIMICCXRReportgen,  # Setup not tested
+    MIMICIII,
     MedNLI,
-    MIMIC_CXR_ImageClassification,  # Setup not tested
-    VinDr_Mammo,  # Setup not tested
-    Pad_UFES_20,
-    CBIS_DDSM_Mass,
-    CBIS_DDSM_Calcification,
-    MNIST_Oct,
-    MNIST_Path,
-    MNIST_Blood,
-    MNIST_Breast,
-    MNIST_Derma,
-    MNIST_OrganC,
-    MNIST_OrganS,
-    MNIST_Pneumonia,
-    MNIST_Retina,
-    MNIST_Tissue,
+    MIMICCXRImageClassification,  # Setup not tested
+    VinDrMammo,  # Setup not tested
+    PadUFES20,
+    CBISDDSMMass,
+    CBISDDSMCalcification,
+    MNISTOct,
+    MNISTPath,
+    MNISTBlood,
+    MNISTBreast,
+    MNISTDerma,
+    MNISTOrganC,
+    MNISTOrganS,
+    MNISTPneumonia,
+    MNISTRetina,
+    MNISTTissue,
     MMLU,
     # # # "MNIST-OrganA": MNIST_OrganA,
     # # # "MNIST-Chest": MNIST_Chest,
@@ -82,15 +84,22 @@ TASKS: Set[Type[Benchmark]] = {
 
 
 TASKS_REQUIREMENTS: Dict[Type[Benchmark], List[str]] = {
-    MIMIC_CXR_reportgen: ["RadGraph", "Chexbert"],
-    MIMIC_CXR_ImageClassification: ["Chexbert"],
-    MIMIC_III: ["RadGraph", "Chexbert"],
+    MIMICCXRReportgen: ["RadGraph", "Chexbert"],
+    MIMICCXRImageClassification: ["Chexbert"],
+    MIMICIII: ["RadGraph", "Chexbert"],
     DiffVQA: ["MIMIC-CXR Report Generation"],
 }
 
 
-class MultiMedEval(object):
+class MultiMedEval:
+    """The MultiMedEval engine."""
+
     def __init__(self, logger: Optional[logging.Logger] = None):
+        """Initialize the MultiMedEval engine.
+
+        Args:
+            logger: The logger to use for the evaluation info. Defaults to None.
+        """
         self._config: Optional[SetupParams] = None
         self._physionet_username = None
         self._physionet_password = None
@@ -100,190 +109,219 @@ class MultiMedEval(object):
         else:
             self.logger = logger
 
-        dynamicDatasets = findDatasets()
-        TASKS.update(dynamicDatasets)
+        dynamic_datasets = find_datasets()
+        TASKS.update(dynamic_datasets)
 
-        self.tasksReady = {}
+        self.tasks_ready = {}
 
         nltk.download("punkt", quiet=True)
         nltk.download("wordnet", quiet=True)
 
-        self.nameToTask: Dict[str, Benchmark] = {}
-        self.nameToRequirements: Dict[str, List[str]] = {}
-        for taskClass in TASKS:
-            benchmark: Benchmark = taskClass(engine=self, logger=self.logger)
-            self.nameToTask[benchmark.taskName] = benchmark
-            self.nameToRequirements[benchmark.taskName] = (
-                TASKS_REQUIREMENTS[taskClass] if taskClass in TASKS_REQUIREMENTS else []
+        self.name_to_task: Dict[str, Benchmark] = {}
+        self.name_to_requirements: Dict[str, List[str]] = {}
+        for task_class in TASKS:
+            benchmark: Benchmark = task_class(engine=self, logger=self.logger)
+            self.name_to_task[benchmark.task_name] = benchmark
+            self.name_to_requirements[benchmark.task_name] = (
+                TASKS_REQUIREMENTS[task_class]
+                if task_class in TASKS_REQUIREMENTS
+                else []
             )
 
-            self.tasksReady[benchmark.taskName] = {
+            self.tasks_ready[benchmark.task_name] = {
                 "ready": False,
                 "error": "Not setup yet",
             }
 
-    def setup(self, setupParams: SetupParams, verbose: bool = True):
-        self.logger.info("Starting the setup of MultiMedEval.")
-        self._config = setupParams
-        tasksToSkip: List[str] = []
-        # if len(self.getConfig()["tasks_to_prepare"]) > 0:
-        #     tasksToSkip = [x for x in self.nameToTask if x not in self.getConfig()["tasks_to_prepare"]]
+    def setup(self, setup_params: SetupParams, verbose: bool = True):
+        """Setup the engine and all the tasks.
 
-        progressBar = tqdm_logging(
-            logger=self.logger, total=len(self.nameToTask) + 2, dynamic_ncols=True
+        Args:
+            setup_params: The setup parameters.
+            verbose: Whether or not to log during setup. Defaults to True.
+
+        Returns:
+            The tasks that are ready.
+        """
+        self.logger.info("Starting the setup of MultiMedEval.")
+        self._config = setup_params
+        tasks_to_skip: List[str] = []
+
+        progress_bar = TqdmLogging(
+            logger=self.logger, total=len(self.name_to_task) + 2, dynamic_ncols=True
         )
-        progressBar.set_description("Setup RadGraph")
+        progress_bar.set_description("Setup RadGraph")
         try:
             self._prepare_radgraph()
-        except Exception as e:
-            self.tasksReady["RadGraph"] = {"ready": False, "error": str(e)}
+        except ImportError as e:
+            self.tasks_ready["RadGraph"] = {"ready": False, "error": str(e)}
         else:
-            self.tasksReady["RadGraph"] = {"ready": True}
-        progressBar.update(1)
+            self.tasks_ready["RadGraph"] = {"ready": True}
+        progress_bar.update(1)
 
-        progressBar.set_description("Setup Chexbert")
+        progress_bar.set_description("Setup Chexbert")
         try:
             self._prepare_chexbert()
-        except Exception as e:
-            self.tasksReady["Chexbert"] = {"ready": False, "error": str(e)}
+        except ImportError as e:
+            self.tasks_ready["Chexbert"] = {"ready": False, "error": str(e)}
         else:
-            self.tasksReady["Chexbert"] = {"ready": True}
-        progressBar.update(1)
+            self.tasks_ready["Chexbert"] = {"ready": True}
+        progress_bar.update(1)
 
-        for taskName in self.nameToTask:
-            progressBar.set_description(f"Setup {taskName}")
+        for task_name, task_item in self.name_to_task.items():
+            progress_bar.set_description(f"Setup {task_name}")
             try:
-                if taskName in tasksToSkip:
-                    raise Exception(f"Task {taskName} is skipped")
-                self.nameToTask[taskName].setup()
-            except Exception as e:
-                self.tasksReady[taskName] = {"ready": False, "error": str(e)}
+                if task_name in tasks_to_skip:
+                    raise ValueError(f"Task {task_name} is skipped")
+                task_item.setup()
+            except Exception as e:  # pylint: disable=broad-except
+                self.tasks_ready[task_name] = {"ready": False, "error": str(e)}
             else:
-                self.tasksReady[taskName] = {"ready": True}
+                self.tasks_ready[task_name] = {"ready": True}
 
-            progressBar.update(1)
-        progressBar.close()
+            progress_bar.update(1)
+        progress_bar.close()
 
-        finalMessage = "End of setup."
+        final_message = "End of setup."
 
         if verbose:
-            finalMessage += "\n"
+            final_message += "\n"
             # Log a table of the tasks and their status
-            finalMessage += "Task".ljust(35) + "Status".ljust(20) + "Error"
-            for taskName in self.tasksReady:
+            final_message += "Task".ljust(35) + "Status".ljust(20) + "Error"
+            for task_name, task_ready_item in self.tasks_ready.items():
                 error = (
                     "No error."
-                    if "error" not in self.tasksReady[taskName]
-                    else self.tasksReady[taskName]["error"]
+                    if "error" not in task_ready_item
+                    else task_ready_item["error"]
                 )
-                ready = "Ready" if self.tasksReady[taskName]["ready"] else "Problem"
-                finalMessage += "\n" + taskName.ljust(35) + ready.ljust(20) + str(error)
+                ready = "Ready" if task_ready_item["ready"] else "Problem"
+                final_message += (
+                    "\n" + task_name.ljust(35) + ready.ljust(20) + str(error)
+                )
 
-        self.logger.info(finalMessage)
+        self.logger.info(final_message)
 
-        return self.tasksReady
+        return self.tasks_ready
 
     def eval(
         self,
-        name: Union[str, List[str]],
+        tasks_to_evaluate: Union[str, List[str]],
         batcher: Callable,
-        evalParams: Optional[EvalParams] = None,
+        eval_params: Optional[EvalParams] = None,
     ):
+        """Evaluate the tasks.
+
+        Args:
+            tasks_to_evaluate: Tasks on which to run the evaluation.
+            batcher: The batcher to use.
+            eval_params: The evaluation parameters. Defaults to None.
+
+        Returns:
+            The results of the evaluation.
+        """
         if batcher is None:
-            raise Exception(
-                "The engine was not initialized with a batcher, please provide a batcher to the engine"
+            raise ValueError(
+                "The engine was not initialized with a batcher, "
+                "please provide a batcher to the engine"
             )
 
-        self.evalParams = evalParams if evalParams is not None else EvalParams()
+        self.eval_params = eval_params if eval_params is not None else EvalParams()
         self.batcher = batcher
 
-        if not os.path.exists(self.evalParams.run_name):
-            os.mkdir(self.evalParams.run_name)
+        if not os.path.exists(self.eval_params.run_name):
+            os.mkdir(self.eval_params.run_name)
 
         # evaluate on evaluation [name], either takes string or list of strings
-        if isinstance(name, list):
-            if len(name) == 0:
-                name = list(self.nameToTask.keys())
+        if isinstance(tasks_to_evaluate, list):
+            if len(tasks_to_evaluate) == 0:
+                tasks_to_evaluate = list(self.name_to_task.keys())
             self.results = {}
-            for x in name:
-                taskMetrics = self.eval(x, batcher, evalParams)
-                if taskMetrics is None:
+            for x in tasks_to_evaluate:
+                task_metrics = self.eval(x, batcher, eval_params)
+                if task_metrics is None:
                     continue
-                self.results[x] = taskMetrics
+                self.results[x] = task_metrics
 
             return self.results
 
-        if name not in self.nameToTask:
-            self.logger.warn(
-                f"Task {name} not in {list(self.nameToTask.keys())}",
+        if tasks_to_evaluate not in self.name_to_task:
+            self.logger.warning(
+                f"Task {tasks_to_evaluate} not in {list(self.name_to_task.keys())}",
             )
             return None
 
         # Check if the requirements are satisfied
-        listRequirements = [name] + self.nameToRequirements[name]
-        for req in listRequirements:
-            if not self.tasksReady[req]["ready"]:
+        list_requirements = [tasks_to_evaluate] + self.name_to_requirements[
+            tasks_to_evaluate
+        ]
+        for req in list_requirements:
+            if not self.tasks_ready[req]["ready"]:
                 error = (
-                    self.tasksReady[req]["error"]
-                    if "error" in self.tasksReady[req]
+                    self.tasks_ready[req]["error"]
+                    if "error" in self.tasks_ready[req]
                     else "No error message"
                 )
 
-                self.logger.warn(f"Task {name} requires {req} to be ready: {error}")
+                self.logger.warning(
+                    f"Task {tasks_to_evaluate} requires {req} to be ready: {error}"
+                )
                 return None
 
-        evaluation: Benchmark = self.nameToTask[name]
+        evaluation: Benchmark = self.name_to_task[tasks_to_evaluate]
 
         predictions = self._run_inference(evaluation)
-        taskResult: EvaluationOutput = evaluation.evaluate(predictions)
+        task_result: EvaluationOutput = evaluation.evaluate(predictions)
 
-        if taskResult.answer_log is not None:
-            fileWriterFactory("csv")(
-                taskResult.answer_log,
-                f"{self.evalParams.run_name}/{evaluation.taskName}",
+        if task_result.answer_log is not None:
+            file_writer_factory("csv")(
+                task_result.answer_log,
+                f"{self.eval_params.run_name}/{evaluation.task_name}",
             )
 
         try:
-            with open(f"{self.evalParams.run_name}/results.json", "r") as f:
+            with open(
+                f"{self.eval_params.run_name}/results.json", "r", encoding="utf-8"
+            ) as f:
                 metrics = json.load(f)
         except IOError:
             metrics = {}
 
-        metrics[evaluation.taskName] = taskResult.metrics
-        fileWriterFactory("json")(metrics, f"{self.evalParams.run_name}/results")
+        metrics[evaluation.task_name] = task_result.metrics
+        file_writer_factory("json")(metrics, f"{self.eval_params.run_name}/results")
 
-        self.logger.info(f"Done task {name}")
+        self.logger.info(f"Done task {tasks_to_evaluate}")
 
-        return taskResult.metrics
+        return task_result.metrics
 
     def _run_inference(self, task: Benchmark):
         self.logger.info(
-            f"======================== Running inference on {task.taskName} ========================"
+            f"======================== Running inference on {task.task_name} "
+            "========================"
         )
 
         dataloader = self.get_dataloader(task)
         kwargs_format_question = (
-            {"include_indication": self.evalParams.mimic_cxr_include_indication_section}
-            if task.taskName == "MIMIC-CXR Report Generation"
+            {
+                "include_indication": self.eval_params.mimic_cxr_include_indication_section
+            }
+            if task.task_name == "MIMIC-CXR Report Generation"
             else {}
         )
 
-        logging.Logger
-
         predictions = []
-        for batch in tqdm_logging(self.logger, dataloader, desc="Running inference"):
-            batchPrompts = []
+        for batch in TqdmLogging(self.logger, dataloader, desc="Running inference"):
+            batch_prompts = []
             for el in batch:
                 sample = el["sample"]
                 text, img = task.format_question(sample, **kwargs_format_question)
-                if self.evalParams.fewshot and task.getPrompt() is not None:
-                    batchPrompts.append(
-                        (task.getPrompt()[0] + text, task.getPrompt()[1] + img)
+                if self.eval_params.fewshot and task.get_prompt() is not None:
+                    batch_prompts.append(
+                        (task.get_prompt()[0] + text, task.get_prompt()[1] + img)
                     )
                 else:
-                    batchPrompts.append((text, img))
+                    batch_prompts.append((text, img))
 
-            answers = self.batcher(batchPrompts)
+            answers = self.batcher(batch_prompts)
 
             for el, answer in zip(batch, answers):
                 predictions.append({"idx": el["idx"], "answer": answer})
@@ -291,117 +329,145 @@ class MultiMedEval(object):
         return predictions
 
     def visualization(self):
+        """Generate visualizations for the tasks."""
         benchmarks = [
-            self.nameToTask[x]
-            for x in self.tasksReady
-            if (self.tasksReady[x]["ready"] and x in self.nameToTask)
+            task_item
+            for x, task_item in self.tasks_ready.items()
+            if (task_item["ready"] and x in self.name_to_task)
         ]
         visualizer = BenchmarkVisualizer(benchmarks)
-        visualizer.sunburstModalities()
-        visualizer.sunburstTasks()
-        visualizer.tableImageClassification()
-        visualizer.sankeyDiagram()
+        visualizer.sunburst_modalities()
+        visualizer.sunburst_tasks()
+        visualizer.table_image_classification()
+        visualizer.sankey_diagram()
         # visualizer.sankeyD3Blocks()
 
-    def getPhysioNetCredentials(self):
+    def get_physionet_credentials(self):
+        """Returns the PhysioNet credentials.
+
+        Returns:
+            A tuple with the PhysioNet username and password.
+        """
         if self._physionet_password is None or self._physionet_username is None:
-            self._physionet_username = self.getConfig()["physionet_username"]
-            self._physionet_password = self.getConfig()["physionet_password"]
+            self._physionet_username = self.get_config()["physionet_username"]
+            self._physionet_password = self.get_config()["physionet_password"]
             if not self._physionet_username or not self._physionet_password:
                 self.logger.info(
-                    "To setup the tasks that use a PhysioNet dataset, the scripts requires the PhysioNet username and password."
+                    "To setup the tasks that use a PhysioNet dataset, the scripts "
+                    "requires the PhysioNet username and password."
                 )
                 self._physionet_username = input("Enter your username: ")
                 self._physionet_password = getpass.getpass("Enter your password: ")
 
         return self._physionet_username, self._physionet_password
 
-    def getConfig(self) -> dict:
+    def get_config(self) -> dict:
+        """Get the evaluation parameters as a dictionary.
+
+        Returns:
+            The eval parameters.
+        """
         if self._config is None:
-            raise Exception(
+            raise ValueError(
                 "The engine was not setup, please run the setup method first."
             )
 
         return asdict(self._config)
 
-    def _writeTotensorboard(self, results):
-        writer = self.evalParams.tensorboardWriter
+    def _write_to_tensorboard(self, results):
+        writer = self.eval_params.tensorboard_writer
         if writer is None:
             return
 
-        runName = self.evalParams.run_name
-        taskName = results["name"]
+        run_name = self.eval_params.run_name
+        task_name = results["name"]
 
         metrics = results["value"]
         for metric in metrics:
-            metricValue = metrics[metric]
+            metric_value = metrics[metric]
             writer.add_scalar(
-                f"{runName}/{taskName}/{metric}",
-                metricValue,
-                global_step=self.evalParams.tensorboardStep,
+                f"{run_name}/{task_name}/{metric}",
+                metric_value,
+                global_step=self.eval_params.tensorboard_step,
             )
 
     def _prepare_radgraph(self):
         # Check if deepspeed is installed and initialized
         try:
-            from deepspeed.comm.comm import is_initialized  # noqa
+            from deepspeed.comm.comm import (  # noqa # pylint: disable=import-outside-toplevel
+                is_initialized,
+            )
 
             # Test if deepspeed is initialized
             if not is_initialized():
-                raise Exception("Deepspeed is not initialized.")
+                raise ImportError("Deepspeed is not initialized.")
         except ImportError:
             pass
         else:
-            raise Exception("Deepspeed is initialized.")
+            raise ImportError("Deepspeed is initialized.")
 
-        device = -1 if self.getConfig()["device"] != "cuda" else 0
+        device = -1 if self.get_config()["device"] != "cuda" else 0
         self.radgraph = F1RadGraph(
             reward_level="partial", cuda=device, model_type="radgraph"
         )
 
     def _prepare_chexbert(self):
-        # Download the Chexbert checkpoint from https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
-        path = self.getConfig()["CheXBert_dir"]
+        # Download the Chexbert checkpoint from
+        # https://stanfordmedicine.app.box.com/s/c3stck6w6dol3h36grdc97xoydzxd7w9
+        path = self.get_config()["chexbert_dir"]
 
         if path is None:
-            raise Exception("CheXBert_dir is not set in the config file.")
+            raise ValueError("chexbert_dir is not set in the config file.")
 
         output = os.path.join(path, "chexbert.pth")
 
         if not os.path.exists(output):
             os.makedirs(path, exist_ok=True)
             gdown.download(
-                "https://stanfordmedicine.app.box.com/shared/static/c3stck6w6dol3h36grdc97xoydzxd7w9",
+                "https://stanfordmedicine.app.box.com/shared/static/"
+                "c3stck6w6dol3h36grdc97xoydzxd7w9",
                 output,
                 quiet=False,
             )
 
         # Check if deepspeed is installed and initialized
         try:
-            from deepspeed.comm.comm import is_initialized  # noqa
+            from deepspeed.comm.comm import (  # noqa # pylint: disable=import-outside-toplevel
+                is_initialized,
+            )
 
             # Test if deepspeed is initialized
             if not is_initialized():
-                raise Exception("Deepspeed is not initialized.")
+                raise ImportError("Deepspeed is not initialized.")
 
-            deepspeedEnabled = True
+            deepspeed_enabled = True
         except ImportError:
-            deepspeedEnabled = False
+            deepspeed_enabled = False
 
-        self.encoder = encode(output, verbose=False, deepspeed=deepspeedEnabled)
-        self.labeler = label(output, verbose=False, deepspeed=deepspeedEnabled)
+        self.encoder = _encode(output, verbose=False, deepspeed=deepspeed_enabled)
+        self.labeler = _label(output, verbose=False, deepspeed=deepspeed_enabled)
 
     def __len__(self):
+        """The total number of samples in the tasks."""
         total_len = 0
-        for task in self.nameToTask:
-            if self.tasksReady[task]["ready"]:
-                total_len += len(self.nameToTask[task])
+        for task, task_item in self.name_to_task.items():
+            if self.tasks_ready[task]["ready"]:
+                total_len += len(task_item)
 
         return total_len
 
     def get_dataloader(self, dataset, params: Optional[EvalParams] = None):
+        """Return a DataLoader for the dataset.
+
+        Args:
+            dataset: The dataset to prepare.
+            params: The parameters to create the dataloader. Defaults to None.
+
+        Returns:
+            A dataloader.
+        """
         if params is None:
-            params = self.evalParams
+            params = self.eval_params
         if params.dataloader_fn is not None:
             return params.dataloader_fn(dataset)
 

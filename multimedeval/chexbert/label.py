@@ -1,19 +1,21 @@
+"""Label reports using the BERT model."""
+
 from collections import OrderedDict
 
 import torch
-import torch.nn as nn
+from torch import nn
 from tqdm import tqdm
 
 from multimedeval.chexbert.constants import BATCH_SIZE, CONDITIONS, NUM_WORKERS, PAD_IDX
 from multimedeval.chexbert.datasets.unlabeled_dataset import UnlabeledDataset
-from multimedeval.chexbert.models.bert_encoder import bert_encoder
-from multimedeval.chexbert.models.bert_labeler import bert_labeler
+from multimedeval.chexbert.models.bert_encoder import BertEncoder
 from multimedeval.chexbert.utils import generate_attention_masks
 
 
 def collate_fn_no_labels(sample_list):
-    """Custom collate function to pad reports in each batch to the max len,
-       where the reports have no associated labels
+    """Custom collate function to pad reports in each batch to the max len where\
+        the reports have no associated labels.
+
     @param sample_list (List): A list of samples. Each sample is a dictionary with
                                keys 'imp', 'len' as returned by the __getitem__
                                function of ImpressionsDataset
@@ -34,9 +36,13 @@ def collate_fn_no_labels(sample_list):
 
 
 def load_unlabeled_data(
-    df, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, shuffle=False
+    df,
+    batch_size=BATCH_SIZE,
+    num_workers=NUM_WORKERS,  # pylint: disable=unused-argument
+    shuffle=False,
 ):
-    """Create UnlabeledDataset object for the input reports
+    """Create UnlabeledDataset object for the input reports.
+
     @param df (string): dataframe containing reports
     @param batch_size (int): the batch size. As per the BERT repository, the max batch size
                              that can fit on a TITAN XP is 6 if the max sequence length
@@ -58,9 +64,14 @@ def load_unlabeled_data(
     return loader
 
 
-class label:
-    def __init__(self, checkpoint_path, verbose=False, deepspeed=False) -> None:
-        model = bert_labeler()
+class _label:
+    def __init__(
+        self,
+        checkpoint_path,
+        verbose=False,
+        deepspeed=False,  # pylint: disable=unused-argument
+    ) -> None:  # pylint: disable=unused-argument
+        model = BertEncoder(logits=True)
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         if torch.cuda.device_count() > 0:  # works even if only 1 GPU available
             if verbose:
@@ -91,9 +102,10 @@ class label:
 
         if self.verbose:
             print(
-                "\nBegin report impression labeling. The progress bar counts the # of batches completed:"
+                "\nBegin report impression labeling. "
+                "The progress bar counts the # of batches completed:"
             )
-            print("The batch size is %d" % BATCH_SIZE)
+            print(f"The batch size is {BATCH_SIZE}")
         with torch.no_grad():
             for data in tqdm(ld, disable=not self.verbose):
                 batch = data["imp"]  # (batch_size, max_len)
@@ -103,20 +115,21 @@ class label:
 
                 out = self.model(batch, attn_mask)
 
-                for j in range(len(out)):
-                    curr_y_pred = out[j].argmax(dim=1)  # shape is (batch_size)
+                for j, out_j in enumerate(out):
+                    curr_y_pred = out_j.argmax(dim=1)  # shape is (batch_size)
                     y_pred[j].append(curr_y_pred)
 
-            for j in range(len(y_pred)):
-                y_pred[j] = torch.cat(y_pred[j], dim=0)
+            for pred_j in y_pred:
+                pred_j = torch.cat(pred_j, dim=0)
 
         y_pred = [t.tolist() for t in y_pred]
         return y_pred
 
 
-class encode:
+class _encode:
+
     def __init__(self, checkpoint_path, verbose=False, deepspeed=False) -> None:
-        model = bert_encoder(False)
+        model = BertEncoder(False)
         if deepspeed:
             with deepspeed.zero.GatheredParameters(
                 model.parameters(),
@@ -156,9 +169,10 @@ class encode:
 
         if self.verbose:
             print(
-                "\nBegin report impression labeling. The progress bar counts the # of batches completed:"
+                "\nBegin report impression labeling. The progress bar "
+                "counts the # of batches completed:"
             )
-            print("The batch size is %d" % BATCH_SIZE)
+            print(f"The batch size is {BATCH_SIZE}")
         with torch.no_grad():
             for data in tqdm(ld, disable=not self.verbose):
                 batch = data["imp"]  # (batch_size, max_len)
@@ -167,8 +181,8 @@ class encode:
                 attn_mask = generate_attention_masks(batch, src_len, self.device)
 
                 out = self.model(batch, attn_mask)
-                for j in range(len(out)):
-                    rep.append(out[j].to("cpu"))
+                for _, out_j in enumerate(out):
+                    rep.append(out_j.to("cpu"))
 
         return torch.stack(rep)
 

@@ -1,3 +1,5 @@
+"""The llava med batcher."""
+
 import json
 import logging
 import os
@@ -27,7 +29,10 @@ os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
 
 class batcherLLaVA_Med:
+    """Batcher for LLaVA-Med."""
+
     def __init__(self, cacheLocation, llavaMedLocation):
+        """Initialize the batcher."""
         # Check if the llavamed location contains the model
         if not os.path.exists(llavaMedLocation):
             os.makedirs(llavaMedLocation)
@@ -113,6 +118,16 @@ class batcherLLaVA_Med:
         )
 
     def __call__(self, prompts):
+        """Generate the response for the given prompts.
+
+        Args:
+            prompts: List of prompts. Each prompt is a tuple of two lists. \
+                The first list contains the text messages and the second list \
+                contains the images.
+
+        Returns:
+            List of responses.
+        """
         imagePlaceHolder = (
             DEFAULT_IM_START_TOKEN
             + DEFAULT_IMAGE_PATCH_TOKEN * self.image_token_len

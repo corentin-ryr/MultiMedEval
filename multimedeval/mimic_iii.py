@@ -1,3 +1,5 @@
+"""MIMIC-III dataset for the Radiology Report Summarization task."""
+
 import gzip
 import os
 import re
@@ -7,12 +9,12 @@ import datasets
 import pandas as pd
 from datasets import load_dataset
 
-from multimedeval.taskFamilies import ReportComparison
-from multimedeval.tqdm_loggable import tqdm_logging
-from multimedeval.utils import download_file
+from multimedeval.task_families import ReportComparison
+from multimedeval.tqdm_loggable import TqdmLogging
+from multimedeval.utils import download_file, section_text
 
 
-def get_final_report(text):
+def _get_final_report(text):
     if "FINAL REPORT" not in text:
         return None
     idx = text.index("FINAL REPORT")
@@ -22,78 +24,85 @@ def get_final_report(text):
     return text
 
 
-def extract_sections(text):
-    p_section = re.compile(r"\n ([A-Z ()/,-]+):\s", re.DOTALL)
+# def _extract_sections(text):
+#     p_section = re.compile(r"\n ([A-Z ()/,-]+):\s", re.DOTALL)
 
-    sections = []
-    section_names = []
-    section_idx = []
+#     sections = []
+#     section_names = []
+#     section_idx = []
 
-    idx = 0
-    s = p_section.search(text, idx)
-    if s:
-        sections.append(text[12 : s.start(1)])
-        section_names.append("preamble")
-        section_idx.append(0)
+#     idx = 0
+#     s = p_section.search(text, idx)
+#     if s:
+#         sections.append(text[12 : s.start(1)])
+#         section_names.append("preamble")
+#         section_idx.append(0)
 
-        while s:
-            current_section = s.group(1).lower()
-            # get the start of the text for this section
-            idx_start = s.end()
-            # skip past the first newline to avoid some bad parses
-            idx_skip = text[idx_start:].find("\n")
-            if idx_skip == -1:
-                idx_skip = 0
+#         while s:
+#             current_section = s.group(1).lower()
+#             # get the start of the text for this section
+#             idx_start = s.end()
+#             # skip past the first newline to avoid some bad parses
+#             idx_skip = text[idx_start:].find("\n")
+#             if idx_skip == -1:
+#                 idx_skip = 0
 
-            s = p_section.search(text, idx_start + idx_skip)
-            if s is None:
-                idx_end = len(text)
-            else:
-                idx_end = s.start()
+#             s = p_section.search(text, idx_start + idx_skip)
+#             if s is None:
+#                 idx_end = len(text)
+#             else:
+#                 idx_end = s.start()
 
-            sections.append(text[idx_start:idx_end])
-            section_names.append(current_section)
-            section_idx.append(idx_start)
+#             sections.append(text[idx_start:idx_end])
+#             section_names.append(current_section)
+#             section_idx.append(idx_start)
 
-    else:
-        sections.append(text)
-        section_names.append("full report")
-        section_idx.append(0)
+#     else:
+#         sections.append(text)
+#         section_names.append("full report")
+#         section_idx.append(0)
 
-    preprocessed = [sec.strip().lower() for sec in sections]
-    preprocessed = [re.sub("\n", "", sec) for sec in preprocessed]
-    preprocessed = [re.sub(" +", " ", sec) for sec in preprocessed]
-    return (section_names, preprocessed)
+#     preprocessed = [sec.strip().lower() for sec in sections]
+#     preprocessed = [re.sub("\n", "", sec) for sec in preprocessed]
+#     preprocessed = [re.sub(" +", " ", sec) for sec in preprocessed]
+#     return (section_names, preprocessed)
 
 
-class MIMIC_III(ReportComparison):
+class MIMICIII(ReportComparison):
+    """MIMIC-III dataset for the Radiology Report Summarization task."""
+
     def __init__(self, **kwargs) -> None:
+        """Initialize the MIMIC-III dataset."""
         super().__init__(**kwargs)
-        self.taskName = "MIMIC-III"
+        self.task_name = "MIMIC-III"
         self.modality = "Radiology"
         self.task = "Report Summarization"
+        self.path = None
 
     def setup(self):
-        self.path = self.engine.getConfig()["MIMIC_III_dir"]
+        """Setups the MIMIC-III task family."""
+        path = self.engine.getConfig()["mimic_iii_dir"]
 
-        if self.path is None:
-            raise ValueError("MIMIC_III_dir is not set in the config file")
+        if path is None:
+            raise ValueError("mimic_iii_dir is not set in the config file")
 
         self._generate_dataset()
 
-        # reports_csv = pd.read_csv(os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False)
+        # reports_csv = pd.read_csv(os.path.join(self.path, "NOTEEVENTS.csv"),
+        # low_memory=False)
         # reports_csv = reports_csv.fillna(-1)
 
         reports_csv = []
-        # Open the NOTEEVENTS.csv file and keep the reports that are in the mapping in the reports_csv list
+        # Open the NOTEEVENTS.csv file and keep the reports that are in the
+        # mapping in the reports_csv list
         reports_csv = pd.read_csv(
-            os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False
+            os.path.join(path, "NOTEEVENTS.csv"), low_memory=False
         )
         reports_csv = reports_csv.fillna(-1)
 
-        expToReport = {}
-        for EXP in tqdm_logging(self.logger, mapping.keys(), desc="Extracting reports"):
-            filter_reports = reports_csv[reports_csv["DESCRIPTION"].isin(mapping[EXP])]
+        exp_to_report = {}
+        for exp in TqdmLogging(self.logger, mapping.keys(), desc="Extracting reports"):
+            filter_reports = reports_csv[reports_csv["DESCRIPTION"].isin(mapping[exp])]
             reports_list = filter_reports["TEXT"].tolist()
             reports_ids = filter_reports["ROW_ID"].tolist()
             missing_idx = []
@@ -101,22 +110,23 @@ class MIMIC_III(ReportComparison):
             impressions_list = []
             findings_list = []
             ids_list = []
-            for i in range(len(reports_list)):
-                report = reports_list[i]
-                text = get_final_report(report)
+            for i, report in enumerate(reports_list):
+                text = _get_final_report(report)
                 # No reports ? we skip
                 if text is None:
                     missing_idx.append(reports_list.index(report))
                     continue
 
                 # Getting all sections from the reports
-                section_names, sections = extract_sections(text)
-                for j in range(len(section_names)):
-                    if section_names[j] in section_map_rev:
-                        section_names[j] = section_map_rev[section_names[j]]
+                # section_names, sections = _extract_sections(text)
+                sections, section_names, _ = section_text(text)
+                for j, section_j in enumerate(section_names):
+                    if section_j in section_map_rev:
+                        section_names[j] = section_map_rev[section_j]
                 all_sections.extend(section_names)
 
-                # Is there no or two impressions ? Its safer to skip (multiple studies of differents body parts in the same reports)
+                # Is there no or two impressions ? Its safer to skip
+                # (multiple studies of differents body parts in the same reports)
                 count = section_names.count("impression")
                 if count > 1 or count == 0:
                     continue
@@ -125,7 +135,7 @@ class MIMIC_III(ReportComparison):
                 impression_text = sections[section_names.index("impression")]
                 section_names.remove("impression")
                 findings_text = ""
-                for m in findings_mapping[EXP]:
+                for m in findings_mapping[exp]:
                     if m[0] in section_names:
                         findings_text = sections[section_names.index(m[0])]
                         if findings_text:
@@ -135,8 +145,8 @@ class MIMIC_III(ReportComparison):
                 if not findings_text or not impression_text:
                     continue
 
-                findings_list.append(re.sub("\s+", " ", findings_text))
-                impressions_list.append(re.sub("\s+", " ", impression_text))
+                findings_list.append(re.sub(r"\s+", " ", findings_text))  # noqa
+                impressions_list.append(re.sub(r"\s+", " ", impression_text))  # noqa
                 ids_list.append(reports_ids[i])
 
             # preprocessing the findings and impression.
@@ -144,41 +154,37 @@ class MIMIC_III(ReportComparison):
             impressions_list_clean = []
             for f in findings_list:
                 for replace in re.findall(r"\[\*\*(.*?)\*\*\]", f):
-                    f = f.replace("[**{}**]".format(replace), "___")
+                    f = f.replace(f"[**{replace}**]", "___")
                 findings_list_clean.append(f)
 
             for f in impressions_list:
                 for replace in re.findall(r"\[\*\*(.*?)\*\*\]", f):
-                    f = f.replace("[**{}**]".format(replace), "___")
+                    f = f.replace(f"[**{replace}**]", "___")
                 impressions_list_clean.append(f)
 
             assert (len(impressions_list_clean)) == (len(findings_list_clean))
 
-            expToReport[EXP] = {
+            exp_to_report[exp] = {
                 "impression": impressions_list_clean,
                 "findings": findings_list_clean,
                 "ids": ids_list,
             }
 
         # Open the split csv
-        splitDset = load_dataset(
+        split_dset = load_dataset(
             "croyer/MIMIC-III-split", cache_dir=self.path, split="test"
         )
-        split = set(splitDset["ids"])
-
-        # split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mimiciiisplit.csv"))
-        # split = split[split["split"] == "test"]
-        # split = split["ids"].tolist()
+        split = set(split_dset["ids"])
 
         # Get all the ids for the test set from the extToReport dict
-        datasetTest = []
-        for folder in expToReport.keys():
-            ids = expToReport[folder]["ids"]
-            reports = expToReport[folder]["findings"]
-            impression = expToReport[folder]["impression"]
-            for i in range(len(ids)):
-                if ids[i] in split:
-                    datasetTest.append(
+        dataset_test = []
+        for folder, folder_report in exp_to_report.items():
+            ids = folder_report["ids"]
+            reports = folder_report["findings"]
+            impression = folder_report["impression"]
+            for i, ids_i in enumerate(ids):
+                if ids_i in split:
+                    dataset_test.append(
                         {
                             "findings": reports[i],
                             "impression": impression[i],
@@ -188,21 +194,38 @@ class MIMIC_III(ReportComparison):
                         }
                     )
 
-        self.dataset = datasets.Dataset.from_list(datasetTest)
+        self.dataset = datasets.Dataset.from_list(dataset_test)
 
-    def getCorrectAnswer(self, sample, fullText=False):
+    def get_correct_answer(self, sample, full_text=False):
+        """Get the correct answer for the sample.
+
+        Args:
+            sample: The sample to get the correct answer for.
+            fullText: Returns the raw text answer. Defaults to False.
+
+        Returns:
+            The correct answer.
+        """
         return sample["impression"]
 
     def format_question(self, sample):
+        """Format the question for the sample.
+
+        Args:
+            sample: The sample to format the question for.
+
+        Returns:
+            The formatted question and images.
+        """
         question = sample["findings"]
         question += "\nSummarize the findings."
-        formattedText = [
+        formatted_text = [
             {
                 "role": "user",
                 "content": question,
             }
         ]
-        return (formattedText, [])
+        return (formatted_text, [])
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
@@ -222,8 +245,6 @@ class MIMIC_III(ReportComparison):
         )
 
         username, password = self.engine.getPhysioNetCredentials()
-        # wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz'
-        # subprocess.run(wget_command, shell=True, check=True)
 
         download_file(
             "https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz",
@@ -1359,6 +1380,6 @@ findings_mapping = {
 
 
 section_map_rev = {}
-for k in section_map:
-    for v in section_map[k]:
+for k, section_k in section_map.items():
+    for v in section_k:
         section_map_rev[v] = k

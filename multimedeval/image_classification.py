@@ -1,3 +1,5 @@
+"""Image classification."""
+
 import os
 import shutil
 import subprocess
@@ -12,25 +14,31 @@ import numpy as np
 import pandas as pd
 import pydicom
 from datasets import load_dataset
+from kaggle.api.kaggle_api_extended import KaggleApi
 from PIL import Image
 
-from multimedeval.taskFamilies import ImageClassification
-from multimedeval.tqdm_loggable import tqdm_logging
-from multimedeval.utils import cleanStr, download_file
+from multimedeval.chexbert.constants import CONDITIONS
+from multimedeval.task_families import ImageClassification
+from multimedeval.tqdm_loggable import TqdmLogging
+from multimedeval.utils import clean_str, download_file
 
 
-class MIMIC_CXR_ImageClassification(ImageClassification):
+class MIMICCXRImageClassification(ImageClassification):
+    """MIMIC-CXR Image Classification task."""
+
     def __init__(self, **kwargs) -> None:
+        """Initialize the MIMIC-CXR Image Classification task."""
         super().__init__(**kwargs)
 
-        self.taskName = "MIMIC-CXR Image Classification"
+        self.task_name = "MIMIC-CXR Image Classification"
         self.modality = "X-Ray"
 
     def setup(self):
-        self.scoringType = "multilabel"
+        """Setup the MIMIC-CXR Image Classification task."""
+        self.scoring_type = "multilabel"
 
         self.num_classes = 5
-        self.path = self.engine.getConfig()["MIMIC_CXR_dir"]
+        self.path = self.engine.getConfig()["mimic_cxr_dir"]
 
         if self.path is None:
             raise ValueError(
@@ -41,44 +49,28 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         # Get the split.csv file in the image directory
         split = pd.read_csv(os.path.join(self.path, "mimic-cxr-2.0.0-split.csv"))
-        chexbertMimic = pd.read_csv(
+        chexbert_mimic = pd.read_csv(
             os.path.join(self.path, "mimic-cxr-2.0.0-chexpert.csv")
         )
 
-        testSplit = split[split.split == "test"]
-        chexbertMimicTest = chexbertMimic[
-            chexbertMimic.study_id.isin(testSplit.study_id)
+        test_split = split[split.split == "test"]
+        chexbert_mimic_test = chexbert_mimic[
+            chexbert_mimic.study_id.isin(test_split.study_id)
         ]
-        chexbertMimicTest = chexbertMimicTest.merge(
-            testSplit, on=["study_id", "subject_id"]
+        chexbert_mimic_test = chexbert_mimic_test.merge(
+            test_split, on=["study_id", "subject_id"]
         )
-        self.dataset = datasets.Dataset.from_pandas(chexbertMimicTest)
+        self.dataset = datasets.Dataset.from_pandas(chexbert_mimic_test)
 
-        trainSplit = split[split.split == "train"]
-        chexbertMimicTrain = chexbertMimic[
-            chexbertMimic.study_id.isin(trainSplit.study_id)
+        train_split = split[split.split == "train"]
+        chexbert_mimic_train = chexbert_mimic[
+            chexbert_mimic.study_id.isin(train_split.study_id)
         ]
-        chexbertMimicTrain = chexbertMimicTrain.merge(
-            trainSplit, on=["study_id", "subject_id"]
+        chexbert_mimic_train = chexbert_mimic_train.merge(
+            train_split, on=["study_id", "subject_id"]
         )
-        self.trainDataset = datasets.Dataset.from_pandas(chexbertMimicTrain)
+        self.train_dataset = datasets.Dataset.from_pandas(chexbert_mimic_train)
 
-        self.labelNames = [
-            "Enlarged Cardiomediastinum",
-            "Cardiomegaly",
-            "Lung Opacity",
-            "Lung Lesion",
-            "Edema",
-            "Consolidation",
-            "Pneumonia",
-            "Atelectasis",
-            "Pneumothorax",
-            "Pleural Effusion",
-            "Pleural Other",
-            "Fracture",
-            "Support Devices",
-            "No Finding",
-        ]
         self.conditions = [
             "Atelectasis",
             "Cardiomegaly",
@@ -88,46 +80,71 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         ]
 
     def format_question(self, sample, prompt=False):
-        samplePath = os.path.join(
+        """Format the question for the MIMIC-CXR Image Classification task.
+
+        Args:
+            sample: The sample to format.
+            prompt: Add the answer to the prompt. Defaults to False.
+
+        Returns:
+            A tuple with the formatted prompt and the images.
+        """
+        sample_path = os.path.join(
             self.path,
             "files",
             "p" + str(sample["subject_id"])[:2],
             "p" + str(sample["subject_id"]),
         )
-        imagePath = os.path.join(
-            samplePath, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg"
+        image_path = os.path.join(
+            sample_path, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg"
         )
         question = "<img> List the conditions that can be seen in this picture."
-        formattedText = [
+        formatted_text = [
             {
                 "role": "user",
                 "content": question,
             }
         ]
-        answer = self.getCorrectAnswer(sample, fullText=True)
+        answer = self.get_correct_answer(sample, full_text=True)
 
         if prompt:
-            formattedText.append({"role": "assistant", "content": answer})
+            formatted_text.append({"role": "assistant", "content": answer})
 
-        return (formattedText, [Image.open(imagePath)])
+        return (formatted_text, [Image.open(image_path)])
 
-    def getPredictedAnswer(self, answer: str) -> Union[int, List[int]]:
+    def get_predicted_answer(self, answer: str) -> Union[int, List[int]]:
+        """Convert the free form text output to the answer index.
+
+        Args:
+            answer: The free form text output of the model.
+
+        Returns:
+            The labels of the answer.
+        """
         df = pd.DataFrame(columns=["Report Impression"], data=[answer])
         labels = [element[0] == 1 for element in self.engine.labeler(df)]
         labels = [
-            int(labels[self.labelNames.index(condition)])
-            for condition in self.conditions
+            int(labels[CONDITIONS.index(condition)]) for condition in self.conditions
         ]
 
         return labels
 
-    def getCorrectAnswer(self, sample, fullText=False) -> Union[int, str, List[int]]:
+    def get_correct_answer(self, sample, full_text=False) -> Union[int, str, List[int]]:
+        """Get the correct answer labels.
+
+        Args:
+            sample: The sample to get the correct answer from.
+            fullText: Whether or not to return the raw text. Defaults to False.
+
+        Returns:
+            : The correct answer labels.
+        """
         # Features: [Atelectasis, cardiomegaly, consolidation, edema, and pleural effusion]
         # If any of the features is 1, then it is positive
         # If all the features are 0, -1 or NaN, then it is negative
         labels = [int(sample[condition] == 1) for condition in self.conditions]
 
-        if fullText:
+        if full_text:
             return ", ".join(
                 [self.conditions[idx] for idx, label in enumerate(labels) if label]
             )
@@ -147,7 +164,9 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
         os.makedirs(self.path, exist_ok=True)
 
         username, password = self.engine.getPhysioNetCredentials()
-        wget_command = f'wget -r -c -np -nc --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/'  # Can replace -nc (no clobber) with -N (timestamping)
+        wget_command = f'wget -r -c -np -nc --directory-prefix "{self.path}" \
+            --user "{username}" \
+            --password "{password}" https://physionet.org/files/mimic-cxr-jpg/2.0.0/'
 
         subprocess.run(wget_command, shell=True, check=True)
 
@@ -155,20 +174,23 @@ class MIMIC_CXR_ImageClassification(ImageClassification):
 
         # Unzip the mimic-cxr-2.0.0-split file
         file = os.path.join(self.path, "mimic-cxr-2.0.0-split.csv")
-        with ZipFile(file + ".gz", "r") as zipObj:
-            zipObj.extractall(file)
+        with ZipFile(file + ".gz", "r") as zip_obj:
+            zip_obj.extractall(file)
 
 
-class VinDr_Mammo(ImageClassification):
+class VinDrMammo(ImageClassification):
+    """VinDr Mammo Image Classification task."""
+
     def __init__(self, **kwargs) -> None:
+        """Initialize the VinDr Mammo Image Classification task."""
         super().__init__(**kwargs)
 
-        self.taskName = "VinDr Mammo"
+        self.task_name = "VinDr Mammo"
         self.modality = "Mammography"
 
     def setup(self):
-
-        self.path = self.engine.getConfig()["VinDr_Mammo_dir"]
+        """Setup the VinDr Mammo Image Classification task."""
+        self.path = self.engine.getConfig()["vindr_mammo_dir"]
 
         if self.path is None:
             raise ValueError(
@@ -178,24 +200,35 @@ class VinDr_Mammo(ImageClassification):
         self._generate_dataset()
 
         self.num_classes = 5
-        self.scoringType = "multiclass"
+        self.scoring_type = "multiclass"
         self.options = ["1", "2", "3", "4", "5"]
 
         # Open the finding_annotation.csv file
         annotations = pd.read_csv(os.path.join(self.path, "finding_annotations.csv"))
-        annotationsTest = annotations[annotations["split"] == "test"]
+        annotations_test = annotations[annotations["split"] == "test"]
 
         # Only keep rows where "finding_birads" is not None
-        annotationsTest = annotationsTest[annotationsTest["finding_birads"].notna()]
+        annotations_test = annotations_test[annotations_test["finding_birads"].notna()]
 
-        self.dataset = datasets.Dataset.from_pandas(annotationsTest)
+        self.dataset = datasets.Dataset.from_pandas(annotations_test)
 
-        annotationsTrain = annotations[annotations["split"] == "training"]
-        annotationsTrain = annotationsTrain[annotationsTrain["finding_birads"].notna()]
-        self.trainDataset = datasets.Dataset.from_pandas(annotationsTrain)
+        annotations_train = annotations[annotations["split"] == "training"]
+        annotations_train = annotations_train[
+            annotations_train["finding_birads"].notna()
+        ]
+        self.train_dataset = datasets.Dataset.from_pandas(annotations_train)
 
     def format_question(self, sample, prompt=False):
-        formattedText = [
+        """Format the question for the VinDr Mammo Image Classification task.
+
+        Args:
+            sample: The sample to format.
+            prompt: Whether or not to add the answer to the prompt. Defaults to False.
+
+        Returns:
+            A tuple with the formatted prompt and the images.
+        """
+        formatted_text = [
             {
                 "role": "user",
                 "content": "<img> What is the BI-RADS level in this mammography (from 1 to 5)?",
@@ -203,7 +236,7 @@ class VinDr_Mammo(ImageClassification):
         ]
 
         if prompt:
-            formattedText.append(
+            formatted_text.append(
                 {"role": "assistant", "content": f"{sample['finding_birads']}"}
             )
 
@@ -224,22 +257,32 @@ class VinDr_Mammo(ImageClassification):
         data = (data * 255).astype(np.uint8)
 
         image = Image.fromarray(data)
-        return (formattedText, [image])
+        return (formatted_text, [image])
 
-    def getPredictedAnswer(self, answer: str) -> int:
-        # # Find the numbers in the string answer
-        # findings = [int(s) for s in answer.split() if s.isdigit()]
-        # if len(findings) > 0 and findings[0] <= 5 and findings[0] >= 1:
-        #     return findings[0] - 1
-        # else:
-        #     return random.randint(0, 4)  # 5 classes so 0 to 4
+    def get_predicted_answer(self, answer: str) -> int:
+        """Convert the free form text output to the answer index.
 
-        answer = cleanStr(answer)
+        Args:
+            answer: The free form text output of the model.
+
+        Returns:
+            The index of the answer.
+        """
+        answer = clean_str(answer)
         # Find the best bleu score between the answer and the options
-        scores = [self.bleu([answer], [[cleanStr(option)]]) for option in self.options]
+        scores = [self.bleu([answer], [[clean_str(option)]]) for option in self.options]
         return scores.index(max(scores))
 
-    def getCorrectAnswer(self, sample, fullText=False) -> int:
+    def get_correct_answer(self, sample, full_text=False) -> int:
+        """Get the correct answer for the sample.
+
+        Args:
+            sample: The sample to get the correct answer from.
+            fullText: Not used. Defaults to False.
+
+        Returns:
+            The correct answer.
+        """
         findings = sample["finding_birads"]
         findings = int(findings[-1])
 
@@ -265,8 +308,6 @@ class VinDr_Mammo(ImageClassification):
         os.makedirs(self.path, exist_ok=True)
 
         username, password = self.engine.getPhysioNetCredentials()
-        # wget_command = f'wget -c --user "{username}" --password "{password}" -O "{self.path}vindr_mammo.zip" https://physionet.org/content/vindr-mammo/get-zip/1.0.0/'
-        # subprocess.run(wget_command, shell=True, check=True)
 
         download_file(
             "https://physionet.org/content/vindr-mammo/get-zip/1.0.0/",
@@ -276,25 +317,29 @@ class VinDr_Mammo(ImageClassification):
         )
 
         # Unzip the file
-        with ZipFile(os.path.join(self.path, "vindr_mammo.zip"), "r") as zipObj:
-            zipObj.extractall(self.path)
+        with ZipFile(os.path.join(self.path, "vindr_mammo.zip"), "r") as zip_obj:
+            zip_obj.extractall(self.path)
 
         self.path = os.path.join(
             self.path, "physionet.org", "files", "vindr-mammo", "1.0.0"
         )
 
 
-class Pad_UFES_20(ImageClassification):
+class PadUFES20(ImageClassification):
+    """Pad-UFES-20 Image Classification task."""
+
     def __init__(self, **kwargs) -> None:
+        """Initialize the Pad-UFES-20 Image Classification task."""
         super().__init__(**kwargs)
-        self.taskName = "Pad UFES 20"
+        self.task_name = "Pad UFES 20"
         self.modality = "Dermatology"
 
     def setup(self):
+        """Setup the Pad-UFES-20 Image Classification task."""
         self.num_classes = 7
-        self.scoringType = "multiclass"
+        self.scoring_type = "multiclass"
 
-        self.path = self.engine.getConfig()["Pad_UFES_20_dir"]
+        self.path = self.engine.getConfig()["pad_ufes_20_dir"]
 
         if self.path is None:
             raise ValueError(
@@ -308,7 +353,7 @@ class Pad_UFES_20(ImageClassification):
         dataset = pd.read_csv(os.path.join(self.path, "metadata.csv"))
 
         self.options = ["BCC", "SCC", "ACK", "SEK", "BOD", "MEL", "NEV"]
-        self.mapAcronymToName = {
+        self.map_acronym_to_name = {
             "BCC": "Basal Cell Carcinoma (BCC)",
             "SCC": "Squamous Cell Carcinoma (SCC)",
             "ACK": "Actinic Keratosis (ACK)",
@@ -318,23 +363,28 @@ class Pad_UFES_20(ImageClassification):
             "NEV": "Nevus (NEV)",
         }
 
-        splitDset = load_dataset(
+        split_dset = load_dataset(
             "croyer/Pad-UFES-20-split", cache_dir=self.path, split="test"
         )
-        split = set(splitDset["ids"])
-
-        # split = pd.read_csv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "padufessplit.csv"))
-        # split = split[split["split"] == "test"]
-        # split = split["ids"].tolist()
+        split = set(split_dset["ids"])
 
         self.dataset = dataset[dataset["lesion_id"].isin(split)]
         self.dataset = datasets.Dataset.from_pandas(dataset)
 
-        self.trainDataset = dataset[~dataset["lesion_id"].isin(split)]
-        self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
+        self.train_dataset = dataset[~dataset["lesion_id"].isin(split)]
+        self.train_dataset = datasets.Dataset.from_pandas(self.train_dataset)
 
     def format_question(self, sample, prompt=False):
-        patientInfo = {
+        """Format the question for the Pad-UFES-20 Image Classification task.
+
+        Args:
+            sample: The sample to format.
+            prompt: Whether or not to add the answer to the prompt. Defaults to False.
+
+        Returns:
+            A tuple with the formatted prompt and the images.
+        """
+        patient_info = {
             "smokes": sample["smoke"],
             "drink": sample["drink"],
             "age": sample["age"],
@@ -348,57 +398,78 @@ class Pad_UFES_20(ImageClassification):
             "has sewage system": sample["has_sewage_system"],
         }
         # Create a sentence out of the patient information don't include Nones
-        patientInfo = "Patient history: " + ", ".join(
+        patient_info = "Patient history: " + ", ".join(
             [
                 f"{key} {value}"
-                for key, value in patientInfo.items()
+                for key, value in patient_info.items()
                 if value is not None
             ]
         )
-        options = "Options:\n" + "\n".join(
-            [self.mapAcronymToName[option] for option in self.options]
-        )
+        # options = "Options:\n" + "\n".join(
+        #     [self.mapAcronymToName[option] for option in self.options]
+        # )
 
-        formattedText = [
+        formatted_text = [
             {
                 "role": "user",
-                "content": f"<img> {patientInfo} Which of the following is the most likely diagnosis of the patient's skin lesion? {options}",
+                "content": f"<img> {patient_info} Which of the following is "
+                "the most likely diagnosis of the patient's skin lesion? {options}",
             }
         ]
 
         if prompt:
-            formattedText.append(
+            formatted_text.append(
                 {
                     "role": "assistant",
-                    "content": f"{self.mapAcronymToName[sample['diagnostic']]} ({sample['diagnostic']})",
+                    "content": f"{self.map_acronym_to_name[sample['diagnostic']]}"
+                    f" ({sample['diagnostic']})",
                 }
             )
 
         image = Image.open(os.path.join(self.path, "images", sample["img_id"]))
-        return (formattedText, [image])
+        return (formatted_text, [image])
 
-    def getPredictedAnswer(self, answer: str) -> int:
-        answer = cleanStr(answer)
+    def get_predicted_answer(self, answer: str) -> int:
+        """Convert the free form text output to the answer index.
+
+        Args:
+            answer: The free form text output of the model.
+
+        Returns:
+            The index of the answer.
+        """
+        answer = clean_str(answer)
         # Find the best bleu score between the answer and the options
-        options = [cleanStr(self.mapAcronymToName[option]) for option in self.options]
+        options = [
+            clean_str(self.map_acronym_to_name[option]) for option in self.options
+        ]
         scores = [self.bleu([answer], [[option]]) for option in options]
 
         return scores.index(max(scores))
 
-    def getCorrectAnswer(self, sample, fullText=False) -> int:
-        correctName = sample["diagnostic"]
+    def get_correct_answer(self, sample, full_text=False) -> int:
+        """Get the correct answer for the sample.
 
-        if fullText:
-            return self.mapAcronymToName[correctName]
+        Args:
+            sample: The sample to get the correct answer from.
+            fullText: Returns the raw answer. Defaults to False.
 
-        return self.options.index(correctName)
+        Returns:
+            The correct answer.
+        """
+        correct_name = sample["diagnostic"]
+
+        if full_text:
+            return self.map_acronym_to_name[correct_name]
+
+        return self.options.index(correct_name)
 
     def _generate_dataset(self):
-        dataFolder = self.path
+        data_folder = self.path
         # Download the file
         self.logger.info("Downloading the dataset...")
         url = "https://prod-dcd-datasets-cache-zipfiles.s3.eu-west-1.amazonaws.com/zr7vgbcyr2-1.zip"
-        with tqdm_logging(
+        with TqdmLogging(
             logger=self.logger,
             unit="B",
             unit_scale=True,
@@ -406,63 +477,66 @@ class Pad_UFES_20(ImageClassification):
             miniters=1,
             desc=url.split("/")[-1],
         ) as t:
-            os.makedirs(dataFolder, exist_ok=True)
+            os.makedirs(data_folder, exist_ok=True)
             urllib.request.urlretrieve(
                 url,
-                os.path.join(dataFolder, "pad_ufes_20.zip"),
+                os.path.join(data_folder, "pad_ufes_20.zip"),
                 reporthook=lambda x, y, z: t.update(y),
             )
 
         # Extract the file
         self.logger.info("Extracting the dataset...")
         with zipfile.ZipFile(
-            os.path.join(dataFolder, "pad_ufes_20.zip"), "r"
+            os.path.join(data_folder, "pad_ufes_20.zip"), "r"
         ) as zip_ref:
-            zip_ref.extractall(f"{dataFolder}")
+            zip_ref.extractall(f"{data_folder}")
 
         self.logger.info("Extracting the images...")
-        for file in os.listdir(os.path.join(dataFolder, "images")):
+        for file in os.listdir(os.path.join(data_folder, "images")):
             if not file.endswith(".zip"):
                 continue
             with zipfile.ZipFile(
-                os.path.join(dataFolder, "images", file), "r"
+                os.path.join(data_folder, "images", file), "r"
             ) as zip_ref:
-                zip_ref.extractall(os.path.join(dataFolder, "images"))
-                os.remove(os.path.join(dataFolder, "images", file))
+                zip_ref.extractall(os.path.join(data_folder, "images"))
+                os.remove(os.path.join(data_folder, "images", file))
 
         self.logger.info("Copying the images...")
-        for file in os.listdir(os.path.join(dataFolder, "images")):
-            if not os.path.isdir(os.path.join(dataFolder, "images", file)):
+        for file in os.listdir(os.path.join(data_folder, "images")):
+            if not os.path.isdir(os.path.join(data_folder, "images", file)):
                 continue
-            for image in os.listdir(os.path.join(dataFolder, "images", file)):
+            for image in os.listdir(os.path.join(data_folder, "images", file)):
                 shutil.copyfile(
-                    os.path.join(dataFolder, "images", file, image),
-                    os.path.join(dataFolder, "images", image),
+                    os.path.join(data_folder, "images", file, image),
+                    os.path.join(data_folder, "images", image),
                 )
-                os.remove(os.path.join(dataFolder, "images", file, image))
+                os.remove(os.path.join(data_folder, "images", file, image))
 
-            os.rmdir(os.path.join(dataFolder, "images", file))
+            os.rmdir(os.path.join(data_folder, "images", file))
 
 
-class CBIS_DDSM(ImageClassification):
+class CBISDDSM(ImageClassification):
+    """CBIS-DDSM Image Classification task."""
+
     def __init__(self, abnormality: str, **kwargs):
+        """Initialize the CBIS-DDSM Image Classification task."""
         super().__init__(**kwargs)
         self.modality = "Mammography"
         self.abnormality = abnormality
 
     def setup(self):
+        """Setup the CBIS-DDSM Image Classification task."""
         self.num_classes = 3
-        self.scoringType = "multiclass"
+        self.scoring_type = "multiclass"
 
         # Get the dataset from Kaggle
-        self.path = self.engine.getConfig()["CBIS_DDSM_dir"]
+        self.path = self.engine.getConfig()["cbis_ddsm_dir"]
 
         if self.path is None:
             raise ValueError(
                 "Skipping CBIS-DDSM because the cache directory is not set."
             )
 
-        # Download the file at address https://huggingface.co/datasets/Reverb/CBIS-DDSM/resolve/main/CBIS-DDSM.7z?download=true
         self._generate_dataset()
 
         # Open the calc_case_description_test_set.csv file with pandas
@@ -506,23 +580,42 @@ class CBIS_DDSM(ImageClassification):
         self._fix_image_path(self.dataset)
         self.dataset = datasets.Dataset.from_pandas(self.dataset)
 
-        self.trainDataset = pd.read_csv(
+        self.train_dataset = pd.read_csv(
             os.path.join(
                 self.path, "csv", f"{self.abnormality}_case_description_train_set.csv"
             )
         )
-        self.trainDataset = self.trainDataset[["pathology", "cropped image file path"]]
-        self._fix_image_path(self.trainDataset)
-        self.trainDataset = datasets.Dataset.from_pandas(self.trainDataset)
+        self.train_dataset = self.train_dataset[
+            ["pathology", "cropped image file path"]
+        ]
+        self._fix_image_path(self.train_dataset)
+        self.train_dataset = datasets.Dataset.from_pandas(self.train_dataset)
 
-    def getPredictedAnswer(self, answer: str) -> int:
-        answer = cleanStr(answer)
+    def get_predicted_answer(self, answer: str) -> int:
+        """Convert the free form text output to the answer index.
+
+        Args:
+            answer: The free form text output of the model.
+
+        Returns:
+            The index of the answer.
+        """
+        answer = clean_str(answer)
         # Find the best bleu score between the answer and the options
-        scores = [self.bleu([answer], [[cleanStr(option)]]) for option in self.options]
+        scores = [self.bleu([answer], [[clean_str(option)]]) for option in self.options]
         return scores.index(max(scores))
 
-    def getCorrectAnswer(self, sample, fullText=False) -> int:
-        if fullText:
+    def get_correct_answer(self, sample, full_text=False) -> int:
+        """Get the correct answer for the sample.
+
+        Args:
+            sample: The sample to get the correct answer from.
+            fullText: Returns the raw answer. Defaults to False.
+
+        Returns:
+            The correct answer.
+        """
+        if full_text:
             return sample["pathology"]
 
         return self.options.index(sample["pathology"])
@@ -530,8 +623,6 @@ class CBIS_DDSM(ImageClassification):
     def _generate_dataset(self):
         if os.path.exists(os.path.join(self.path, "csv")):
             return
-
-        from kaggle.api.kaggle_api_extended import KaggleApi
 
         api = KaggleApi()
         api.authenticate()
@@ -543,62 +634,87 @@ class CBIS_DDSM(ImageClassification):
         )
 
     def _fix_image_path(self, data: pd.DataFrame):
-        """correct dicom paths to correct image paths"""
+        """Correct dicom paths to correct image paths."""
         for idx in range(len(data)):
             sample = data.iloc[idx]
 
             img_name = sample["cropped image file path"].split("/")[2]
             if img_name in self.cropped_images_dict:
-                imagePath = self.cropped_images_dict[img_name]
+                image_path = self.cropped_images_dict[img_name]
             elif img_name in self.nan_dict:
-                imagePath = self.nan_dict[img_name]
+                image_path = self.nan_dict[img_name]
 
-            data.iloc[idx, data.columns.get_loc("cropped image file path")] = imagePath
+            data.iloc[idx, data.columns.get_loc("cropped image file path")] = image_path
 
 
-class CBIS_DDSM_Calcification(CBIS_DDSM):
+class CBISDDSMCalcification(CBISDDSM):
+    """CBIS-DDSM Calcification Image Classification task."""
+
     def __init__(self, **kwargs) -> None:
+        """Initialize the CBIS-DDSM Calcification Image Classification task."""
         super().__init__(abnormality="calc", **kwargs)
-        self.taskName = "CBIS-DDSM Calcification"
+        self.task_name = "CBIS-DDSM Calcification"
 
     def format_question(self, sample, prompt=False):
+        """Format the question for the CBIS-DDSM Calcification Image Classification task.
+
+        Args:
+            sample: The sample to format.
+            prompt: Whether or not to add the answe rto the prompt. Defaults to False.
+
+        Returns:
+            A tuple with the formatted prompt and the images.
+        """
         path = Path(sample["cropped image file path"])
         path = Path(self.path) / Path(*path.parts[1:])
 
-        formattedText = [
+        formatted_text = [
             {
                 "role": "user",
-                "content": "<img> Is the calcification benign, malignant or benign without callback?",
+                "content": "<img> Is the calcification benign, "
+                "malignant or benign without callback?",
             }
         ]
         if prompt:
-            formattedText.append(
+            formatted_text.append(
                 {"role": "assistant", "content": f"{sample['pathology'].lower()}"}
             )
 
         image = Image.open(os.path.join(self.path, "images", path))
-        return (formattedText, [image])
+        return (formatted_text, [image])
 
 
-class CBIS_DDSM_Mass(CBIS_DDSM):
+class CBISDDSMMass(CBISDDSM):
+    """CBIS-DDSM Mass Image Classification task."""
+
     def __init__(self, **kwargs) -> None:
+        """Initialize the CBIS-DDSM Mass Image Classification task."""
         super().__init__(abnormality="mass", **kwargs)
-        self.taskName = "CBIS-DDSM Mass"
+        self.task_name = "CBIS-DDSM Mass"
 
     def format_question(self, sample, prompt=False):
+        """Format the question for the CBIS-DDSM Mass Image Classification task.
+
+        Args:
+            sample: The sample to format.
+            prompt: Whether or not to add the answer to the prompt. Defaults to False.
+
+        Returns:
+            A tuple with the formatted prompt and the images.
+        """
         path = Path(sample["cropped image file path"])
         path = Path(self.path) / Path(*path.parts[1:])
 
-        formattedText = [
+        formatted_text = [
             {
                 "role": "user",
                 "content": "<img> Is the mass benign, malignant or benign without callback?",
             }
         ]
         if prompt:
-            formattedText.append(
+            formatted_text.append(
                 {"role": "assistant", "content": f"{sample['pathology'].lower()}"}
             )
 
         image = Image.open(os.path.join(self.path, "images", path))
-        return (formattedText, [image])
+        return (formatted_text, [image])

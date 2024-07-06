@@ -1,12 +1,14 @@
+"""Tests the VQA-Rad preprocessing."""
+
 import json
 import logging
 import os
 
 import pytest
 
-from multimedeval import EvalParams, MultiMedEval, SetupParams
-from multimedeval.utils import cleanStr
-from multimedeval.vqa import VQA_RAD
+from multimedeval import MultiMedEval, SetupParams
+from multimedeval.utils import clean_str
+from multimedeval.vqa import VQARad
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,8 +16,10 @@ IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 
 class TestVQAPreprocessing:
+    """Tests the VQA-Rad preprocessing."""
 
     def setup_class(self):
+        """Set up the test class."""
         self.engine = MultiMedEval()
 
         config = (
@@ -24,8 +28,8 @@ class TestVQAPreprocessing:
             else json.load(open("MedMD_config.json"))
         )
 
-        self.engine.setup(SetupParams(VQA_RAD_dir=config["VQA_RAD_dir"]))
-        self.vqarad: VQA_RAD = self.engine.nameToTask["VQA-Rad"]
+        self.engine.setup(SetupParams(vqa_rad_dir=config["vqa_rad_dir"]))
+        self.vqarad: VQARad = self.engine.name_to_task["VQA-Rad"]
 
     @pytest.mark.parametrize(
         "text, expectedSet",
@@ -96,7 +100,8 @@ class TestVQAPreprocessing:
         ],
     )
     def test_vqa_preprocessing(self, text, expectedSet):
-        text = cleanStr(text)
+        """Tests the VQA-Rad preprocessing."""
+        text = clean_str(text)
         print(text)
         tokenizedText = self.vqarad._preprocess(text)
 

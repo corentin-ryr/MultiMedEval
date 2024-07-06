@@ -1,3 +1,5 @@
+"""Batchers."""
+
 import json
 import time
 
@@ -16,7 +18,10 @@ from multimedeval import EvalParams, MultiMedEval, SetupParams
 
 
 class batcherMistral:
+    """Batcher for the Mistral model."""
+
     def __init__(self, device=None) -> None:
+        """Initialize the Mistral batcher."""
         self.device = device
 
         nf4_config = BitsAndBytesConfig(
@@ -38,6 +43,14 @@ class batcherMistral:
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def __call__(self, prompts):
+        """Call the Mistral batcher.
+
+        Args:
+            prompts: The prompt to start the generation.
+
+        Returns:
+            The generated text.
+        """
         model_inputs = [
             self.tokenizer.apply_chat_template(
                 messages[0], return_tensors="pt", tokenize=False
@@ -69,12 +82,16 @@ class batcherMistral:
 
 
 class batcherLlama:
+    """Batcher for the Llama model."""
+
     def __init__(self, device=None) -> None:
+        """Initialize the Llama batcher."""
         self.device = "auto" if device is None else device
         self.loadModelAndTokenizer()
         self.model.eval()
 
     def loadModelAndTokenizer(self):
+        """Load the Llama model and tokenizer."""
         nf4_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -97,6 +114,14 @@ class batcherLlama:
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def __call__(self, prompts):
+        """Call the Llama batcher.
+
+        Args:
+            prompts: The prompt to start the generation.
+
+        Returns:
+            The generated text.
+        """
         model_inputs = [
             self.tokenizer.apply_chat_template(
                 messages[0], return_tensors="pt", tokenize=False
@@ -140,15 +165,10 @@ class batcherLlama:
 
 
 class batcherMedAlpaca(batcherLlama):
-    def loadModelAndTokenizer(self) -> None:
-        nf4_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-        )
-        nf4_config = BitsAndBytesConfig(load_in_8bit=True)
+    """Batcher for the MedAlpaca model."""
 
+    def loadModelAndTokenizer(self) -> None:
+        """Load the MedAlpaca model and tokenizer."""
         self.model = LlamaForCausalLM.from_pretrained(
             "medalpaca/medalpaca-7b",
             device_map=self.device,
@@ -171,12 +191,13 @@ class batcherMedAlpaca(batcherLlama):
 
 
 class batcherPMCLlama(batcherLlama):
+    """Batcher for the PMC LLaMA model."""
+
     def loadModelAndTokenizer(self):
+        """Load the PMC LLaMA model and tokenizer."""
         self.tokenizer: LlamaTokenizer = LlamaTokenizer.from_pretrained(
             "axiong/PMC_LLaMA_13B", padding_side="left"
         )
-
-        nf4_config = BitsAndBytesConfig(load_in_8bit=True)
 
         self.model = LlamaForCausalLM.from_pretrained(
             "axiong/PMC_LLaMA_13B", torch_dtype=torch.float16, device_map="cuda"
@@ -190,6 +211,14 @@ class batcherPMCLlama(batcherLlama):
         self.tokenizer.chat_template = """{% for message in messages %}{% if message['role'] == 'user' %}{{ '### Input:\n'  + message['content'] + "\n### Answer:" }}{% elif message['role'] == 'system' %}{{ '###Instruction:\n' + message['content'].strip() + '\n' }}{% elif message['role'] == 'assistant' %}{{ message['content'] + eos_token }}{% endif %}{% endfor %}"""
 
     def __call__(self, prompts):
+        """Call the PMCLlama batcher.
+
+        Args:
+            prompts: The prompt to start the generation.
+
+        Returns:
+            The generated text.
+        """
         instruction = "You're a doctor, kindly address the medical queries according to the patient's account. Answer with the best option directly."
 
         prompts = [

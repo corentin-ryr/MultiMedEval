@@ -43,6 +43,7 @@ dev = [
     "plotly",
     "kaleido",
     "tabulate",
+    "types-tabulate",
     "colour",
     "flake8",
     "black",

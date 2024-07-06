@@ -9,13 +9,13 @@ from torch.utils.checkpoint import checkpoint
 
 class PMC_CLIP_cfg:
     backbone: str = "ModifiedRN50"  # ['RN50', 'ModifiedRN50', 'MAE']
-    layers: Union[Tuple[int, int, int, int], int] = [3, 4, 6, 3]
+    layers: Union[Tuple[int, int, int, int], int] = (3, 4, 6, 3)
     width: int = 64
     head_width: int = 64
     mlp_ratio: float = 4.0
     patch_size: int = 16
     image_size: Union[Tuple[int, int], int] = 224
-    timm_model_name: str = (
+    timm_model_name: Optional[str] = (
         None  # a valid model name overrides layers, width, patch_size
     )
     timm_model_pretrained: bool = (
@@ -29,7 +29,6 @@ class PMC_CLIP_cfg:
     )
     patch_dropout: float = 0.0  # patch dropout rate, no dropout by default
     drop_attention_rate: float = 0.0  # Transformer Dropout
-    patch_size: None
 
 
 class Bottleneck(nn.Module):
@@ -95,7 +94,11 @@ class Bottleneck(nn.Module):
 
 class AttentionPool2d(nn.Module):
     def __init__(
-        self, spacial_dim: int, embed_dim: int, num_heads: int, output_dim: int = None
+        self,
+        spacial_dim: int,
+        embed_dim: int,
+        num_heads: int,
+        output_dim: Optional[int] = None,
     ):
         super().__init__()
         self.positional_embedding = nn.Parameter(
@@ -207,7 +210,7 @@ class ResNet(nn.Module):
         for param in self.parameters():
             param.requires_grad = False
         if freeze_bn_stats:
-            freeze_batch_norm_2d(self)
+            raise ValueError()
 
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):
@@ -311,7 +314,7 @@ class ModifiedResNet(nn.Module):
         for param in self.parameters():
             param.requires_grad = False
         if freeze_bn_stats:
-            freeze_batch_norm_2d(self)
+            raise ValueError()
 
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):

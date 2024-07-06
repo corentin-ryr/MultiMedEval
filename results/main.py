@@ -1,15 +1,17 @@
+"""Main script to run the evaluation."""
+
 import argparse
 import json
 import logging
 from abc import abstractmethod
 
+from llava_med.batcher import batcherLLaVA_Med
+from LLMs.batcher import batcherLlama, batcherMedAlpaca, batcherMistral, batcherPMCLlama
+from rad_fm.batcher import RadFMBatcher
+
 from multimedeval import EvalParams, MultiMedEval, SetupParams
 
 logging.basicConfig(level=logging.INFO)
-
-from llava_med.batcher import batcherLLaVA_Med
-from LLMs.batcher import batcherLlama, batcherMedAlpaca, batcherMistral, batcherPMCLlama
-from RadFM.batcher import RadFMBatcher
 
 BATCHERS = {
     "RadFM": RadFMBatcher,
@@ -22,12 +24,16 @@ BATCHERS = {
 
 
 class Batcher:
+    """Batcher abstract class."""
+
     @abstractmethod
     def __init__(self, model_path):
+        """Initialize the batcher."""
         pass
 
 
 def main(batcherName):
+    """Main function."""
     # The two path are PATH/TO/MODEL/RadFM/Language_files and PATH/TO/MODEL/RadFM_cleaned/Language_files
     batcher = RadFMBatcher(**json.load(open("configPaths.json")))
 
