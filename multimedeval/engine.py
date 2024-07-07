@@ -331,7 +331,7 @@ class MultiMedEval:
     def visualization(self):
         """Generate visualizations for the tasks."""
         benchmarks = [
-            task_item
+            self.name_to_task[x]
             for x, task_item in self.tasks_ready.items()
             if (task_item["ready"] and x in self.name_to_task)
         ]
