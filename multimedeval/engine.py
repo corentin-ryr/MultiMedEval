@@ -111,6 +111,7 @@ class MultiMedEval:
 
         dynamic_datasets = find_datasets()
         TASKS.update(dynamic_datasets)
+        print(f"TASKS: {TASKS}")
 
         self.tasks_ready = {}
 
