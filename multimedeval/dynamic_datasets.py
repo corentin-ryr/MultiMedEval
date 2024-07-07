@@ -16,7 +16,7 @@ def make_constructor(new_class, dataset, dataset_name, dataset_samples):
     def constructor(self, **kwargs) -> None:
         super(new_class, self).__init__(**kwargs)
         self.path = dataset
-        self.taskName = dataset_name
+        self.task_name = dataset_name
         self.modality = dataset_samples["modality"]
         self.dataset = dataset_samples["samples"]
 
