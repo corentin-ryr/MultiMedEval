@@ -339,7 +339,7 @@ class BenchmarkVisualizer:
         )
 
         # Reduce margins
-        fig.update_layout(margin=Dict(t=50, l=20, r=20, b=20))
+        fig.update_layout(margin={"t": 50, "l": 20, "r": 20, "b": 20})
         # Increase font size of the labels
 
         fig.write_image(
