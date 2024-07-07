@@ -86,6 +86,6 @@ def compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgrap
 class ModuleRedirectUnpickler(dill.Unpickler):
     def find_class(self, module, name):
         # Redirect the module name if it matches the old module name
-        if module == 'report_comparison_utils':
+        if module == 'multimedeval.reportComparisonUtils':
             module = 'multimedeval.utils'
         return super().find_class(module, name)
