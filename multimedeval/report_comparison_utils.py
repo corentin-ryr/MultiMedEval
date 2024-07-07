@@ -72,7 +72,8 @@ def compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgrap
     # Get the current path to the module
     module_path = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(module_path, "radcliq-v1.dill"), "rb") as f:
-        composite_metric_v0_model: CompositeMetric = dill.load(f)
+        unpickler = ModuleRedirectUnpickler(f)
+        composite_metric_v0_model: CompositeMetric = unpickler.load()
 
     # The column need to be in the order [bleu, bertscore, chexbert, radgraph]
     input_data = torch.stack(
@@ -80,3 +81,11 @@ def compute_composite(bleu_scores, f1_bertscore, chexbert_similarity, f1_radgrap
         dim=1,
     )
     return composite_metric_v0_model.predict(input_data)
+
+
+class ModuleRedirectUnpickler(dill.Unpickler):
+    def find_class(self, module, name):
+        # Redirect the module name if it matches the old module name
+        if module == 'report_comparison_utils':
+            module = 'multimedeval.utils'
+        return super().find_class(module, name)

@@ -73,7 +73,7 @@ def get_predicted_answer(self, pred: str, sample):
 
     options = [clean_str(option) for option in sample["options"]]
     # Compute the BLEU score for each option
-    scores = [self.bleuScorer([pred], [[option]]) for option in options]
+    scores = [self.bleu_scorer([pred], [[option]]) for option in options]
 
     if max(scores) == 0:
         return "Invalid answer"
