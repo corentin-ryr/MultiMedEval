@@ -1,90 +1,156 @@
-from datasets import load_dataset, Dataset
+"""VQA tasks."""
+
 import os
-from PIL import Image
-import gdown
 from zipfile import ZipFile
-from multimedeval.taskFamilies import VQA
-from multimedeval.utils import download_file
+
+import gdown
 import pandas as pd
+from datasets import Dataset, load_dataset
+from PIL import Image
+
+from multimedeval.task_families import VQA
+from multimedeval.utils import download_file
 
 
+class VQARad(VQA):
+    """VQA-Rad task."""
 
-
-class VQA_RAD(VQA):
     def __init__(self, **kwargs) -> None:
+        """Initialize the VQA-Rad task object."""
         super().__init__(**kwargs)
-        self.taskName = "VQA-Rad"
+        self.task_name = "VQA-Rad"
         self.modality = "Radiology"
 
     def setup(self):
-        cacheDir = self.engine.getConfig()["VQA_RAD_dir"]
+        """Setup the VQA-Rad task. Downloads the dataset if not already downloaded."""
+        cache_dir = self.engine.get_config()["vqa_rad_dir"]
 
-        if cacheDir is None:
-            raise Exception("No path for VQA-Rad dataset provided in the config file. Skipping the task.")
+        if cache_dir is None:
+            raise ValueError(
+                "No path for VQA-Rad dataset provided in the config file. "
+                "Skipping the task."
+            )
 
-        self.dataset = load_dataset("flaviagiammarino/vqa-rad", split="test", cache_dir=cacheDir)
-        self.trainDataset = load_dataset("flaviagiammarino/vqa-rad", split="train", cache_dir=cacheDir)
+        self.dataset = load_dataset(
+            "flaviagiammarino/vqa-rad", split="test", cache_dir=cache_dir
+        )
+        self.train_dataset = load_dataset(
+            "flaviagiammarino/vqa-rad", split="train", cache_dir=cache_dir
+        )
 
     def format_question(self, sample, prompt=False):
-        formattedQuestion = f"<img> {sample['question']}"
-        formattedAnswer = f"{sample['answer']}"
-        if formattedAnswer in ["yes", "no"]:
-            formattedQuestion = "Answer the following question with yes or no. " + formattedQuestion
+        """Format the question for the VQA-Rad task.
 
-        question = [{"role": "user", "content": formattedQuestion}]
+        Args:
+            sample: The dataset sample to format.
+            prompt: Wether or not to add the answer to the formatted question. Defaults to False.
+
+        Returns:
+            A conversation in the huggingface style and the images.
+        """
+        formatted_question = f"<img> {sample['question']}"
+        formatted_answer = f"{sample['answer']}"
+        if formatted_answer in ["yes", "no"]:
+            formatted_question = (
+                "Answer the following question with yes or no. " + formatted_question
+            )
+
+        question = [{"role": "user", "content": formatted_question}]
         if prompt:
-            question.append({"role": "assistant", "content": formattedAnswer})
+            question.append({"role": "assistant", "content": formatted_answer})
 
         return (question, [sample["image"]])
 
-    def getCorrectAnswer(self, sample):
+    def get_correct_answer(self, sample):
+        """Get the correct answer for the VQA-Rad task.
+
+        Args:
+            sample: The dataset sample.
+
+        Returns:
+            The correct answer.
+        """
         return sample["answer"].lower().strip()
 
 
-class Path_VQA(VQA):
+class PathVQA(VQA):
+    """Path-VQA task."""
+
     def __init__(self, **kwargs):
+        """Initialize the Path-VQA task object."""
         super().__init__(**kwargs)
-        self.taskName = "VQA-Path"
+        self.task_name = "VQA-Path"
         self.modality = "Pathology"
 
     def setup(self):
-        cacheDir = self.engine.getConfig()["Path_VQA_dir"]
+        """Setup the Path-VQA task. Downloads the dataset if not already downloaded."""
+        cache_dir = self.engine.get_config()["path_vqa_dir"]
 
-        if cacheDir is None:
-            raise Exception("No path for Path-VQA dataset provided in the config file. Skipping the task.")
-    
-        self.dataset = load_dataset("flaviagiammarino/path-vqa", split="test", cache_dir=cacheDir)
-        self.trainDataset = load_dataset("flaviagiammarino/path-vqa", split="train", cache_dir=cacheDir)
+        if cache_dir is None:
+            raise ValueError(
+                "No path for Path-VQA dataset provided in the config file. Skipping the task."
+            )
+
+        self.dataset = load_dataset(
+            "flaviagiammarino/path-vqa", split="test", cache_dir=cache_dir
+        )
+        self.train_dataset = load_dataset(
+            "flaviagiammarino/path-vqa", split="train", cache_dir=cache_dir
+        )
 
     def format_question(self, sample, prompt=False):
-        formattedQuestion = f"<img> {sample['question']}"
-        formattedAnswer = f"{sample['answer']}"
-        if formattedAnswer in ["yes", "no"]:
-            formattedQuestion = "Answer the following question with yes or no. " + formattedQuestion
+        """Format the question for the Path-VQA task.
 
-        question = [{"role": "user", "content": formattedQuestion}]
+        Args:
+            sample: The sample to format.
+            prompt: Whether or not to add the answer to the formatted output. Defaults to False.
+
+        Returns:
+            A conversation in the huggingface style and the images.
+        """
+        formatted_question = f"<img> {sample['question']}"
+        formatted_answer = f"{sample['answer']}"
+        if formatted_answer in ["yes", "no"]:
+            formatted_question = (
+                "Answer the following question with yes or no. " + formatted_question
+            )
+
+        question = [{"role": "user", "content": formatted_question}]
         if prompt:
-            question.append({"role": "assistant", "content": formattedAnswer})
+            question.append({"role": "assistant", "content": formatted_answer})
 
         return (question, [sample["image"]])
 
-    def getCorrectAnswer(self, sample):
+    def get_correct_answer(self, sample):
+        """Get the correct answer for the Path-VQA task.
+
+        Args:
+            sample: The sample to get the correct answer for.
+
+        Returns:
+            The correct answer.
+        """
         return sample["answer"].lower().strip()
 
 
 class SLAKE(VQA):
+    """VQA task for the SLAKE dataset."""
+
     def __init__(self, **kwargs):
+        """Initialize the SLAKE task object."""
         super().__init__(**kwargs)
-        self.taskName = "SLAKE"
+        self.task_name = "SLAKE"
         self.modality = "Radiology"
 
-
     def setup(self):
-        self.path = self.engine.getConfig()["SLAKE_dir"]
+        """Setup the SLAKE task. Downloads the dataset if not already downloaded."""
+        self.path = self.engine.get_config()["slake_dir"]
 
         if self.path is None:
-            raise Exception("No path for SLAKE dataset provided in the config file. Skipping the task.")
-
+            raise ValueError(
+                "No path for SLAKE dataset provided in the config file. "
+                "Skipping the task."
+            )
 
         dset = load_dataset("BoKelvin/SLAKE", cache_dir=self.path)
         self._generate_dataset()
@@ -100,32 +166,49 @@ class SLAKE(VQA):
                 self.dataset.append(sample)
 
         # jsonFile = json.load(open(os.path.join(self.path, "train.json"), "r"))
-        self.trainDataset = []
+        self.train_dataset = []
         for sample in dset["train"]:
             if sample["q_lang"] == "en":
                 sample["image"] = os.path.join(self.path, "imgs", sample["img_name"])
-                self.trainDataset.append(sample)
+                self.train_dataset.append(sample)
 
         self.dataset = Dataset.from_list(self.dataset)
-        self.trainDataset = Dataset.from_list(self.trainDataset)
-
-
+        self.train_dataset = Dataset.from_list(self.train_dataset)
 
     def format_question(self, sample, prompt=False):
-        formattedQuestion = f"<img> {sample['question']}"
-        formattedAnswer = f"{sample['answer']}"
-        if formattedAnswer in ["yes", "no"]:
-            formattedQuestion = "Answer the following question with yes or no. " + formattedQuestion
+        """Format the question for the SLAKE task.
 
-        question = [{"role": "user", "content": formattedQuestion}]
+        Args:
+            sample: The sample to format.
+            prompt: Whether to add the answer to the conversation. Defaults to False.
+
+        Returns:
+            A conversation in the huggingface style and the images.
+        """
+        formatted_question = f"<img> {sample['question']}"
+        formatted_answer = f"{sample['answer']}"
+        if formatted_answer in ["yes", "no"]:
+            formatted_question = (
+                "Answer the following question with yes or no. " + formatted_question
+            )
+
+        question = [{"role": "user", "content": formatted_question}]
         if prompt:
-            question.append({"role": "assistant", "content": formattedAnswer})
+            question.append({"role": "assistant", "content": formatted_answer})
 
         images = [Image.open(os.path.join(self.path, "imgs", sample["img_name"]))]
 
         return (question, images)
 
-    def getCorrectAnswer(self, sample):
+    def get_correct_answer(self, sample):
+        """Get the correct answer for the SLAKE task.
+
+        Args:
+            sample: The sample to get the correct answer for.
+
+        Returns:
+            The correct answer.
+        """
         return sample["answer"].lower().strip()
 
     def _generate_dataset(self):
@@ -138,76 +221,114 @@ class SLAKE(VQA):
 
         output = os.path.join(self.path, "BoKelvin___slake", "imgs.zip")
         if not os.path.exists(output):
-            gdown.download("https://huggingface.co/datasets/BoKelvin/SLAKE/resolve/main/imgs.zip?download=true", output=output, quiet=False)
+            gdown.download(
+                "https://huggingface.co/datasets/BoKelvin/"
+                "SLAKE/resolve/main/imgs.zip?download=true",
+                output=output,
+                quiet=False,
+            )
 
         print(output)
-        with ZipFile(output, "r") as zObject:
-            zObject.extractall(path=os.path.join(self.path, "BoKelvin___slake"))
+        with ZipFile(output, "r") as z_object:
+            z_object.extractall(path=os.path.join(self.path, "BoKelvin___slake"))
 
         os.remove(output)
 
 
-
 class DiffVQA(VQA):
+    """VQA task for the DiffVQA dataset."""
+
     def __init__(self, **kwargs):
+        """Initialize the DiffVQA task object."""
         super().__init__(**kwargs)
-        self.taskName = "Diff-VQA"
+        self.task_name = "Diff-VQA"
         self.modality = "Radiology"
 
-
     def setup(self):
-        self.path = self.engine.getConfig()["DiffVQA_dir"]
+        """Setup the DiffVQA task. Downloads the dataset if not already downloaded."""
+        self.path = self.engine.get_config()["diff_vqa_dir"]
 
-        self.mimicPath = self.engine.getConfig()["MIMIC_CXR_dir"]
+        self.mimic_path = self.engine.get_config()["mimic_cxr_dir"]
 
-        if self.path is None or self.mimicPath is None:
-            raise Exception("No path for DiffVQA dataset provided in the config file. Skipping the task.")
-    
+        if self.path is None or self.mimic_path is None:
+            raise ValueError(
+                "No path for DiffVQA dataset provided in the config file. Skipping the task."
+            )
+
         self._generate_dataset()
 
         # Open the csv file
         df = pd.read_csv(os.path.join(self.path, "mimic_pair_questions.csv"))
 
-        testDf = df[df["split"] == "test"]
-        self.dataset = Dataset.from_pandas(testDf)
+        test_df = df[df["split"] == "test"]
+        self.dataset = Dataset.from_pandas(test_df)
 
-        trainDf = df[df["split"] == "train"]
-        self.trainDataset = Dataset.from_pandas(trainDf)
-
-
+        train_df = df[df["split"] == "train"]
+        self.train_dataset = Dataset.from_pandas(train_df)
 
     def format_question(self, sample, prompt=False):
-        imageFolderPath = os.path.join(self.mimicPath, "mimic-cxr-jpg", "2.0.0", "files", f"p{str(sample['subject_id'])[:2]}", f"p{sample['subject_id']}", f"s{sample['study_id']}")
-        listOfFiles = os.listdir(imageFolderPath)
+        """Format the question for the DiffVQA task.
 
-        images = [Image.open(os.path.join(imageFolderPath, imagePath)) for imagePath in listOfFiles if imagePath.endswith(".jpg")]
+        Args:
+            sample: The sample to format.
+            prompt: Whether to add the answer to the prompt. Defaults to False.
 
-        imgTokens = "<img>" * len(images)
-        formattedQuestion = f"{imgTokens} {sample['question']}"
-        formattedAnswer = f"{sample['answer']}"
-        if formattedAnswer in ["yes", "no"]:
-            formattedQuestion = "Answer the following question with yes or no. " + formattedQuestion
+        Returns:
+            A conversation in the huggingface style and the images.
+        """
+        image_folder_path = os.path.join(
+            self.mimic_path,
+            "mimic-cxr-jpg",
+            "2.0.0",
+            "files",
+            f"p{str(sample['subject_id'])[:2]}",
+            f"p{sample['subject_id']}",
+            f"s{sample['study_id']}",
+        )
+        list_files = os.listdir(image_folder_path)
 
-        question = [{"role": "user", "content": formattedQuestion}]
+        images = [
+            Image.open(os.path.join(image_folder_path, imagePath))
+            for imagePath in list_files
+            if imagePath.endswith(".jpg")
+        ]
+
+        img_tokens = "<img>" * len(images)
+        formatted_question = f"{img_tokens} {sample['question']}"
+        formatted_answer = f"{sample['answer']}"
+        if formatted_answer in ["yes", "no"]:
+            formatted_question = (
+                "Answer the following question with yes or no. " + formatted_question
+            )
+
+        question = [{"role": "user", "content": formatted_question}]
         if prompt:
-            question.append({"role": "assistant", "content": formattedAnswer})
+            question.append({"role": "assistant", "content": formatted_answer})
 
         return (question, images)
 
-    def getCorrectAnswer(self, sample):
+    def get_correct_answer(self, sample):
+        """Get the correct answer for the DiffVQA task.
+
+        Args:
+            sample: The sample to get the correct answer for.
+
+        Returns:
+            The correct answer.
+        """
         return sample["answer"].lower().strip()
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return
-        if os.path.exists(os.path.join(self.path, "DiffVQA", "mimic_pair_questions.csv")):
+        if os.path.exists(
+            os.path.join(self.path, "DiffVQA", "mimic_pair_questions.csv")
+        ):
             self.path = os.path.join(self.path, "DiffVQA")
             return
 
         os.makedirs(os.path.join(self.path, "DiffVQA"), exist_ok=True)
 
-        username, password = self.engine.getPhysioNetCredentials()
-        # wget_command = f'wget -r -N -c -np --directory-prefix "{self.path}" --user "{username}" --password "{password}" https://physionet.org/files/mimiciii/1.4/NOTEEVENTS.csv.gz'
-        # subprocess.run(wget_command, shell=True, check=True)
+        username, password = self.engine.get_physionet_credentials()
 
         download_file(
             "https://physionet.org/files/medical-diff-vqa/1.0.0/mimic_pair_questions.csv?download",
@@ -217,4 +338,3 @@ class DiffVQA(VQA):
         )
 
         self.path = os.path.join(self.path, "DiffVQA")
-

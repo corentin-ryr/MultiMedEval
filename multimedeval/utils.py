@@ -1,43 +1,57 @@
-from dataclasses import dataclass
-import string
-from datetime import datetime
+"""Utility functions for the MultimedEval library."""
+
 import csv
 import json
-import numpy as np
-import re
-from abc import abstractmethod, ABC
-import torch
-import requests
-from tqdm import tqdm
-import re
-import requests
-import os
-from typing import Optional
-from typing import Any
 import logging
+import os
+import re
+import string
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+
+import numpy as np
+import requests
+import torch
+from datasets import Dataset
+from tqdm import tqdm
+
+if TYPE_CHECKING:
+    from multimedeval import MultiMedEval
+
 
 class Benchmark(ABC):
-    def __init__(self, engine, logger) -> None:
-        self.taskName:str = "None"
-        self.engine = engine
-        self.modality:str = "None"
-        self.task:str = "None"
-        self._prompt = None
-        self.trainDataset = None
-        self.dataset = None
-        self.logger:logging.Logger = logger
+    """Abstract class for benchmarks."""
 
-    def getPrompt(self):
-        if not self.trainDataset:
+    def __init__(self, engine, logger) -> None:
+        """Initialize the benchmark.
+
+        Args:
+            engine: Reference to the engine class.
+            logger: A logger object.
+        """
+        self.task_name: str = "None"
+        self.engine: MultiMedEval = engine
+        self.modality: str = "None"
+        self.task: str = "None"
+        self._prompt = None
+        self.train_dataset = None
+        self.dataset: Optional[Dataset] = None
+        self.logger: logging.Logger = logger
+
+    def get_prompt(self):
+        """Get the fewshot prompt."""
+        if not self.train_dataset:
             return None
 
         if self._prompt is None:
             prompt = []
             images = []
             for i in range(5):
-                index = int(i / 5 * len(self.trainDataset))
+                index = int(i / 5 * len(self.train_dataset))
                 text, img = self.format_question(
-                    self.trainDataset[index],
+                    self.train_dataset[index],
                     prompt=True,
                 )
                 prompt += text
@@ -47,25 +61,31 @@ class Benchmark(ABC):
         return self._prompt
 
     def __len__(self):
+        """Get the length of the dataset."""
         return len(self.dataset)
 
     @abstractmethod
     def format_question(self, sample, prompt=False):
-        pass
+        """Format the question in a Huggingface format."""
 
     @abstractmethod
     def setup(self):
-        pass
+        """Setup the benchmark and download the dataset."""
 
     def __getitem__(self, idx):
+        """Get an item from the dataset.
+
+        Args:
+            idx: The index of the item to get.
+
+        Returns:
+            The item from the dataset.
+        """
         return {"idx": idx, "sample": self.dataset[idx]}
 
-    def __len__(self):
-        return len(self.dataset)
-    
     @abstractmethod
     def evaluate(self, predictions):
-        pass
+        """Runs the evaluation on the predictions."""
 
 
 @dataclass
@@ -73,96 +93,104 @@ class EvalParams:
     """Dataclass defining the parameters for evaluation.
 
     Args:
-        batch_size: The size of the batches sent to the user's batcher Callable. 
+        batch_size: The size of the batches sent to the user's batcher Callable.
         run_name: The name to use for the folder where the output will be stored.
         fewshot: A boolean indicating whether the evaluation is few-shot.
         num_workers: The number of workers for the dataloader.
         device: The device to run the evaluation on.
         tensorBoardWriter: The tensorboard writer to use for logging.
         tensorboardStep: The global step for logging to tensorboard.
+
     Raises:
         ImportError: raises an import error if tensorboard is not installed.
     """
-    batch_size: Optional[int] = 128
-    run_name: Optional[str] = f"run {datetime.now()}"
-    fewshot: Optional[bool] = False
-    num_workers: Optional[int] = 0
-    tensorboardWriter:Optional[Any] = None
-    tensorboardStep: Optional[int] = 0
-    mimic_cxr_include_indication_section: Optional[bool] = False
-    dataloader_fn: Optional[Any] = None
+
+    batch_size: int = 128
+    run_name: str = f"run {datetime.now()}"
+    fewshot: bool = False
+    num_workers: int = 0
+    tensorboard_writer: Any = None
+    tensorboard_step: int = 0
+    mimic_cxr_include_indication_section: bool = False
+    dataloader_fn: Any = None
 
     def __post_init__(self):
-        if self.tensorboardWriter is not None:
+        """Check if tensorboard is installed."""
+        if self.tensorboard_writer is not None:
             try:
-                from torch.utils.tensorboard import SummaryWriter
-            except ImportError:
-                raise ImportError("Please install tensorboard using `pip install tensorboard`")
+                from torch.utils.tensorboard import (  # noqa # pylint: disable=unused-import, import-outside-toplevel
+                    SummaryWriter,
+                )
+            except ImportError as e:
+                raise ImportError(
+                    f"Please install tensorboard using `pip install tensorboard` {e}"
+                ) from e
+
 
 @dataclass
 class SetupParams:
     """Parameter dataclass for setting up the benchmark.
 
     Args:
-        MedQA_dir: The path to the MedQA dataset.
-        PubMedQA_dir: The path to the PubMedQA dataset.
-        MedMCQA_dir: The path to the MedMCQA dataset.
-        VQA_RAD_dir: The path to the VQA-RAD dataset.
-        Path_VQA_dir: The path to the Path-VQA dataset.
-        SLAKE_dir: The path to the SLAKE dataset.
-        MIMIC_III_dir: The path to the MIMIC-III dataset.
-        MedNLI_dir: The path to the MedNLI dataset.
-        MIMIC_CXR_dir: The path to the MIMIC-CXR dataset.
-        VinDr_Mammo_dir: The path to the VinDr-Mammo dataset.
-        Pad_UFES_20_dir: The path to the PadChest dataset.
-        CBIS_DDSM_dir: The path to the CBIS-DDSM dataset.
-        MNIST_Oct_dir: The path to the MNIST-OCT dataset.
-        MNIST_Path_dir: The path to the MNIST-Path dataset.
-        MNIST_Blood_dir: The path to the MNIST-Blood dataset.
-        MNIST_Breast_dir: The path to the MNIST-Breast dataset.
-        MNIST_Derma_dir: The path to the MNIST-Derma dataset.
-        MNIST_OrganC_dir: The path to the MNIST-OrganC dataset.
-        MNIST_OrganS_dir: The path to the MNIST-OrganS dataset.
-        MNIST_Pneumonia_dir: The path to the MNIST-Pneumonia dataset.
-        MNIST_Retina_dir: The path to the MNIST-Retina dataset.
-        MNIST_Tissue_dir: The path to the MNIST-Tissue dataset.
-        CheXBert_dir: The path to the CheXpert dataset.
+        medqa_dir: The path to the MedQA dataset.
+        pubmedqa_dir: The path to the PubMedQA dataset.
+        medmcqa_dir: The path to the MedMCQA dataset.
+        vqa_rad_dir: The path to the VQA-RAD dataset.
+        path_vqa_dir: The path to the Path-VQA dataset.
+        slake_dir: The path to the SLAKE dataset.
+        mimic_iii_dir: The path to the MIMIC-III dataset.
+        mednli_dir: The path to the MedNLI dataset.
+        mimic_cxr_dir: The path to the MIMIC-CXR dataset.
+        vindr_mammo_dir: The path to the VinDr-Mammo dataset.
+        pad_ufes_20_dir: The path to the PadChest dataset.
+        cbis_ddsm_dir: The path to the CBIS-DDSM dataset.
+        mnist_oct_dir: The path to the MNIST-OCT dataset.
+        mnist_path_dir: The path to the MNIST-Path dataset.
+        mnist_blood_dir: The path to the MNIST-Blood dataset.
+        mnist_breast_dir: The path to the MNIST-Breast dataset.
+        mnist_derma_dir: The path to the MNIST-Derma dataset.
+        mnist_organc_dir: The path to the MNIST-OrganC dataset.
+        mnist_organs_dir: The path to the MNIST-OrganS dataset.
+        mnist_pneumonia_dir: The path to the MNIST-Pneumonia dataset.
+        mnist_retina_dir: The path to the MNIST-Retina dataset.
+        mnist_tissue_dir: The path to the MNIST-Tissue dataset.
+        chexbert_dir: The path to the CheXpert dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
-        
+
     """
 
-
-    MedQA_dir: Optional[str|os.PathLike] = None
-    PubMedQA_dir: Optional[str|os.PathLike] = None
-    MedMCQA_dir: Optional[str|os.PathLike] = None
-    VQA_RAD_dir: Optional[str|os.PathLike] = None
-    Path_VQA_dir: Optional[str|os.PathLike] = None
-    SLAKE_dir: Optional[str|os.PathLike] = None
-    MIMIC_III_dir: Optional[str|os.PathLike] = None
-    MedNLI_dir: Optional[str|os.PathLike] = None
-    MIMIC_CXR_dir: Optional[str|os.PathLike] = None
-    VinDr_Mammo_dir: Optional[str|os.PathLike] = None
-    Pad_UFES_20_dir: Optional[str|os.PathLike] = None
-    CBIS_DDSM_dir: Optional[str|os.PathLike] = None
-    MNIST_Oct_dir: Optional[str|os.PathLike] = None
-    MNIST_Path_dir: Optional[str|os.PathLike] = None
-    MNIST_Blood_dir: Optional[str|os.PathLike] = None
-    MNIST_Breast_dir: Optional[str|os.PathLike] = None
-    MNIST_Derma_dir: Optional[str|os.PathLike] = None
-    MNIST_OrganC_dir: Optional[str|os.PathLike] = None
-    MNIST_OrganS_dir: Optional[str|os.PathLike] = None
-    MNIST_Pneumonia_dir: Optional[str|os.PathLike] = None
-    MNIST_Retina_dir: Optional[str|os.PathLike] = None
-    MNIST_Tissue_dir: Optional[str|os.PathLike] = None
-    DiffVQA_dir: Optional[str|os.PathLike] = None
-    MMLU_dir: Optional[str|os.PathLike] = None
-    CheXBert_dir:Optional[str|os.PathLike] = None
+    medqa_dir: Optional[Union[str, os.PathLike]] = None
+    pubmedqa_dir: Optional[Union[str, os.PathLike]] = None
+    medmcqa_dir: Optional[Union[str, os.PathLike]] = None
+    vqa_rad_dir: Optional[Union[str, os.PathLike]] = None
+    path_vqa_dir: Optional[Union[str, os.PathLike]] = None
+    slake_dir: Optional[Union[str, os.PathLike]] = None
+    mimic_iii_dir: Optional[Union[str, os.PathLike]] = None
+    mednli_dir: Optional[Union[str, os.PathLike]] = None
+    mimic_cxr_dir: Optional[Union[str, os.PathLike]] = None
+    vindr_mammo_dir: Optional[Union[str, os.PathLike]] = None
+    pad_ufes_20_dir: Optional[Union[str, os.PathLike]] = None
+    cbis_ddsm_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_oct_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_path_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_blood_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_breast_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_derma_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_organc_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_organs_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_pneumonia_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_retina_dir: Optional[Union[str, os.PathLike]] = None
+    mnist_tissue_dir: Optional[Union[str, os.PathLike]] = None
+    diff_vqa_dir: Optional[Union[str, os.PathLike]] = None
+    mmlu_dir: Optional[Union[str, os.PathLike]] = None
+    chexbert_dir: Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     device: Optional[str] = "cuda"
 
     def __post_init__(self):
+        """Checking that the device is available."""
         if self.device != "cpu":
             # Check if the device is available (handle cuda and mps)
             if self.device == "cuda" and not torch.cuda.is_available():
@@ -171,46 +199,79 @@ class SetupParams:
             elif self.device == "mps" and not torch.backends.mps.is_available():
                 self.device = "cpu"
 
+
 @dataclass
 class EvaluationOutput:
-    metrics: dict[str, float]
-    answer_log: Optional[list[tuple]] = None
+    """Dataclass for storing the output of the evaluation."""
+
+    metrics: Dict[str, float]
+    answer_log: Optional[List[tuple]] = None
 
 
 def remove_punctuation(input_string: str):
+    """Removes punctuation from a string.
+
+    Args:
+        input_string: The string to remove punctuation from.
+
+    Returns:
+        The string with punctuation removed.
+    """
     # Make a translator object to replace punctuation with none
     translator = str.maketrans(string.punctuation, " " * len(string.punctuation))
     # Use the translator
     return input_string.translate(translator)
 
 
-def csvWriter(data, path):
+def csv_writer(data, path):
+    """Writes data to a csv file.
+
+    Args:
+        data: The data to write (list of lists).
+        path: The path to write the data to.
+    """
     try:
-        with open(f"{path}.csv", "w", newline="") as f:
-            spamWriter = csv.writer(f)
-            spamWriter.writerows(data)
-    except Exception as e:
+        with open(f"{path}.csv", "w", newline="", encoding="utf-8") as f:
+            spam_writer = csv.writer(f)
+            spam_writer.writerows(data)
+    except IOError as e:
         print(e)
 
 
-def jsonWriter(data, path):
+def json_writer(data, path):
+    """Writes data to a json file.
+
+    Args:
+        data: The serializable data to write.
+        path: The path to write the data to.
+    """
     try:
-        with open(f"{path}.json", "w") as f:
+        with open(f"{path}.json", "w", encoding="utf-8") as f:
             json.dump(data, f)
-    except Exception as e:
+    except IOError as e:
         print(e)
 
 
-SUPPORTED_FILETYPES = {"csv": csvWriter, "json": jsonWriter}
+SUPPORTED_FILETYPES = {"csv": csv_writer, "json": json_writer}
 
 
-def fileWriterFactory(fileType):
-    assert fileType in SUPPORTED_FILETYPES, f"{fileType} not supported."
+def file_writer_factory(file_type):
+    """Factory function for file writers.
 
-    return SUPPORTED_FILETYPES[fileType]
+    Args:
+        fileType: The type of file to write.
+
+    Returns:
+        The file writer function.
+    """
+    assert file_type in SUPPORTED_FILETYPES, f"{file_type} not supported."
+
+    return SUPPORTED_FILETYPES[file_type]
 
 
-def exact_entity_token_if_rel_exists_reward(hypothesis_annotation_list, reference_annotation_list):
+def _exact_entity_token_if_rel_exists_reward(
+    hypothesis_annotation_list, reference_annotation_list
+):
     candidates = []
     for annotation_list in [hypothesis_annotation_list, reference_annotation_list]:
         candidate = []
@@ -226,18 +287,30 @@ def exact_entity_token_if_rel_exists_reward(hypothesis_annotation_list, referenc
     hypothesis_relation_token_list, reference_relation_token_list = candidates
 
     precision = (
-        sum([1 for x in hypothesis_relation_token_list if (x in reference_relation_token_list)])
+        sum(
+            1
+            for x in hypothesis_relation_token_list
+            if (x in reference_relation_token_list)
+        )
         / len(hypothesis_relation_token_list)
         if len(hypothesis_relation_token_list) > 0
         else 0.0
     )
     recall = (
-        sum([1 for x in reference_relation_token_list if (x in hypothesis_relation_token_list)])
+        sum(
+            1
+            for x in reference_relation_token_list
+            if (x in hypothesis_relation_token_list)
+        )
         / len(reference_relation_token_list)
         if len(reference_relation_token_list) > 0
         else 0.0
     )
-    f1_score = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+    f1_score = (
+        (2 * precision * recall / (precision + recall))
+        if (precision + recall) > 0
+        else 0.0
+    )
 
     return f1_score
 
@@ -294,9 +367,9 @@ def section_text(text):
     """
     p_section = re.compile(r"\n ([A-Z ()/,-]+):\s", re.DOTALL)
 
-    sections = list()
-    section_names = list()
-    section_idx = list()
+    sections = []
+    section_names = []
+    section_idx = []
 
     idx = 0
     s = p_section.search(text, idx)
@@ -331,7 +404,7 @@ def section_text(text):
         section_names.append("full report")
         section_idx.append(0)
 
-    section_names = normalize_section_names(section_names)
+    section_names = _normalize_section_names(section_names)
 
     # remove empty sections
     # this handles when the report starts with a finding-like statement
@@ -360,7 +433,7 @@ def section_text(text):
     return sections, section_names, section_idx
 
 
-def normalize_section_names(section_names):
+def _normalize_section_names(section_names):
     # first, lower case all
     section_names = [s.lower().strip() for s in section_names]
 
@@ -445,7 +518,7 @@ def normalize_section_names(section_names):
         "ribs",
         "pa and lat",
     ]
-    p_findings = re.compile("({})".format("|".join(p_findings)))
+    p_findings = re.compile(f"({'|'.join(p_findings)})")
 
     main_sections = ["impression", "findings", "history", "comparison", "addendum"]
     for i, s in enumerate(section_names):
@@ -473,78 +546,15 @@ def normalize_section_names(section_names):
     return section_names
 
 
-def custom_mimic_cxr_rules():
-    custom_section_names = {
-        "s50913680": "recommendations",  # files/p11/p11851243/s50913680.txt
-        "s59363654": "examination",  # files/p12/p12128253/s59363654.txt
-        "s59279892": "technique",  # files/p13/p13150370/s59279892.txt
-        "s59768032": "recommendations",  # files/p13/p13249077/s59768032.txt
-        "s57936451": "indication",  # files/p14/p14325424/s57936451.txt
-        "s50058765": "indication",  # files/p14/p14731346/s50058765.txt
-        "s53356173": "examination",  # files/p15/p15898350/s53356173.txt
-        "s53202765": "technique",  # files/p16/p16076182/s53202765.txt
-        "s50808053": "technique",  # files/p16/p16631485/s50808053.txt
-        "s51966317": "indication",  # files/p10/p10817099/s51966317.txt
-        "s50743547": "examination",  # files/p11/p11388341/s50743547.txt
-        "s56451190": "note",  # files/p11/p11842879/s56451190.txt
-        "s59067458": "recommendations",  # files/p11/p11984647/s59067458.txt
-        "s59215320": "examination",  # files/p12/p12408912/s59215320.txt
-        "s55124749": "indication",  # files/p12/p12428492/s55124749.txt
-        "s54365831": "indication",  # files/p13/p13876470/s54365831.txt
-        "s59087630": "recommendations",  # files/p14/p14267880/s59087630.txt
-        "s58157373": "recommendations",  # files/p15/p15032392/s58157373.txt
-        "s56482935": "recommendations",  # files/p15/p15388421/s56482935.txt
-        "s58375018": "recommendations",  # files/p15/p15505556/s58375018.txt
-        "s54654948": "indication",  # files/p17/p17090359/s54654948.txt
-        "s55157853": "examination",  # files/p18/p18975498/s55157853.txt
-        "s51491012": "history",  # files/p19/p19314266/s51491012.txt
-    }
-
-    custom_indices = {
-        "s50525523": [201, 349],  # files/p10/p10602608/s50525523.txt
-        "s57564132": [233, 554],  # files/p10/p10637168/s57564132.txt
-        "s59982525": [313, 717],  # files/p11/p11989982/s59982525.txt
-        "s53488209": [149, 475],  # files/p12/p12458657/s53488209.txt
-        "s54875119": [234, 988],  # files/p13/p13687044/s54875119.txt
-        "s50196495": [59, 399],  # files/p13/p13894879/s50196495.txt
-        "s56579911": [59, 218],  # files/p15/p15394326/s56579911.txt
-        "s52648681": [292, 631],  # files/p15/p15666238/s52648681.txt
-        "s59889364": [172, 453],  # files/p15/p15835529/s59889364.txt
-        "s53514462": [73, 377],  # files/p16/p16297706/s53514462.txt
-        "s59505494": [59, 450],  # files/p16/p16730991/s59505494.txt
-        "s53182247": [59, 412],  # files/p16/p16770442/s53182247.txt
-        "s51410602": [47, 320],  # files/p17/p17069955/s51410602.txt
-        "s56412866": [522, 822],  # files/p17/p17612000/s56412866.txt
-        "s54986978": [59, 306],  # files/p17/p17912487/s54986978.txt
-        "s59003148": [262, 505],  # files/p17/p17916384/s59003148.txt
-        "s57150433": [61, 394],  # files/p18/p18335791/s57150433.txt
-        "s56760320": [219, 457],  # files/p18/p18418794/s56760320.txt
-        "s59562049": [158, 348],  # files/p18/p18502016/s59562049.txt
-        "s52674888": [145, 296],  # files/p19/p19381919/s52674888.txt
-        "s55258338": [192, 568],  # files/p13/p13719117/s55258338.txt
-        "s59330497": [140, 655],  # files/p15/p15479218/s59330497.txt
-        "s52119491": [179, 454],  # files/p17/p17959278/s52119491.txt
-        # below have no findings at all in the entire report
-        "s58235663": [0, 0],  # files/p11/p11573679/s58235663.txt
-        "s50798377": [0, 0],  # files/p12/p12632853/s50798377.txt
-        "s54168089": [0, 0],  # files/p14/p14463099/s54168089.txt
-        "s53071062": [0, 0],  # files/p15/p15774521/s53071062.txt
-        "s56724958": [0, 0],  # files/p16/p16175671/s56724958.txt
-        "s54231141": [0, 0],  # files/p16/p16312859/s54231141.txt
-        "s53607029": [0, 0],  # files/p17/p17603668/s53607029.txt
-        "s52035334": [0, 0],  # files/p19/p19349312/s52035334.txt
-    }
-
-    return custom_section_names, custom_indices
-
-
-# def cleanStr(text: str):
-#     tempStr = remove_punctuation(text.lower().replace("\n", " ").strip())
-#     return re.sub(" +", " ", tempStr)
-
-
-
 def download_file(url: str, fname: str, username=None, password=None):
+    """Download a file from a URL.
+
+    Args:
+        url: The URL to download the file from.
+        fname: The name of the file to save the download to.
+        username: Physionet username. Defaults to None.
+        password: Physionet password. Defaults to None.
+    """
     header = {
         "User-Agent": "Wget/1.20.3 (linux-gnu)",
         "Accept": "*/*",
@@ -565,13 +575,11 @@ def download_file(url: str, fname: str, username=None, password=None):
         unit="iB",
         unit_scale=True,
         unit_divisor=chunk_size,
-    ) as bar:
+    ) as progress_bar:
         for data in resp.iter_content(chunk_size=chunk_size):
             size = file.write(data)
-            bar.update(size)
+            progress_bar.update(size)
 
-
-import re
 
 contractions = {
     "aint": "ain't",
@@ -711,8 +719,8 @@ manual_map = {
     "ten": "10",
 }
 articles = ["a", "an", "the"]
-period_strip = re.compile("(?!<=\d)(\.)(?!\d)")
-comma_strip = re.compile("(\d)(\,)(\d)")
+period_strip = re.compile(r"(?!<=\d)(\.)(?!\d)")  # noqa
+comma_strip = re.compile(r"(\d)(\,)(\d)")  # noqa
 punct = [
     ";",
     r"/",
@@ -738,12 +746,20 @@ punct = [
 ]
 
 
-def cleanStr(token):
+def clean_str(token):
+    """Cleans a string (removes punctuation, lowers...).
+
+    Args:
+        token: The string to clean.
+
+    Returns:
+        The cleaned string.
+    """
     token = token.lower()
     _token = token
     for p in punct:
         if (p + " " in token or " " + p in token) or (
-            re.search(comma_strip, token) != None
+            re.search(comma_strip, token) is not None
         ):
             _token = _token.replace(p, "")
         else:

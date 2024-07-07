@@ -6,40 +6,25 @@ from datetime import datetime, timedelta
 from tqdm.auto import tqdm as tqdm_auto
 
 
-
-
-class tqdm_logging(tqdm_auto):
-    """A tqdm implementation that outputs to Python logger.
-
-    - Any postfix progress bar arguments are passed as `extras` to the logging system
-
-    - The log has structured data available; all logs are tagged with `{"tqdm": True}`
-      so they can be filtered out in the log management service
-
-    - Default rate of creating messages is lower than the usually progress bar
-      update rate of 1 Htz, because we do not want to spam the logs
-
-    See also
-
-    - `Implementing structured logging <https://docs.python.org/3/howto/logging-cookbook.html#implementing-structured-logging>`_.
-    """
-
-
+class TqdmLogging(tqdm_auto):
+    """A tqdm implementation that outputs to Python logger."""
 
     #: What log level all tqdm_logging instances will use
     log_level = logging.INFO
-
 
     #: How often to post a log message
     #: Default to every 10 seconds
     log_message_rate = timedelta(seconds=10)
 
     def __init__(self, logger, *args, **kwargs):
+        """Initialize the logger.
+
+        Args:
+            logger: Python logger instance.
+        """
         self.last_log_message_at = datetime(1970, 1, 1)
-        self.logger:logging.Logger = logger
-        super(tqdm_logging, self).__init__(*args, **kwargs)
-
-
+        self.logger: logging.Logger = logger
+        super().__init__(*args, **kwargs)
 
     @classmethod
     def set_level(cls, log_level: int):
@@ -57,34 +42,26 @@ class tqdm_logging(tqdm_auto):
         cls.log_message_rate = rate
 
     def set_postfix(self, ordered_dict=None, refresh=True, **kwargs):
-        """Overloaded to store the raw post-fix"""
+        """Overloaded to store the raw post-fix."""
         self.raw_postfix = ordered_dict
-        super(tqdm_logging, self).set_postfix(ordered_dict, refresh, **kwargs)
+        super().set_postfix(ordered_dict, refresh, **kwargs)
 
     def should_throttle_logging(self) -> bool:
-        """Check if we throttle down displays to reduce log spam"""
-
+        """Check if we throttle down displays to reduce log spam."""
         # Always refresh the last message on tqdm.close()
         if self.disable:
             return False
 
         if datetime.now() - self.last_log_message_at > self.log_message_rate:
             return False
-        else:
-            return True
 
-    def display(self, **kwargs):
+        return True
+
+    def display(self, **kwargs):  # pylint: disable=unused-argument
         """Create a log entry for the current progress."""
-
         if self.should_throttle_logging():
             return
 
-        # Some sample format_dicts:
-        #
-        # {'n': 0, 'total': 60, 'elapsed': 0, 'ncols': 344, 'nrows': 15, 'prefix': 'Sample progress', 'ascii': False, 'unit': 'it', 'unit_scale': False, 'rate': None, 'bar_format': None, 'postfix': None, 'unit_divisor': 1000, 'initial': 0, 'colour': None}
-        # {'n': 7, 'total': 60, 'elapsed': 3.032935857772827, 'ncols': 344, 'nrows': 15, 'prefix': 'Sample progress', 'ascii': False, 'unit': 'it', 'unit_scale': False, 'rate': 2.0927977450656536, 'bar_format': None, 'postfix': 'Currently time=2022-09-20 21:08:26.951320', 'unit_divisor': 1000, 'initial': 0, 'colour': None}
-        # ^C{'n': 3000, 'total': 60000, 'elapsed': 1.089920997619629, 'ncols': 344, 'nrows': 15, 'prefix': 'Sample progress', 'ascii': False, 'unit': 'it', 'unit_scale': True, 'rate': None, 'bar_format': None, 'postfix': 'Currently time=2022-09-20 21:10:24.377513', 'unit_divisor': 1000, 'initial': 0, 'colour': None}
-        #
         format_dict = self.format_dict
         name = format_dict.get("prefix", "unknown")
         postfix = format_dict.get("postfix", None)
@@ -108,25 +85,14 @@ class tqdm_logging(tqdm_auto):
 
         # Taken from format_meter()
         remaining = (total - n) / rate if rate and total else 0
-        remaining_str = tqdm_auto.format_interval(remaining) if rate else '?'
         try:
-            eta_dt = (datetime.now() + timedelta(seconds=remaining)
-                      if rate and total else datetime.utcfromtimestamp(0))
+            eta_dt = (
+                datetime.now() + timedelta(seconds=remaining)
+                if rate and total
+                else datetime.utcfromtimestamp(0)
+            )
         except OverflowError:
             eta_dt = datetime.max
-
-        elapsed_str = tqdm_auto.format_interval(elapsed)
-
-        if rate:
-            if rate > 1:
-                rate_formatted = f"{rate:,.1f}{unit}/s"
-            else:
-                rate_formatted = f"{1/rate:,.1f}s/{unit}"
-        else:
-            rate_formatted = "-"
-
-        # Include any postfix variables in extra logging
-        raw_postfix = getattr(self, "raw_postfix", {})
 
         postfix_str = postfix or "-"
 
@@ -147,10 +113,9 @@ class tqdm_logging(tqdm_auto):
             "remaining": remaining,
         }
 
-
         self.logger.log(
             self.log_level,
-            self.__str__(),
+            str(self),
             # name,
             # n_formatted,
             # total_formatted,
@@ -164,6 +129,7 @@ class tqdm_logging(tqdm_auto):
         self.last_log_message_at = datetime.now()
 
     def close(self):
+        """Close the progress bar."""
         if self.disable:
             return
 

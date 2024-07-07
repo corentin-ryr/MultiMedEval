@@ -1,8 +1,11 @@
-from .blocks import ModifiedResNet,PMC_CLIP_cfg
 import torch
-from torchvision import transforms
-from PIL import Image
 import torch.nn as nn
+from PIL import Image
+from torchvision import transforms
+
+from .blocks import ModifiedResNet, PMC_CLIP_cfg
+
+
 def extend_instance(obj, mixin):
     """Apply mixins to a class instance after creation"""
     base_cls = obj.__class__
@@ -36,7 +39,6 @@ def setattr_recursive(obj, att, val):
     setattr(obj, att.split(".")[-1], val)
 
 
-    
 def get_visual_encoder(model_str):
     """
     Args:
@@ -45,30 +47,37 @@ def get_visual_encoder(model_str):
         vision_model, visual_dim, img_preprocessor
     """
     normalize = transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-    img_preprocessor = transforms.Compose([                        
-                transforms.Resize((512,512), interpolation=Image.BICUBIC),
-                transforms.ToTensor(),
-                normalize,
-            ])
-    if  'PMC-CLIP' in model_str:
-        #vision_cfg = json.load(open(model_args.visual_model_config,'r'))['vision_cfg']
+    img_preprocessor = transforms.Compose(
+        [
+            transforms.Resize((512, 512), interpolation=Image.BICUBIC),
+            transforms.ToTensor(),
+            normalize,
+        ]
+    )
+    if "PMC-CLIP" in model_str:
+        # vision_cfg = json.load(open(model_args.visual_model_config,'r'))['vision_cfg']
         vision_cfg = PMC_CLIP_cfg()
         vision_heads = vision_cfg.width * 32 // vision_cfg.head_width
         vision_model = ModifiedResNet(
             layers=vision_cfg.layers,
             heads=vision_heads,
-            output_dim = 768,
+            output_dim=768,
             image_size=vision_cfg.image_size,
-            width=vision_cfg.width
+            width=vision_cfg.width,
         )
-        vision_model = vision_load_pretrain(vision_model,model_str)
+        vision_model = vision_load_pretrain(vision_model, model_str)
         vision_model = nn.Sequential(*list(vision_model.children())[:-2])
         visual_dim = 1024
-    return vision_model,visual_dim,img_preprocessor
+    return vision_model, visual_dim, img_preprocessor
 
-def vision_load_pretrain(resnet,model_path):
-    checkpoint = torch.load(model_path, map_location='cpu') 
-    state_dict = checkpoint['state_dict'] 
-    state_dict = {k.replace('module.visual.',''): v for k, v in state_dict.items() if '.visual' in k}
+
+def vision_load_pretrain(resnet, model_path):
+    checkpoint = torch.load(model_path, map_location="cpu")
+    state_dict = checkpoint["state_dict"]
+    state_dict = {
+        k.replace("module.visual.", ""): v
+        for k, v in state_dict.items()
+        if ".visual" in k
+    }
     resnet.load_state_dict(state_dict)
-    return resnet  
+    return resnet

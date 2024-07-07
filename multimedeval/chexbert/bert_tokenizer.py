@@ -1,24 +1,33 @@
-import pandas as pd
-from transformers import BertTokenizer, AutoTokenizer
-import json
+"""Tokenize radiology report impressions and save as a list."""
+
 from tqdm import tqdm
-import argparse
 
 
 def get_impressions_from_pandas(df):
+    """Get the report impressions from a pandas DataFrame and clean them."""
     imp = df["Report Impression"]
     imp = imp.str.strip()
-    imp = imp.replace("\n", " ", regex=True)
-    imp = imp.replace("\s+", " ", regex=True)
+    imp = imp.replace(r"\n", " ", regex=True)
+    imp = imp.replace(r"\s+", " ", regex=True)
     imp = imp.str.strip()
     return imp
 
 
 def tokenize(impressions, tokenizer, verbose=True):
+    """Tokenize radiology report impressions and save as a list.
 
+    Args:
+        impressions: The reports to tokenize.
+        tokenizer: The tokenizer to use.
+        verbose: Defaults to True.
+
+    Returns:
+        The tokenized reports.
+    """
     # raise Exception
     new_impressions = []
-    if verbose: print("\nTokenizing report impressions. All reports are cut off at 512 tokens.")
+    if verbose:
+        print("\nTokenizing report impressions. All reports are cut off at 512 tokens.")
     for i in tqdm(range(impressions.shape[0]), disable=not verbose):
         tokenized_imp = tokenizer.tokenize(impressions.iloc[i])
         if tokenized_imp:  # not an empty report
@@ -30,33 +39,3 @@ def tokenize(impressions, tokenizer, verbose=True):
         else:  # an empty report
             new_impressions.append([tokenizer.cls_token_id, tokenizer.sep_token_id])
     return new_impressions
-
-
-def load_list(path):
-    with open(path, "r") as filehandle:
-        impressions = json.load(filehandle)
-        return impressions
-
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(description="Tokenize radiology report impressions and save as a list.")
-#     parser.add_argument(
-#         "-d",
-#         "--data",
-#         type=str,
-#         nargs="?",
-#         required=True,
-#         help='path to csv containing reports. The reports should be \
-#                             under the "Report Impression" column',
-#     )
-#     parser.add_argument("-o", "--output_path", type=str, nargs="?", required=True, help="path to intended output file")
-#     args = parser.parse_args()
-#     csv_path = args.data
-#     out_path = args.output_path
-
-#     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
-
-#     impressions = get_impressions_from_pandas(csv_path)
-#     new_impressions = tokenize(impressions, tokenizer)
-#     with open(out_path, "w") as filehandle:
-#         json.dump(new_impressions, filehandle)

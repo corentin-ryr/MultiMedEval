@@ -1,0 +1,55 @@
+exclude: ^scripts
+fail_fast: true
+repos:
+  - repo: local
+    hooks:
+      - id: black
+        name: Black
+        entry: black
+        pass_filenames: true
+        language: system
+        files: '\.py$'
+  - repo: local
+    hooks:
+      - id: isort
+        name: isort
+        entry: isort
+        pass_filenames: true
+        language: system
+        files: '\.py$'
+  - repo: local
+    hooks:
+      - id: mypy
+        name: MyPy
+        entry: mypy
+        pass_filenames: true
+        language: system
+        files: '\.py$'
+  - repo: local
+    hooks:
+      - id: flake8
+        name: flake8
+        entry: flake8
+        pass_filenames: true
+        language: system
+        files: '\.py$'
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.1.1
+    hooks:
+      - id: pydocstyle
+        name: Run pydocstyle
+        args:
+          - --convention=google
+            #- --add-ignore=D100,D102,D103,D104,D105,D107,D202,D205,D400,D401
+        exclude: _test.py$
+        pass_filenames: true
+        files: '\.py$'
+  - repo: local
+    hooks:
+      - id: pylint
+        name: Pylint
+        entry: pylint multimedeval
+        pass_filenames: true
+        always_run: true
+        language: system
+        files: '\.py$'

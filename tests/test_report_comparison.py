@@ -1,21 +1,23 @@
-from multimedeval.mimic import MIMIC_CXR_reportgen
-from multimedeval import MultiMedEval, SetupParams, EvalParams
-import csv
-import logging
-from scipy.stats import kendalltau
-import numpy as np
-from sklearn.utils import resample
-import os
-import pytest
-import json
-import subprocess
-from appdirs import user_cache_dir
+"""Tests for the ReportComparison task."""
 
+import csv
+import json
+import logging
+import os
+import subprocess
+
+import numpy as np
+from appdirs import user_cache_dir
+from scipy.stats import kendalltau
+from sklearn.utils import resample
+
+from multimedeval import MultiMedEval, SetupParams
 
 logging.basicConfig(level=logging.INFO)
 
 
 def compute_kendall_tau(computed_scores, evaluator_scores):
+    """Compute Kendall Tau."""
     tau, _ = kendalltau(evaluator_scores, computed_scores)
 
     num_samples = len(computed_scores)
@@ -35,20 +37,30 @@ IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 
 # @pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
-def test_ReportComparison():
-
+def test_report_comparison():
+    """Tests the ReportComparison task."""
     engine = MultiMedEval()
 
-    config = json.load(open("tests/test_config.json")) if IN_GITHUB_ACTIONS else json.load(open("MedMD_config.json"))
+    config_file_name = (
+        "tests/test_config.json" if IN_GITHUB_ACTIONS else "MedMD_config.json"
+    )
+    with open(config_file_name, "r", encoding="utf-8") as file:
+        config = json.load(file)
     if IN_GITHUB_ACTIONS:
         config["physionet_username"] = os.getenv("PHYSIONET_USERNAME")
         config["physionet_password"] = os.getenv("PHYSIONET_PASSWORD")
 
     try:
-        success = engine.setup(SetupParams(CheXBert_dir=config["CheXBert_dir"], physionet_username=config["physionet_username"], physionet_password=config["physionet_password"]))
-    except:
-        assert False
-        
+        success = engine.setup(
+            SetupParams(
+                chexbert_dir=config["chexbert_dir"],
+                physionet_username=config["physionet_username"],
+                physionet_password=config["physionet_password"],
+            )
+        )
+    except Exception as e:
+        raise AssertionError(f"Error in setup. {e}") from e
+
     print(f"Radgraph: {success['RadGraph']}")
     model_path = os.path.join(user_cache_dir("radgraph"))
 
@@ -57,118 +69,146 @@ def test_ReportComparison():
     for file in os.listdir(model_path):
         print(f"{file}: {os.path.getsize(os.path.join(model_path, file))}")
 
-
-
-    reportComparison = engine.nameToTask["MIMIC-CXR Report Generation"]
+    report_comparison = engine.name_to_task["MIMIC-CXR Report Generation"]
 
     # Download the files from Physionet
-    username, password = engine.getPhysioNetCredentials()
-    wget_command = f'wget -r -c -np -nc --directory-prefix tests --user "{username}" --password "{password}" https://physionet.org/files/rexval-dataset/1.0.0/'
+    username, password = engine.get_physionet_credentials()
+    wget_command = (
+        f'wget -r -c -np -nc --directory-prefix tests --user "{username}" '
+        f'--password "{password}" https://physionet.org/files/rexval-dataset/1.0.0/'
+    )
 
     subprocess.run(wget_command, shell=True, check=True)
 
     # Load the all the report pairs from the csv file
-    reportPairs = []
+    report_pairs = []
     id_to_details = {}
-    id = 0
-    with open("tests/physionet.org/files/rexval-dataset/1.0.0/50_samples_gt_and_candidates.csv", "r") as file:
+    current_id = 0
+    with open(
+        "tests/physionet.org/files/rexval-dataset/1.0.0/50_samples_gt_and_candidates.csv",
+        "r",
+        encoding="utf-8",
+    ) as file:
         reader = csv.reader(file)
         next(reader)
 
         for row in reader:
-            id_to_details[len(reportPairs)] = {"id": id, "pair": "radgraph"}
-            reportPairs.append((row[1], row[2]))
+            id_to_details[len(report_pairs)] = {"id": current_id, "pair": "radgraph"}
+            report_pairs.append((row[1], row[2]))
 
-            id_to_details[len(reportPairs)] = {"id": id, "pair": "bertscore"}
-            reportPairs.append((row[1], row[3]))
+            id_to_details[len(report_pairs)] = {"id": current_id, "pair": "bertscore"}
+            report_pairs.append((row[1], row[3]))
 
-            id_to_details[len(reportPairs)] = {"id": id, "pair": "s_emb"}
-            reportPairs.append((row[1], row[4]))
+            id_to_details[len(report_pairs)] = {"id": current_id, "pair": "s_emb"}
+            report_pairs.append((row[1], row[4]))
 
-            id_to_details[len(reportPairs)] = {"id": id, "pair": "bleu"}
-            reportPairs.append((row[1], row[5]))
+            id_to_details[len(report_pairs)] = {"id": current_id, "pair": "bleu"}
+            report_pairs.append((row[1], row[5]))
 
-            id += 1
+            current_id += 1
 
     id_to_num_error = {}
-    with open("tests/physionet.org/files/rexval-dataset/1.0.0/6_valid_raters_per_rater_error_categories.csv", "r") as file:
+    with open(
+        "tests/physionet.org/files/rexval-dataset/1.0.0/"
+        "6_valid_raters_per_rater_error_categories.csv",
+        "r",
+        encoding="utf-8",
+    ) as file:
         reader = csv.reader(file)
         next(reader)
         for row in reader:
-            id_to_num_error[f"{row[0]}_{row[1]}"] = id_to_num_error.get(f"{row[0]}_{row[1]}", 0.0) + float(row[5])
+            id_to_num_error[f"{row[0]}_{row[1]}"] = id_to_num_error.get(
+                f"{row[0]}_{row[1]}", 0.0
+            ) + float(row[5])
 
     for key in id_to_num_error:
         id_to_num_error[key] /= 6
 
-    hypReports, refReports = zip(*reportPairs)
-    print(f"Hypotheses: {hypReports[:5]}")
-    print(f"References: {refReports[:5]}")
+    hyp_reports, ref_teports = zip(*report_pairs)
+    print(f"Hypotheses: {hyp_reports[:5]}")
+    print(f"References: {ref_teports[:5]}")
     (
-        bleu1Scores,
-        bleu2Scores,
-        bleu4Scores,
-        rougeLScores,
-        rouge1Scores,
-        f1_bertscore_unscaled,
+        _,
+        bleu2_scores,
+        _,
+        _,
+        _,
+        _,
         chexbert_similarity,
         f1_radgraph,
         radcliq_v0_scores,
-        meteor_scores,
+        _,
         f1_bertscore,
-    ) = reportComparison._evaluate_reports(hypReports, refReports)
+    ) = report_comparison._evaluate_reports(hyp_reports, ref_teports)
 
-    BLEU_evaluator_and_computed_scores = []
-    BERTScore_evaluator_and_computed_scores = []
+    bleu_evaluator_and_computed_scores = []
+    bertscore_evaluator_and_computed_scores = []
     chexbert_evaluator_and_computed_scores = []
     radgraph_evaluator_and_computed_scores = []
     radcliq_evaluator_and_computed_scores = []
-    for i in range(len(reportPairs)):
+    for i in range(len(report_pairs)):
         details = id_to_details[i]
 
-        BLEU_evaluator_and_computed_scores.append(
-            (1 - bleu2Scores[i], id_to_num_error[f"{details['id']}_{details['pair']}"])
+        bleu_evaluator_and_computed_scores.append(
+            (1 - bleu2_scores[i], id_to_num_error[f"{details['id']}_{details['pair']}"])
         )
-        BERTScore_evaluator_and_computed_scores.append(
+        bertscore_evaluator_and_computed_scores.append(
             (1 - f1_bertscore[i], id_to_num_error[f"{details['id']}_{details['pair']}"])
         )
         chexbert_evaluator_and_computed_scores.append(
-            (1 - chexbert_similarity[i], id_to_num_error[f"{details['id']}_{details['pair']}"])
+            (
+                1 - chexbert_similarity[i],
+                id_to_num_error[f"{details['id']}_{details['pair']}"],
+            )
         )
         radgraph_evaluator_and_computed_scores.append(
             (1 - f1_radgraph[i], id_to_num_error[f"{details['id']}_{details['pair']}"])
         )
         radcliq_evaluator_and_computed_scores.append(
-            (radcliq_v0_scores[i], id_to_num_error[f"{details['id']}_{details['pair']}"])
+            (
+                radcliq_v0_scores[i],
+                id_to_num_error[f"{details['id']}_{details['pair']}"],
+            )
         )
 
     # Compute kendall tau for BLEU
-    computed_scores, evaluator_scores = zip(*BLEU_evaluator_and_computed_scores)
+    computed_scores, evaluator_scores = zip(*bleu_evaluator_and_computed_scores)
     tau, tau_low, tau_high = compute_kendall_tau(computed_scores, evaluator_scores)
-    print(f"Kendall Tau for BLEU: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]")
+    print(
+        f"Kendall Tau for BLEU: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]"
+    )
     assert 0.368 < tau < 0.539
 
     # Compute kendall tau for BERTScore
-    computed_scores, evaluator_scores = zip(*BERTScore_evaluator_and_computed_scores)
+    computed_scores, evaluator_scores = zip(*bertscore_evaluator_and_computed_scores)
     tau, tau_low, tau_high = compute_kendall_tau(computed_scores, evaluator_scores)
-    print(f"Kendall Tau for BERTScore: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]")
+    print(
+        f"Kendall Tau for BERTScore: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]"
+    )
     assert 0.429 < tau < 0.584
 
     # Compute kendall tau for CheXBert
     computed_scores, evaluator_scores = zip(*chexbert_evaluator_and_computed_scores)
     tau, tau_low, tau_high = compute_kendall_tau(computed_scores, evaluator_scores)
-    print(f"Kendall Tau for CheXBert: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]")
+    print(
+        f"Kendall Tau for CheXBert: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]"
+    )
     assert 0.417 < tau < 0.576
 
     # Compute kendall tau for RadGraph
     computed_scores, evaluator_scores = zip(*radgraph_evaluator_and_computed_scores)
     tau, tau_low, tau_high = compute_kendall_tau(computed_scores, evaluator_scores)
-    print(f"Kendall Tau for RadGraph: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]")
+    print(
+        f"Kendall Tau for RadGraph: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]"
+    )
     assert 0.449 < tau < 0.578
 
     # Compute kendall tau for RadCliq
     computed_scores, evaluator_scores = zip(*radcliq_evaluator_and_computed_scores)
     tau, tau_low, tau_high = compute_kendall_tau(computed_scores, evaluator_scores)
-    print(f"Kendall Tau for RadCliq: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]")
+    print(
+        f"Kendall Tau for RadCliq: {tau}, 95% confidence interval: [{tau_low}, {tau_high}]"
+    )
     assert 0.450 < tau < 0.749
 
     # Make a plot with 4 subplots
@@ -207,4 +247,4 @@ def test_ReportComparison():
 
 
 if __name__ == "__main__":
-    test_ReportComparison()
+    test_report_comparison()

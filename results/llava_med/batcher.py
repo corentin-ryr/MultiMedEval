@@ -1,15 +1,22 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import torch
-import os
-from llava.conversation import conv_templates
-from transformers import CLIPImageProcessor, GenerationConfig
-from llava import LlavaLlamaForCausalLM
-from llava.model.utils import KeywordsStoppingCriteria
+"""The llava med batcher."""
 
-from tqdm import tqdm
-from multimedeval import MultiMedEval, EvalParams, SetupParams
 import json
 import logging
+import os
+
+import torch
+from llava import LlavaLlamaForCausalLM
+from llava.conversation import conv_templates
+from llava.model.utils import KeywordsStoppingCriteria
+from tqdm import tqdm
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    CLIPImageProcessor,
+    GenerationConfig,
+)
+
+from multimedeval import EvalParams, MultiMedEval, SetupParams
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,18 +27,25 @@ DEFAULT_IM_END_TOKEN = "<im_end>"
 
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
+
 class batcherLLaVA_Med:
+    """Batcher for LLaVA-Med."""
+
     def __init__(self, cacheLocation, llavaMedLocation):
+        """Initialize the batcher."""
         # Check if the llavamed location contains the model
         if not os.path.exists(llavaMedLocation):
             os.makedirs(llavaMedLocation)
             print("Loading base model")
             base = AutoModelForCausalLM.from_pretrained(
-                "huggyllama/llama-7b", torch_dtype=torch.float16, low_cpu_mem_usage=True, cache_dir=cacheLocation
+                "huggyllama/llama-7b",
+                torch_dtype=torch.float16,
+                low_cpu_mem_usage=True,
+                cache_dir=cacheLocation,
             )
 
             print("Loading delta")
-            deltaPath = "microsoft/llava-med-7b-delta" # "PATH/TO/llava_med_in_text_60k_ckpt2_delta" 
+            deltaPath = "microsoft/llava-med-7b-delta"  # "PATH/TO/llava_med_in_text_60k_ckpt2_delta"
             delta = LlavaLlamaForCausalLM.from_pretrained(
                 deltaPath,
                 torch_dtype=torch.float16,
@@ -43,7 +57,10 @@ class batcherLLaVA_Med:
             print("Applying delta")
             for name, param in tqdm(delta.state_dict().items(), desc="Applying delta"):
                 if name not in base.state_dict():
-                    assert name in ["model.mm_projector.weight", "model.mm_projector.bias"], f"{name} not in base model"
+                    assert name in [
+                        "model.mm_projector.weight",
+                        "model.mm_projector.bias",
+                    ], f"{name} not in base model"
                     continue
                 if param.data.shape == base.state_dict()[name].shape:
                     param.data += base.state_dict()[name]
@@ -59,11 +76,17 @@ class batcherLLaVA_Med:
             delta.save_pretrained(llavaMedLocation)
             delta_tokenizer.save_pretrained(llavaMedLocation)
 
-        self.model = LlavaLlamaForCausalLM.from_pretrained(llavaMedLocation, torch_dtype=torch.float16).cuda()
-        self.tokenizer = AutoTokenizer.from_pretrained(llavaMedLocation, padding_side="left", truncation_side='left')
+        self.model = LlavaLlamaForCausalLM.from_pretrained(
+            llavaMedLocation, torch_dtype=torch.float16
+        ).cuda()
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            llavaMedLocation, padding_side="left", truncation_side="left"
+        )
 
         self.tokenizer.add_tokens([DEFAULT_IMAGE_PATCH_TOKEN], special_tokens=True)
-        self.tokenizer.add_tokens([DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN], special_tokens=True)
+        self.tokenizer.add_tokens(
+            [DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN], special_tokens=True
+        )
 
         # Set the model's padding token
         self.model.config.pad_token_id = self.tokenizer.pad_token_id
@@ -71,13 +94,19 @@ class batcherLLaVA_Med:
         vision_tower = self.model.model.vision_tower[0]
         vision_tower.to(device="cuda", dtype=torch.float16)
         vision_config = vision_tower.config
-        vision_config.im_patch_token = self.tokenizer.convert_tokens_to_ids([DEFAULT_IMAGE_PATCH_TOKEN])[0]
+        vision_config.im_patch_token = self.tokenizer.convert_tokens_to_ids(
+            [DEFAULT_IMAGE_PATCH_TOKEN]
+        )[0]
         vision_config.use_im_start_end = True
-        vision_config.im_start_token, vision_config.im_end_token = self.tokenizer.convert_tokens_to_ids(
-            [DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN]
+        vision_config.im_start_token, vision_config.im_end_token = (
+            self.tokenizer.convert_tokens_to_ids(
+                [DEFAULT_IM_START_TOKEN, DEFAULT_IM_END_TOKEN]
+            )
         )
 
-        self.image_token_len = (vision_config.image_size // vision_config.patch_size) ** 2
+        self.image_token_len = (
+            vision_config.image_size // vision_config.patch_size
+        ) ** 2
         self.image_processor = CLIPImageProcessor.from_pretrained(
             self.model.config.mm_vision_tower, torch_dtype=torch.float16
         )
@@ -89,8 +118,20 @@ class batcherLLaVA_Med:
         )
 
     def __call__(self, prompts):
+        """Generate the response for the given prompts.
+
+        Args:
+            prompts: List of prompts. Each prompt is a tuple of two lists. \
+                The first list contains the text messages and the second list \
+                contains the images.
+
+        Returns:
+            List of responses.
+        """
         imagePlaceHolder = (
-            DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_PATCH_TOKEN * self.image_token_len + DEFAULT_IM_END_TOKEN
+            DEFAULT_IM_START_TOKEN
+            + DEFAULT_IMAGE_PATCH_TOKEN * self.image_token_len
+            + DEFAULT_IM_END_TOKEN
         )
 
         outputList = []
@@ -112,19 +153,30 @@ class batcherLLaVA_Med:
             for image in prompt[1]:
                 image = image.convert("RGB")
                 image_tensor = (
-                    self.image_processor.preprocess([image], return_tensors="pt")["pixel_values"].half().cuda()[0]
+                    self.image_processor.preprocess([image], return_tensors="pt")[
+                        "pixel_values"
+                    ]
+                    .half()
+                    .cuda()[0]
                 )
 
                 listImage.append(image_tensor)
 
-
-        inputs = self.tokenizer(listText, return_tensors="pt", padding=True, truncation=True, max_length=1024)
+        inputs = self.tokenizer(
+            listText,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=1024,
+        )
         input_ids = inputs.input_ids.cuda()
 
         image_tensor = listImage if len(listImage) > 0 else None
 
         keywords = ["###"]
-        stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
+        stopping_criteria = KeywordsStoppingCriteria(
+            keywords, self.tokenizer, input_ids
+        )
 
         with torch.inference_mode():
             output_ids = self.model.generate(
@@ -139,12 +191,17 @@ class batcherLLaVA_Med:
             )
 
         input_token_len = input_ids.shape[1]
-        n_diff_input_output = (input_ids != output_ids[:, :input_token_len]).sum().item()
+        n_diff_input_output = (
+            (input_ids != output_ids[:, :input_token_len]).sum().item()
+        )
         if n_diff_input_output > 0:
-            print(f"[Warning] {n_diff_input_output} output_ids are not the same as the input_ids")
+            print(
+                f"[Warning] {n_diff_input_output} output_ids are not the same as the input_ids"
+            )
 
-        outputs_batch = self.tokenizer.batch_decode(output_ids[:, input_token_len:], skip_special_tokens=True)
-
+        outputs_batch = self.tokenizer.batch_decode(
+            output_ids[:, input_token_len:], skip_special_tokens=True
+        )
 
         # Measure time spent
         for outputs in outputs_batch:
@@ -167,15 +224,15 @@ class batcherLLaVA_Med:
             outputList.append(outputs)
 
         return outputList
-   
+
 
 if __name__ == "__main__":
-    batcher = batcherLLaVA_Med(
-        **json.load(open("config.json"))
-    )
+    batcher = batcherLLaVA_Med(**json.load(open("config.json")))
 
     engine = MultiMedEval()
     setupParams = SetupParams(**json.load(open("MedMD_config.json")))
     engine.setup(setupParams)
 
-    engine.eval(["Pad UFES 20"], batcher, EvalParams(batch_size=32, run_name="testLLaVAMed"))
+    engine.eval(
+        ["Pad UFES 20"], batcher, EvalParams(batch_size=32, run_name="testLLaVAMed")
+    )

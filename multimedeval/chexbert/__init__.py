@@ -1,2 +1,3 @@
-from multimedeval.chexbert import datasets
-from multimedeval.chexbert import models
+"""Init file."""
+
+from multimedeval.chexbert import datasets, models  # noqa

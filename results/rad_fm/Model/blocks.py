@@ -1,27 +1,36 @@
 from collections import OrderedDict
-from typing import Tuple, Union, Callable, Optional
+from typing import Callable, Optional, Tuple, Union
 
 import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.utils.checkpoint import checkpoint
 
+
 class PMC_CLIP_cfg:
-    backbone: str = 'ModifiedRN50'  # ['RN50', 'ModifiedRN50', 'MAE']
-    layers: Union[Tuple[int, int, int, int], int] = [3,4,6,3]
+    backbone: str = "ModifiedRN50"  # ['RN50', 'ModifiedRN50', 'MAE']
+    layers: Union[Tuple[int, int, int, int], int] = (3, 4, 6, 3)
     width: int = 64
     head_width: int = 64
     mlp_ratio: float = 4.0
     patch_size: int = 16
     image_size: Union[Tuple[int, int], int] = 224
-    timm_model_name: str = None  # a valid model name overrides layers, width, patch_size
-    timm_model_pretrained: bool = False  # use (imagenet) pretrained weights for named model
-    timm_pool: str = 'avg'  # feature pooling for timm model ('abs_attn', 'rot_attn', 'avg', '')
-    timm_proj: str = 'linear'  # linear projection for timm model output ('linear', 'mlp', '')
+    timm_model_name: Optional[str] = (
+        None  # a valid model name overrides layers, width, patch_size
+    )
+    timm_model_pretrained: bool = (
+        False  # use (imagenet) pretrained weights for named model
+    )
+    timm_pool: str = (
+        "avg"  # feature pooling for timm model ('abs_attn', 'rot_attn', 'avg', '')
+    )
+    timm_proj: str = (
+        "linear"  # linear projection for timm model output ('linear', 'mlp', '')
+    )
     patch_dropout: float = 0.0  # patch dropout rate, no dropout by default
-    drop_attention_rate: float = 0.  # Transformer Dropout
-    patch_size: None
-    
+    drop_attention_rate: float = 0.0  # Transformer Dropout
+
+
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -48,11 +57,24 @@ class Bottleneck(nn.Module):
 
         if stride > 1 or inplanes != planes * Bottleneck.expansion:
             # downsampling layer is prepended with an avgpool, and the subsequent convolution has stride 1
-            self.downsample = nn.Sequential(OrderedDict([
-                ("-1", nn.AvgPool2d(stride)),
-                ("0", nn.Conv2d(inplanes, planes * self.expansion, 1, stride=1, bias=False)),
-                ("1", nn.BatchNorm2d(planes * self.expansion))
-            ]))
+            self.downsample = nn.Sequential(
+                OrderedDict(
+                    [
+                        ("-1", nn.AvgPool2d(stride)),
+                        (
+                            "0",
+                            nn.Conv2d(
+                                inplanes,
+                                planes * self.expansion,
+                                1,
+                                stride=1,
+                                bias=False,
+                            ),
+                        ),
+                        ("1", nn.BatchNorm2d(planes * self.expansion)),
+                    ]
+                )
+            )
 
     def forward(self, x: torch.Tensor):
         identity = x
@@ -71,9 +93,17 @@ class Bottleneck(nn.Module):
 
 
 class AttentionPool2d(nn.Module):
-    def __init__(self, spacial_dim: int, embed_dim: int, num_heads: int, output_dim: int = None):
+    def __init__(
+        self,
+        spacial_dim: int,
+        embed_dim: int,
+        num_heads: int,
+        output_dim: Optional[int] = None,
+    ):
         super().__init__()
-        self.positional_embedding = nn.Parameter(torch.randn(spacial_dim ** 2 + 1, embed_dim) / embed_dim ** 0.5)
+        self.positional_embedding = nn.Parameter(
+            torch.randn(spacial_dim**2 + 1, embed_dim) / embed_dim**0.5
+        )
         self.k_proj = nn.Linear(embed_dim, embed_dim)
         self.q_proj = nn.Linear(embed_dim, embed_dim)
         self.v_proj = nn.Linear(embed_dim, embed_dim)
@@ -81,18 +111,24 @@ class AttentionPool2d(nn.Module):
         self.num_heads = num_heads
 
     def forward(self, x):
-        x = x.reshape(x.shape[0], x.shape[1], x.shape[2] * x.shape[3]).permute(2, 0, 1)  # NCHW -> (HW)NC
+        x = x.reshape(x.shape[0], x.shape[1], x.shape[2] * x.shape[3]).permute(
+            2, 0, 1
+        )  # NCHW -> (HW)NC
         x = torch.cat([x.mean(dim=0, keepdim=True), x], dim=0)  # (HW+1)NC
         x = x + self.positional_embedding[:, None, :].to(x.dtype)  # (HW+1)NC
         x, _ = F.multi_head_attention_forward(
-            query=x, key=x, value=x,
+            query=x,
+            key=x,
+            value=x,
             embed_dim_to_check=x.shape[-1],
             num_heads=self.num_heads,
             q_proj_weight=self.q_proj.weight,
             k_proj_weight=self.k_proj.weight,
             v_proj_weight=self.v_proj.weight,
             in_proj_weight=None,
-            in_proj_bias=torch.cat([self.q_proj.bias, self.k_proj.bias, self.v_proj.bias]),
+            in_proj_bias=torch.cat(
+                [self.q_proj.bias, self.k_proj.bias, self.v_proj.bias]
+            ),
             bias_k=None,
             bias_v=None,
             add_zero_attn=False,
@@ -101,7 +137,7 @@ class AttentionPool2d(nn.Module):
             out_proj_bias=self.c_proj.bias,
             use_separate_proj_weight=True,
             training=self.training,
-            need_weights=False
+            need_weights=False,
         )
 
         return x[0]
@@ -113,9 +149,14 @@ class ResNet(nn.Module):
     """
 
     def __init__(
-            self, layers, output_dim, heads, image_size=224, width=64,
-            block=Bottleneck,
-        ):
+        self,
+        layers,
+        output_dim,
+        heads,
+        image_size=224,
+        width=64,
+        block=Bottleneck,
+    ):
         super().__init__()
         self.output_dim = output_dim
         self.image_size = image_size
@@ -142,10 +183,12 @@ class ResNet(nn.Module):
         self.init_parameters()
 
     def _make_layer(
-            self,
-            planes, blocks, stride=1,
-            block=Bottleneck,
-        ):
+        self,
+        planes,
+        blocks,
+        stride=1,
+        block=Bottleneck,
+    ):
         layers = [block(self._inplanes, planes, stride)]
 
         self._inplanes = planes * block.expansion
@@ -161,11 +204,13 @@ class ResNet(nn.Module):
                     nn.init.zeros_(param)
 
     def lock(self, unlocked_groups=0, freeze_bn_stats=False):
-        assert unlocked_groups == 0, 'partial locking not currently supported for this model'
+        assert (
+            unlocked_groups == 0
+        ), "partial locking not currently supported for this model"
         for param in self.parameters():
             param.requires_grad = False
         if freeze_bn_stats:
-            freeze_batch_norm_2d(self)
+            raise ValueError()
 
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):
@@ -190,9 +235,11 @@ class ResNet(nn.Module):
         x = self.head(x)  # [batch_size, 1024]
 
         visual_output = dict.fromkeys(["image_features", "mim_loss"], None)
-        visual_output.update({
-            'image_features': x,
-        })
+        visual_output.update(
+            {
+                "image_features": x,
+            }
+        )
 
         return visual_output
 
@@ -211,10 +258,14 @@ class ModifiedResNet(nn.Module):
         self.image_size = image_size
 
         # the 3-layer stem
-        self.conv1 = nn.Conv2d(3, width // 2, kernel_size=3, stride=2, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            3, width // 2, kernel_size=3, stride=2, padding=1, bias=False
+        )
         self.bn1 = nn.BatchNorm2d(width // 2)
         self.relu1 = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(width // 2, width // 2, kernel_size=3, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            width // 2, width // 2, kernel_size=3, padding=1, bias=False
+        )
         self.bn2 = nn.BatchNorm2d(width // 2)
         self.relu2 = nn.ReLU(inplace=True)
         self.conv3 = nn.Conv2d(width // 2, width, kernel_size=3, padding=1, bias=False)
@@ -245,7 +296,7 @@ class ModifiedResNet(nn.Module):
 
     def init_parameters(self):
         if self.attnpool is not None:
-            std = self.attnpool.c_proj.in_features ** -0.5
+            std = self.attnpool.c_proj.in_features**-0.5
             nn.init.normal_(self.attnpool.q_proj.weight, std=std)
             nn.init.normal_(self.attnpool.k_proj.weight, std=std)
             nn.init.normal_(self.attnpool.v_proj.weight, std=std)
@@ -257,11 +308,13 @@ class ModifiedResNet(nn.Module):
                     nn.init.zeros_(param)
 
     def lock(self, unlocked_groups=0, freeze_bn_stats=False):
-        assert unlocked_groups == 0, 'partial locking not currently supported for this model'
+        assert (
+            unlocked_groups == 0
+        ), "partial locking not currently supported for this model"
         for param in self.parameters():
             param.requires_grad = False
         if freeze_bn_stats:
-            freeze_batch_norm_2d(self)
+            raise ValueError()
 
     @torch.jit.ignore
     def set_grad_checkpointing(self, enable=True):
@@ -284,9 +337,11 @@ class ModifiedResNet(nn.Module):
         x = self.attnpool(x)
 
         visual_output = dict.fromkeys(["image_features", "mim_loss"], None)
-        visual_output.update({
-            'image_features': x,
-        })
+        visual_output.update(
+            {
+                "image_features": x,
+            }
+        )
 
         return visual_output
 
@@ -308,9 +363,13 @@ class QuickGELU(nn.Module):
 
 class ResidualAttentionBlock(nn.Module):
     def __init__(
-            self, d_model: int, n_head: int, mlp_ratio: float = 4.0, act_layer: Callable = nn.GELU,
-            drop_attention_rate: float = 0.,
-        ):
+        self,
+        d_model: int,
+        n_head: int,
+        mlp_ratio: float = 4.0,
+        act_layer: Callable = nn.GELU,
+        drop_attention_rate: float = 0.0,
+    ):
         super().__init__()
 
         self.attn = nn.MultiheadAttention(
@@ -320,11 +379,15 @@ class ResidualAttentionBlock(nn.Module):
         )
         self.ln_1 = LayerNorm(d_model)
         mlp_width = int(d_model * mlp_ratio)
-        self.mlp = nn.Sequential(OrderedDict([
-            ("c_fc", nn.Linear(d_model, mlp_width)),
-            ("gelu", act_layer()),
-            ("c_proj", nn.Linear(mlp_width, d_model))
-        ]))
+        self.mlp = nn.Sequential(
+            OrderedDict(
+                [
+                    ("c_fc", nn.Linear(d_model, mlp_width)),
+                    ("gelu", act_layer()),
+                    ("c_proj", nn.Linear(mlp_width, d_model)),
+                ]
+            )
+        )
         self.ln_2 = LayerNorm(d_model)
 
     def attention(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
@@ -343,12 +406,12 @@ class PatchDropout(nn.Module):
 
     def __init__(self, prob, exclude_first_token=True):
         super().__init__()
-        assert 0 <= prob < 1.
+        assert 0 <= prob < 1.0
         self.prob = prob
         self.exclude_first_token = exclude_first_token  # exclude CLS token
 
     def forward(self, x):
-        if not self.training or self.prob == 0.:
+        if not self.training or self.prob == 0.0:
             return x
 
         if self.exclude_first_token:
@@ -378,18 +441,31 @@ class PatchDropout(nn.Module):
 
 class Transformer(nn.Module):
     def __init__(
-            self, width: int, layers: int, heads: int,  mlp_ratio: float = 4.0, act_layer: Callable = nn.GELU,
-            drop_attention_rate: float = 0.,
-        ):
+        self,
+        width: int,
+        layers: int,
+        heads: int,
+        mlp_ratio: float = 4.0,
+        act_layer: Callable = nn.GELU,
+        drop_attention_rate: float = 0.0,
+    ):
         super().__init__()
         self.width = width
         self.layers = layers
         self.grad_checkpointing = False
 
-        self.resblocks = nn.ModuleList([
-            ResidualAttentionBlock(width, heads, mlp_ratio, act_layer=act_layer, drop_attention_rate=drop_attention_rate)
-            for _ in range(layers)
-        ])
+        self.resblocks = nn.ModuleList(
+            [
+                ResidualAttentionBlock(
+                    width,
+                    heads,
+                    mlp_ratio,
+                    act_layer=act_layer,
+                    drop_attention_rate=drop_attention_rate,
+                )
+                for _ in range(layers)
+            ]
+        )
 
     def forward(self, x: torch.Tensor, attn_mask: Optional[torch.Tensor] = None):
         for r in self.resblocks:
