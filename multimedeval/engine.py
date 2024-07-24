@@ -1,7 +1,6 @@
 """The engine class."""
 
 import getpass
-import json
 import logging
 import os
 from collections.abc import Callable
@@ -108,6 +107,8 @@ class MultiMedEval:
             self.logger = logging.getLogger("MultiMedEval")
         else:
             self.logger = logger
+
+        self.eval_params = EvalParams()
 
         dynamic_datasets = find_datasets()
         print(f"Dynamic datasets: {dynamic_datasets}")
@@ -229,8 +230,7 @@ class MultiMedEval:
                 "please provide a batcher to the engine"
             )
 
-        self.eval_params = eval_params if eval_params is not None else EvalParams()
-        self.batcher = batcher
+        self.eval_params = eval_params if eval_params is not None else self.eval_params
 
         if not os.path.exists(self.eval_params.run_name):
             os.mkdir(self.eval_params.run_name)
@@ -239,18 +239,20 @@ class MultiMedEval:
         if isinstance(tasks_to_evaluate, list):
             if len(tasks_to_evaluate) == 0:
                 tasks_to_evaluate = list(self.name_to_task.keys())
-            self.results = {}
+            results = {}
             for x in tasks_to_evaluate:
                 task_metrics = self.eval(x, batcher, eval_params)
                 if task_metrics is None:
                     continue
-                self.results[x] = task_metrics
+                results[x] = task_metrics
 
-            return self.results
+            return results
 
         if tasks_to_evaluate not in self.name_to_task:
             self.logger.warning(
-                f"Task {tasks_to_evaluate} not in {list(self.name_to_task.keys())}",
+                "Task %s not in %s",
+                tasks_to_evaluate,
+                list(self.name_to_task.keys()),
             )
             return None
 
@@ -266,14 +268,15 @@ class MultiMedEval:
                     else "No error message"
                 )
 
-                self.logger.warning(
+                warning_message = (
                     f"Task {tasks_to_evaluate} requires {req} to be ready: {error}"
                 )
+                self.logger.warning(warning_message)
                 return None
 
         evaluation: Benchmark = self.name_to_task[tasks_to_evaluate]
 
-        predictions = self._run_inference(evaluation)
+        predictions = self._run_inference(evaluation, batcher)
         task_result: EvaluationOutput = evaluation.evaluate(predictions)
 
         if task_result.answer_log is not None:
@@ -282,26 +285,16 @@ class MultiMedEval:
                 f"{self.eval_params.run_name}/{evaluation.task_name}",
             )
 
-        try:
-            with open(
-                f"{self.eval_params.run_name}/results.json", "r", encoding="utf-8"
-            ) as f:
-                metrics = json.load(f)
-        except IOError:
-            metrics = {}
-
-        metrics[evaluation.task_name] = task_result.metrics
-        file_writer_factory("json")(metrics, f"{self.eval_params.run_name}/results")
-
-        self.logger.info(f"Done task {tasks_to_evaluate}")
+        self.logger.info("Done task %s", str(tasks_to_evaluate))
 
         return task_result.metrics
 
-    def _run_inference(self, task: Benchmark):
-        self.logger.info(
+    def _run_inference(self, task: Benchmark, batcher):
+        info_message = (
             f"======================== Running inference on {task.task_name} "
             "========================"
         )
+        self.logger.info(info_message)
 
         dataloader = self.get_dataloader(task)
         kwargs_format_question = (
@@ -325,7 +318,7 @@ class MultiMedEval:
                 else:
                     batch_prompts.append((text, img))
 
-            answers = self.batcher(batch_prompts)
+            answers = batcher(batch_prompts)
 
             for el, answer in zip(batch, answers):
                 predictions.append({"idx": el["idx"], "answer": answer})

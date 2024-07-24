@@ -48,7 +48,7 @@ class TestLoadingAll:
     """Tests loading all tasks and running them."""
 
     # Create the engine once for all tests
-    def setup_class(self):
+    def __init__(self):
         """Set up the test class."""
         self.engine = MultiMedEval()
 
