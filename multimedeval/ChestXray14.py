@@ -1,8 +1,6 @@
 import os
 import datasets
 import pandas as pd
-import pydicom
-from datasets import load_dataset
 from kaggle.api.kaggle_api_extended import KaggleApi
 from PIL import Image
 
@@ -49,7 +47,7 @@ class ChestXray14(ImageClassification):
 
         self.dataset, self.train_dataset = self._train_test_split(full_dataset)
 
-    def get_predicted_answer(self, answer: str) -> int:
+    def get_predicted_answer(self, answer):
         """Convert the free form text output to the answer index.
 
         Args:
@@ -111,7 +109,7 @@ class ChestXray14(ImageClassification):
         question += " \n ".join(
             [f"{option}" for option in self.options]
         )
-        question += " \n Which options correspond to the image?"
+        question += " \n List the options that can be seen in this picture."
 
         formatted_text = [
             {
