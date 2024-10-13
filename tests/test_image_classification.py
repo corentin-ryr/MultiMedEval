@@ -97,7 +97,7 @@ def test_chestxray14(
     )
     with open(config_file_path, encoding="utf-8") as config_file:
         config = json.load(config_file)
-    engine.setup(SetupParams(chestray14_dir=config["chestxray14_dir"]))
+    engine.setup(SetupParams(chestxray14_dir=config["chestxray14_dir"]))
 
     results = engine.eval(["ChestXray14"], batcher, EvalParams())
 

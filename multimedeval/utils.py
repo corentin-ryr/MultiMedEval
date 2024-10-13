@@ -154,6 +154,7 @@ class SetupParams:
         mnist_pneumonia_dir: The path to the MNIST-Pneumonia dataset.
         mnist_retina_dir: The path to the MNIST-Retina dataset.
         mnist_tissue_dir: The path to the MNIST-Tissue dataset.
+        chestxray14_dir: The path to the ChestXray14 dataset.
         chexbert_dir: The path to the CheXpert dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
@@ -184,7 +185,7 @@ class SetupParams:
     mnist_tissue_dir: Optional[Union[str, os.PathLike]] = None
     diff_vqa_dir: Optional[Union[str, os.PathLike]] = None
     mmlu_dir: Optional[Union[str, os.PathLike]] = None
-    chestray14_dir: Optional[Union[str, os.PathLike]] = None
+    chestxray14_dir: Optional[Union[str, os.PathLike]] = None
     chexbert_dir: Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
