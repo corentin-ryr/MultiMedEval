@@ -36,6 +36,7 @@ TASKS = [
     "exampleDatasetQA",
     "exampleDatasetVQA",
     "MMLU",
+    "ChestXray14"
 ]
 
 
