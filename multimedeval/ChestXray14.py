@@ -25,7 +25,7 @@ class ChestXray14(ImageClassification):
 "Consolidation", "Edema", "Emphysema", "Fibrosis", "Pleural_Thickening", "Hernia"]
 
         # Get the dataset from Kaggle
-        self.path = self.engine.get_config()["chestray14_dir"]
+        self.path = self.engine.get_config()["chestxray14_dir"]
 
         if self.path is None:
             raise ValueError(
