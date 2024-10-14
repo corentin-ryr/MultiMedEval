@@ -19,6 +19,5 @@
   "mnist_retina_dir": "/mnt/data",
   "mnist_tissue_dir": "/mnt/data",
   "cbis_ddsm_dir": "/mnt/data",
-  "mmlu_dir": "/mnt/data",
-  "chestxray14_dir": "/mnt/data"
+  "mmlu_dir": "/mnt/data"
 }
