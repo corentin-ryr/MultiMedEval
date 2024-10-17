@@ -4,7 +4,7 @@ import csv
 import json
 import logging
 import os
-import subprocess
+import zipfile
 
 import numpy as np
 from appdirs import user_cache_dir
@@ -12,6 +12,7 @@ from scipy.stats import kendalltau
 from sklearn.utils import resample
 
 from multimedeval import MultiMedEval, SetupParams
+from multimedeval.utils import download_file
 
 logging.basicConfig(level=logging.INFO)
 
@@ -71,21 +72,31 @@ def test_report_comparison():
 
     report_comparison = engine.name_to_task["MIMIC-CXR Report Generation"]
 
-    # Download the files from Physionet
+    # Directory to save the files
+    directory = "tests"
+
+    # Create the directory if it doesn't exist
+    os.makedirs(directory, exist_ok=True)
     username, password = engine.get_physionet_credentials()
-    wget_command = (
-        f'wget -r -c -np -nc --directory-prefix tests --user "{username}" '
-        f'--password "{password}" https://physionet.org/files/rexval-dataset/1.0.0/'
+
+    download_file(
+        "https://physionet.org/content/rexval-dataset/get-zip/1.0.0/",
+        os.path.join("tests", "rexval.zip"),
+        username,
+        password,
     )
 
-    subprocess.run(wget_command, shell=True, check=True)
+    # Unzip the file
+    with zipfile.ZipFile(os.path.join("tests", "rexval.zip"), "r") as zip_ref:
+        zip_ref.extractall("tests")
 
     # Load the all the report pairs from the csv file
     report_pairs = []
     id_to_details = {}
     current_id = 0
     with open(
-        "tests/physionet.org/files/rexval-dataset/1.0.0/50_samples_gt_and_candidates.csv",
+        "tests/radiology-report-expert-evaluation-rexval-dataset-1.0.0/"
+        "50_samples_gt_and_candidates.csv",
         "r",
         encoding="utf-8",
     ) as file:
@@ -109,7 +120,7 @@ def test_report_comparison():
 
     id_to_num_error = {}
     with open(
-        "tests/physionet.org/files/rexval-dataset/1.0.0/"
+        "tests/radiology-report-expert-evaluation-rexval-dataset-1.0.0/"
         "6_valid_raters_per_rater_error_categories.csv",
         "r",
         encoding="utf-8",

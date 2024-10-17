@@ -1,23 +1,17 @@
-import random
+"""Embedding layer of RadFM."""
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
-from einops import rearrange, repeat
-from einops.layers.torch import Rearrange
-from einops_exts import rearrange_many
-from torch.autograd import Variable
-from torch.utils.checkpoint import checkpoint
-from transformers import AutoConfig, AutoModel, AutoTokenizer, BertModel
+from einops import rearrange
 
 from .helpers import PerceiverResampler
-from .transformer_decoder import TransformerDecoder, TransformerDecoderLayer
-from .utils import get_visual_encoder
 from .vit_3d import ViT
 
 
 class MyEmbedding(nn.Module):
+    """The embedding layer for the model."""
+
     def __init__(
         self,
         num_embeddings=32000,
@@ -28,6 +22,17 @@ class MyEmbedding(nn.Module):
         frame_patch_size=4,
         seg_channel=256,
     ):
+        """Initialize the embedding layer.
+
+        Args:
+            num_embeddings: The number of tokens in the embedding. Defaults to 32000.
+            embedding_dim: The dimension of the embeddings. Defaults to 5120.
+            perceiver_num: Thecnumber of perceivers. Defaults to 32.
+            vis_dim: The dimension of the vis. Defaults to 768.
+            patch_size: The size of the patch. Defaults to 32.
+            frame_patch_size: The size of the frame patch. Defaults to 4.
+            seg_channel: The number of segmentation channels. Defaults to 256.
+        """
         super().__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
@@ -38,12 +43,12 @@ class MyEmbedding(nn.Module):
         self.frame_patch_size = frame_patch_size
         self.seg_channel = seg_channel
 
-        ## The bert model is useless for generation. Load it just for keeping model the same with the pre-train checkpoint.
+        # The bert model is useless for generation. Load it just for keeping model the same with the pre-train checkpoint.
         # self.bert_tokenizer = AutoTokenizer.from_pretrained("./MedKEBERT")
         # self.bert_model = BertModel(AutoConfig.from_pretrained("./MedKEBERT/"))
         # self.bert_projection_fc = nn.Linear(768, vis_dim)
 
-        ## the MedKEBERT can be downloaded from https://huggingface.co/xmcmic/Med-KEBERT/tree/main ##
+        # the MedKEBERT can be downloaded from https://huggingface.co/xmcmic/Med-KEBERT/tree/main ##
         # self.bert_tokenizer = AutoTokenizer.from_pretrained("xmcmic/Med-KEBERT")
         # self.bert_model = AutoModel.from_pretrained("xmcmic/Med-KEBERT")
         # self.bert_projection_fc = nn.Linear(768,vis_dim)
@@ -88,12 +93,23 @@ class MyEmbedding(nn.Module):
         self.fc = nn.Linear(self.vis_dim, self.embedding_dim)
         # self.cls_head = nn.Linear(self.vis_dim // 8, 1)
 
-    def forward(self, text_input, vision_x, key_words_query=None):
+    def forward(
+        self, text_input, vision_x, **kwargs
+    ):  # pylint: disable=unused-argument
+        """Forward pass of the model.
+
+        Args:
+            text_input: The input text.
+            vision_x: The input vision.
+
+        Returns:
+            The output of the model.
+        """
         if self.flag == "Text":
-            B, S, C, H, W, D = vision_x.shape
+            B, S, _, _, _, _ = vision_x.shape
             vision_x = rearrange(vision_x, "b S c h w d-> (b S) c h w d")
 
-            vision_x, pos_embedding = self.vision_encoder(vision_x)
+            vision_x, _ = self.vision_encoder(vision_x)
             vision_x = rearrange(vision_x, "(b s F) v d -> b s F v d", b=B, s=S, F=1)
             vision_x = self.perceiver(vision_x)  # reshapes to (b, S, n, d)
 
@@ -108,7 +124,9 @@ class MyEmbedding(nn.Module):
             embedding_weight = torch.cat([embedding_weight, vision_x], dim=1)
 
             text_input = (
-                F.one_hot(text_input, embedding_weight.shape[1])  # embedding_weight
+                F.one_hot(  # pylint: disable=E1102
+                    text_input, embedding_weight.shape[1]
+                )
                 .to(vision_x.dtype)
                 .to(vision_x.device)
             )
