@@ -35,8 +35,7 @@ TASKS = [
     "CBIS-DDSM Calcification",
     "exampleDatasetQA",
     "exampleDatasetVQA",
-    "MMLU",
-    "ChestXray14"
+    "MMLU"
 ]
 
 
