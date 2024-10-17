@@ -106,7 +106,7 @@ You then need to call the `setup` function of the `engine`. This will download t
 
 ```python
 setupParams = SetupParams(medqa_dir="data/")
-tasksReady = engine.setup(setupParams=setupParams)
+tasksReady = engine.setup(setup_params=setupParams)
 ```
 
 Here we initialize the `SetupParams` dataclass with only the path for the MedQA dataset. If you omit to pass a directory for some of the datasets, they will be skipped during the evaluation. During the setup process, the script will need a Physionet username and password to download "VinDr-Mammo", "MIMIC-CXR" and "MIMIC-III". You also need to setup Kaggle on your machine before running the setup as the "CBIS-DDSM" is hosted on Kaggle. At the end of the setup process, you will see a summary of which tasks are ready and which didn't run properly and the function will return a summary in the form of a dictionary.
@@ -179,7 +179,7 @@ To run the benchmark, call the `eval` method of the `MultiMedEval` class with th
 
 ```python
 evalParams = EvalParams(batch_size=128)
-results = engine.eval(["MedQA", "VQA-RAD"], batcher, evalParams=evalParams)
+results = engine.eval(["MedQA", "VQA-RAD"], batcher, eval_params=evalParams)
 ```
 
 ## MultiMedEval parameters

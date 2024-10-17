@@ -13,6 +13,7 @@ import nltk
 from radgraph import F1RadGraph
 from torch.utils.data import DataLoader
 
+from multimedeval.ChestXray14 import ChestXray14
 from multimedeval.chexbert.label import _encode, _label
 from multimedeval.dynamic_datasets import find_datasets
 from multimedeval.image_classification import (
@@ -78,6 +79,7 @@ TASKS: Set[Type[Benchmark]] = {
     MNISTRetina,
     MNISTTissue,
     MMLU,
+    ChestXray14
     # # # "MNIST-OrganA": MNIST_OrganA,
     # # # "MNIST-Chest": MNIST_Chest,
 }
