@@ -1,6 +1,7 @@
 """The engine class."""
 
 import getpass
+import json
 import logging
 import os
 from collections.abc import Callable
@@ -246,6 +247,8 @@ class MultiMedEval:
                     continue
                 results[x] = task_metrics
 
+                self._update_results_file(results)
+
             return results
 
         if tasks_to_evaluate not in self.name_to_task:
@@ -288,6 +291,18 @@ class MultiMedEval:
         self.logger.info("Done task %s", str(tasks_to_evaluate))
 
         return task_result.metrics
+
+    def _update_results_file(self, results):
+        try:
+            with open(
+                f"{self.eval_params.run_name}/results.json", "r", encoding="utf-8"
+            ) as f:
+                metrics = json.load(f)
+        except IOError:
+            metrics = {}
+
+        metrics.update(results)
+        file_writer_factory("json")(metrics, f"{self.eval_params.run_name}/results")
 
     def _run_inference(self, task: Benchmark, batcher):
         info_message = (
@@ -392,7 +407,7 @@ class MultiMedEval:
     def _prepare_radgraph(self):
         # Check if deepspeed is installed and initialized
         try:
-            from deepspeed.comm.comm import (  # noqa # pylint: disable=import-outside-toplevel
+            from deepspeed.comm.comm import (  # noqa # pylint: disable=import-outside-toplevel  # type: ignore
                 is_initialized,
             )
 

@@ -3,7 +3,7 @@
 import os
 from abc import abstractmethod
 from typing import List, Optional, Union
-
+import nltk
 import pandas as pd
 import torch
 from nltk.stem import WordNetLemmatizer
@@ -351,6 +351,8 @@ class ReportComparison(Benchmark):
         self.bleu_2 = BLEUScore(n_gram=2, weights=[1 / 2, 1 / 2])
         self.bleu_4 = BLEUScore(n_gram=4)
         self.rouge_l = ROUGEScore(rouge_keys=("rougeL", "rouge1"))
+
+        nltk.download("punkt_tab")
 
     def _compute_chexbert(self, hyp_reports, ref_reports):
         df = pd.DataFrame(columns=["Report Impression"], data=ref_reports)
