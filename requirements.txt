@@ -13,4 +13,3 @@ medmnist
 radgraph==0.1.2
 Pillow>=10.2.0
 types-requests
-protobuf
