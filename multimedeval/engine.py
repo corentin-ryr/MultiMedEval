@@ -158,7 +158,7 @@ class MultiMedEval:
         progress_bar.set_description("Setup RadGraph")
         try:
             self._prepare_radgraph()
-        except ImportError as e:
+        except (ImportError, AttributeError) as e:
             self.tasks_ready["RadGraph"] = {"ready": False, "error": str(e)}
         else:
             self.tasks_ready["RadGraph"] = {"ready": True}
@@ -430,7 +430,7 @@ class MultiMedEval:
 
         # Check if deepspeed is installed and initialized
         try:
-            from deepspeed.comm.comm import (  # noqa # pylint: disable=import-outside-toplevel
+            from deepspeed.comm.comm import (  # noqa # pylint: disable=import-outside-toplevel # type: ignore
                 is_initialized,
             )
 
