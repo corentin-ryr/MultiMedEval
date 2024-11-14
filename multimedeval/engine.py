@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Set, Type, Union
 
 import gdown
 import nltk
-from radgraph import F1RadGraph
+
 from torch.utils.data import DataLoader
 
 from multimedeval.ChestXray14 import ChestXray14
@@ -407,6 +407,7 @@ class MultiMedEval:
             )
 
     def _prepare_radgraph(self):
+        from radgraph import F1RadGraph
         # Check if deepspeed is installed and initialized
         try:
             from deepspeed.comm.comm import (  # noqa # pylint: disable=import-outside-toplevel  # type: ignore

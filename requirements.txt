@@ -10,7 +10,7 @@ bert_score
 pydicom
 kaggle
 medmnist
-radgraph==0.1.10
+#radgraph==0.1.10
 Pillow>=10.2.0
 types-requests
 protobuf
