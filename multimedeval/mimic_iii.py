@@ -81,9 +81,9 @@ class MIMICIII(ReportComparison):
 
     def setup(self):
         """Setups the MIMIC-III task family."""
-        path = self.engine.get_config()["mimic_iii_dir"]
+        self.path = self.engine.get_config()["mimic_iii_dir"]
 
-        if path is None:
+        if self.path is None:
             raise ValueError("mimic_iii_dir is not set in the config file")
 
         self._generate_dataset()
@@ -96,7 +96,7 @@ class MIMICIII(ReportComparison):
         # Open the NOTEEVENTS.csv file and keep the reports that are in the
         # mapping in the reports_csv list
         reports_csv = pd.read_csv(
-            os.path.join(path, "NOTEEVENTS.csv"), low_memory=False
+            os.path.join(self.path, "NOTEEVENTS.csv"), low_memory=False
         )
         reports_csv = reports_csv.fillna(-1)
 
