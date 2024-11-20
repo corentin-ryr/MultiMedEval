@@ -5,9 +5,10 @@ import json
 import logging
 from abc import abstractmethod
 
-from llava_med.batcher import batcherLLaVA_Med
-from LLMs.batcher import batcherLlama, batcherMedAlpaca, batcherMistral, batcherPMCLlama
-from rad_fm.batcher import RadFMBatcher
+from results.llava_med.batcher import batcherLLaVA_Med
+from results.llms.batcher import batcherLlama, batcherMedAlpaca, batcherMistral, batcherPMCLlama
+from results.rad_fm.batcher import RadFMBatcher
+from results.ct_clip.ct_clip import BatcherCTClip
 
 from multimedeval import EvalParams, MultiMedEval, SetupParams
 
@@ -19,17 +20,9 @@ BATCHERS = {
     "MedAlpaca": batcherMedAlpaca,
     "Mistral": batcherMistral,
     "PMCLlama": batcherPMCLlama,
-    "LLaVA_Med": batcherLLaVA_Med,
+    "LLaVA-Med": batcherLLaVA_Med,
+    "CT-CLIP": BatcherCTClip,
 }
-
-
-class Batcher:
-    """Batcher abstract class."""
-
-    @abstractmethod
-    def __init__(self, model_path):
-        """Initialize the batcher."""
-        pass
 
 
 def main(batcherName):
