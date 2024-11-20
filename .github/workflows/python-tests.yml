@@ -11,7 +11,6 @@ on:
 
 jobs:
   test:
-
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -35,10 +34,11 @@ jobs:
       run: |
         sudo mkdir -p /mnt/data
         sudo chmod -R 777 /mnt/data
+    - name: Install Poetry
+      run: python -m pip install poetry
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install -e .[dev]
+        poetry install
     - name: Test with pytest
       env:
         PHYSIONET_USERNAME: ${{ secrets.physionet_username }}
@@ -46,4 +46,4 @@ jobs:
         KAGGLE_USERNAME: ${{ secrets.kaggle_username }}
         KAGGLE_KEY: ${{ secrets.kaggle_key }}
       run: |
-        pytest
+        poetry run pytest
