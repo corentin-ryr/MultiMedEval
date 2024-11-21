@@ -212,6 +212,7 @@ class EvaluationOutput:
 
 @dataclass
 class BatcherInput:
+    """Dataclass for unified formatting of the basic (text, image) batcher input"""
     text: List[dict] = field(default_factory = list)
     image: List[Image] = field(default_factory = list)
 
@@ -225,6 +226,9 @@ class BatcherInput:
         self.image.append(image)
     
     def _formulate_prompt(self):
+        """
+            final formulation of prompt in a tuple form, e.g. ([{"user":"xxx"},{...}], [PIL.img1])
+        """
         return (self.text, self.image)
     
     def _get_text(self):
@@ -236,6 +240,7 @@ class BatcherInput:
 
 @dataclass
 class BatcherInputWithSeg(BatcherInput):
+    """Dataclass for unified formatting of the segmentation (text, image, segmemntation_mask) batcher input"""
     segmentation_masks: List[Image] = field(default_factory = list)
 
     def add_seg_mask(self, seg_mask: Image):
