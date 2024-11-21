@@ -333,7 +333,7 @@ class MultiMedEval:
                         (task.get_prompt()[0] + batcher_input._get_text(), task.get_prompt()[1] + batcher_input._get_image())
                     )
                 else:
-                    batch_prompts.append(batcher_input._formulate_prompt)
+                    batch_prompts.append(batcher_input._formulate_prompt())
 
             answers = batcher(batch_prompts)
 
