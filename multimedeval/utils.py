@@ -47,18 +47,15 @@ class Benchmark(ABC):
             return None
 
         if self._prompt is None:
-            prompt = []
-            images = []
+            batcher_inputs = []
             for i in range(5):
                 index = int(i / 5 * len(self.train_dataset))
-                text, img = self.format_question(
+                input = self.format_question(
                     self.train_dataset[index],
                     prompt=True,
                 )
-                prompt += text
-                images += img
-            self._prompt = (prompt, images)
-
+                batcher_inputs.append(input)
+            self._prompt = batcher_inputs
         return self._prompt
 
     def __len__(self):
