@@ -47,15 +47,18 @@ class Benchmark(ABC):
             return None
 
         if self._prompt is None:
-            batcher_inputs = []
+            batcher_input = BatcherInput()
             for i in range(5):
                 index = int(i / 5 * len(self.train_dataset))
-                input = self.format_question(
+                single_turn_input = self.format_question(
                     self.train_dataset[index],
                     prompt=True,
                 )
-                batcher_inputs.append(input)
-            self._prompt = batcher_inputs
+                
+                batcher_input.conversation.extend(single_turn_input.conversation)
+                batcher_input.images.extend(single_turn_input.images)
+                batcher_input.segmentation_masks.extend(single_turn_input.segmentation_masks)
+            self._prompt = batcher_input
         return self._prompt
 
     def __len__(self):
