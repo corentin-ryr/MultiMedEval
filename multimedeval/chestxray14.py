@@ -119,7 +119,7 @@ class ChestXray14(ImageClassification):
         #         "content": question,
         #     }
         # ]
-        batcher_input.add_text_prompt("user", question)
+        batcher_input._add_text_prompt("user", question)
         if prompt:
             # formatted_text.append(
             #     {
@@ -127,11 +127,11 @@ class ChestXray14(ImageClassification):
             #         "content": f"{self.get_correct_answer(sample, full_text=True)}",
             #     }
             # )
-            batcher_input.add_text_prompt('assistant', f"{self.get_correct_answer(sample, full_text=True)}")
+            batcher_input._add_text_prompt('assistant', f"{self.get_correct_answer(sample, full_text=True)}")
 
 
         image = Image.open(sample['full_path'])
-        batcher_input.add_images(image)
+        batcher_input._add_images(image)
 
         return batcher_input
 
