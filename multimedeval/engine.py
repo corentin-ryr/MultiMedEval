@@ -46,6 +46,8 @@ from multimedeval.utils import (
     EvaluationOutput,
     SetupParams,
     file_writer_factory,
+    BatcherInput,
+    concat_batcher_input
 )
 from multimedeval.visualization import BenchmarkVisualizer
 from multimedeval.vqa import SLAKE, DiffVQA, PathVQA, VQARad
@@ -329,9 +331,9 @@ class MultiMedEval:
                 sample = el["sample"]
                 batcher_input = task.format_question(sample, **kwargs_format_question)
                 if self.eval_params.fewshot and task.get_prompt() is not None:
-                    batch_prompts.append(
-                        task._prompt + [batcher_input]
-                    )
+                    few_shot_input = task.get_prompt()
+                    few_shot_input_plus_one = concat_batcher_input([few_shot_input, batcher_input])
+                    batch_prompts.append(few_shot_input_plus_one)
                 else:
                     batch_prompts.append(batcher_input)
             answers = batcher(batch_prompts)
