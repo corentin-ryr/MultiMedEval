@@ -212,45 +212,23 @@ class EvaluationOutput:
 
 @dataclass
 class BatcherInput:
-    """Dataclass for unified formatting of the basic (text, image) batcher input"""
-    text: List[dict] = field(default_factory = list)
-    image: List[Image] = field(default_factory = list)
+    """Dataclass for unified formatting of the basic (conversation, images, seg(optional)) batcher input"""
+    
+    conversation: List[dict] = field(default_factory = list)
+    images: Optional[List[Image]] = field(default_factory = list)
+    segmentation_masks: Optional[List[Image]] = field(default_factory = list)
 
-    def add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
-        self.text.append({
+    def _add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
+        self.conversation.append({
             "role": role,
             "content": content
         })
 
-    def add_image(self, image: Image):
-        self.image.append(image)
+    def _add_images(self, image: Image):
+        self.images.append(image)
     
-    def _formulate_prompt(self):
-        """
-            final formulation of prompt in a tuple form, e.g. ([{"user":"xxx"},{...}], [PIL.img1])
-        """
-        return (self.text, self.image)
-    
-    def _get_text(self):
-        return self.text
-    
-    def _get_image(self):
-        return self.image
-        
-
-@dataclass
-class BatcherInputWithSeg(BatcherInput):
-    """Dataclass for unified formatting of the segmentation (text, image, segmemntation_mask) batcher input"""
-    segmentation_masks: List[Image] = field(default_factory = list)
-
-    def add_seg_mask(self, seg_mask: Image):
+    def _add_segmentation_mask(self, seg_mask: Image):
         self.segmentation_masks.append(seg_mask)
-    
-    def _formulate_prompt(self):
-        return (self.text, self.image, self.segmentation_masks)
-    
-    def _get_seg_mask(self):
-        return self.segmentation_masks
 
 def remove_punctuation(input_string: str):
     """Removes punctuation from a string.
