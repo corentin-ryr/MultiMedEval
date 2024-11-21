@@ -13,7 +13,7 @@ import nltk
 
 from torch.utils.data import DataLoader
 
-from multimedeval.ChestXray14 import ChestXray14
+from multimedeval.chestXray14 import ChestXray14
 from multimedeval.chexbert.label import _encode, _label
 from multimedeval.dynamic_datasets import find_datasets
 from multimedeval.image_classification import (
