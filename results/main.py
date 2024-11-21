@@ -3,7 +3,6 @@
 import argparse
 import json
 import logging
-from abc import abstractmethod
 
 from results.llava_med.batcher import batcherLLaVA_Med
 from results.llms.batcher import batcherLlama, batcherMedAlpaca, batcherMistral, batcherPMCLlama

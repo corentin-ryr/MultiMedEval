@@ -62,6 +62,10 @@ flake8-pyi = "*"
 appdirs = "^1.4.4"
 kaleido = "0.2.1"
 
+[tool.poetry.group.ctclip.dependencies]
+einops = "*"
+
+
 
 [tool.pytest.ini_options]
 addopts = "--cov=multimedeval"
