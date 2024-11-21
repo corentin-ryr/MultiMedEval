@@ -131,7 +131,7 @@ class ChestXray14(ImageClassification):
 
 
         image = Image.open(sample['full_path'])
-        batcher_input.add_image(image)
+        batcher_input.add_images(image)
 
         return batcher_input
 

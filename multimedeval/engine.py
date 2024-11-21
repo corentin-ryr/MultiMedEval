@@ -330,11 +330,10 @@ class MultiMedEval:
                 batcher_input = task.format_question(sample, **kwargs_format_question)
                 if self.eval_params.fewshot and task.get_prompt() is not None:
                     batch_prompts.append(
-                        (task.get_prompt()[0] + batcher_input._get_text(), task.get_prompt()[1] + batcher_input._get_image())
+                        task._prompt + [batcher_input]
                     )
                 else:
-                    batch_prompts.append(batcher_input._formulate_prompt())
-
+                    batch_prompts.append(batcher_input)
             answers = batcher(batch_prompts)
 
             for el, answer in zip(batch, answers):
