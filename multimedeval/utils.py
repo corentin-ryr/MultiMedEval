@@ -7,15 +7,16 @@ import os
 import re
 import string
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, Literal
 
 import numpy as np
 import requests
 import torch
 from datasets import Dataset
 from tqdm import tqdm
+from PIL.Image import Image
 
 if TYPE_CHECKING:
     from multimedeval import MultiMedEval
@@ -209,6 +210,42 @@ class EvaluationOutput:
     metrics: Dict[str, float]
     answer_log: Optional[List[tuple]] = None
 
+@dataclass
+class BatcherInput:
+    text: List[dict] = field(default_factory = list)
+    image: List[Image] = field(default_factory = list)
+
+    def add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
+        self.text.append({
+            "role": role,
+            "content": content
+        })
+
+    def add_image(self, image: Image):
+        self.image.append(image)
+    
+    def _formulate_prompt(self):
+        return (self.text, self.image)
+    
+    def _get_text(self):
+        return self.text
+    
+    def _get_image(self):
+        return self.image
+        
+
+@dataclass
+class BatcherInputWithSeg(BatcherInput):
+    segmentation_masks: List[Image] = field(default_factory = list)
+
+    def add_seg_mask(self, seg_mask: Image):
+        self.segmentation_masks.append(seg_mask)
+    
+    def _formulate_prompt(self):
+        return (self.text, self.image, self.segmentation_masks)
+    
+    def _get_seg_mask(self):
+        return self.segmentation_masks
 
 def remove_punctuation(input_string: str):
     """Removes punctuation from a string.
