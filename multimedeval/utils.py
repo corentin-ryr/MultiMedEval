@@ -219,16 +219,16 @@ class BatcherInput:
     segmentation_masks: Optional[List[Image]] = field(default_factory = list)
 
     def _add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
-        self.conversation.append({
+        self.conversation.extend({
             "role": role,
             "content": content
         })
 
     def _add_images(self, image: Image):
-        self.images.append(image)
+        self.images.extend(image)
     
     def _add_segmentation_mask(self, seg_mask: Image):
-        self.segmentation_masks.append(seg_mask)
+        self.segmentation_masks.extend(seg_mask)
 
 
 def concat_batcher_input(batcher_list: List[BatcherInput]) -> BatcherInput:

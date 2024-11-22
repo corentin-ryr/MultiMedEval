@@ -9,7 +9,7 @@ from datasets import Dataset, load_dataset
 from PIL import Image
 
 from multimedeval.task_families import VQA
-from multimedeval.utils import download_file
+from multimedeval.utils import download_file, BatcherInput
 
 
 class VQARad(VQA):
@@ -46,7 +46,7 @@ class VQARad(VQA):
             prompt: Wether or not to add the answer to the formatted question. Defaults to False.
 
         Returns:
-            A conversation in the huggingface style and the images.
+            An instance of BatcherInput with conversation in the huggingface style and the images.
         """
         formatted_question = f"<img> {sample['question']}"
         formatted_answer = f"{sample['answer']}"
@@ -55,11 +55,15 @@ class VQARad(VQA):
                 "Answer the following question with yes or no. " + formatted_question
             )
 
-        question = [{"role": "user", "content": formatted_question}]
+        # question = [{"role": "user", "content": formatted_question}]
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', formatted_question)
         if prompt:
-            question.append({"role": "assistant", "content": formatted_answer})
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
 
-        return (question, [sample["image"]])
+        batcher_input._add_images([sample["image"]])
+        return batcher_input
 
     def get_correct_answer(self, sample):
         """Get the correct answer for the VQA-Rad task.
@@ -106,7 +110,7 @@ class PathVQA(VQA):
             prompt: Whether or not to add the answer to the formatted output. Defaults to False.
 
         Returns:
-            A conversation in the huggingface style and the images.
+            An instance of BatcherInput with conversation in the huggingface style and the images.
         """
         formatted_question = f"<img> {sample['question']}"
         formatted_answer = f"{sample['answer']}"
@@ -115,11 +119,15 @@ class PathVQA(VQA):
                 "Answer the following question with yes or no. " + formatted_question
             )
 
-        question = [{"role": "user", "content": formatted_question}]
+        # question = [{"role": "user", "content": formatted_question}]
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', formatted_question)
         if prompt:
-            question.append({"role": "assistant", "content": formatted_answer})
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
 
-        return (question, [sample["image"]])
+        batcher_input._add_images([sample["image"]])
+        return batcher_input
 
     def get_correct_answer(self, sample):
         """Get the correct answer for the Path-VQA task.
@@ -183,7 +191,7 @@ class SLAKE(VQA):
             prompt: Whether to add the answer to the conversation. Defaults to False.
 
         Returns:
-            A conversation in the huggingface style and the images.
+            An instance of BatcherInput with conversation in the huggingface style and the images.
         """
         formatted_question = f"<img> {sample['question']}"
         formatted_answer = f"{sample['answer']}"
@@ -192,13 +200,17 @@ class SLAKE(VQA):
                 "Answer the following question with yes or no. " + formatted_question
             )
 
-        question = [{"role": "user", "content": formatted_question}]
+        # question = [{"role": "user", "content": formatted_question}]
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', formatted_question)
         if prompt:
-            question.append({"role": "assistant", "content": formatted_answer})
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
 
         images = [Image.open(os.path.join(self.path, "imgs", sample["img_name"]))]
-
-        return (question, images)
+        
+        batcher_input._add_images(images)
+        return batcher_input
 
     def get_correct_answer(self, sample):
         """Get the correct answer for the SLAKE task.
@@ -274,7 +286,7 @@ class DiffVQA(VQA):
             prompt: Whether to add the answer to the prompt. Defaults to False.
 
         Returns:
-            A conversation in the huggingface style and the images.
+            An instance of BatcherInput with conversation in the huggingface style and the images.
         """
         image_folder_path = os.path.join(
             self.mimic_path,
@@ -301,11 +313,15 @@ class DiffVQA(VQA):
                 "Answer the following question with yes or no. " + formatted_question
             )
 
-        question = [{"role": "user", "content": formatted_question}]
+        # question = [{"role": "user", "content": formatted_question}]
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', formatted_question)
         if prompt:
-            question.append({"role": "assistant", "content": formatted_answer})
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
+        batcher_input._add_images(images)
 
-        return (question, images)
+        return batcher_input
 
     def get_correct_answer(self, sample):
         """Get the correct answer for the DiffVQA task.

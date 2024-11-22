@@ -11,7 +11,7 @@ from datasets import load_dataset
 
 from multimedeval.task_families import ReportComparison
 from multimedeval.tqdm_loggable import TqdmLogging
-from multimedeval.utils import download_file, section_text
+from multimedeval.utils import download_file, section_text, BatcherInput
 
 
 def _get_final_report(text):
@@ -215,17 +215,19 @@ class MIMICIII(ReportComparison):
             sample: The sample to format the question for.
 
         Returns:
-            The formatted question and images.
+            An instance of BatcherInput with formatted question and images.
         """
         question = sample["findings"]
         question += "\nSummarize the findings."
-        formatted_text = [
-            {
-                "role": "user",
-                "content": question,
-            }
-        ]
-        return (formatted_text, [])
+        # formatted_text = [
+        #     {
+        #         "role": "user",
+        #         "content": question,
+        #     }
+        # ]
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', question)
+        return batcher_input
 
     def _generate_dataset(self):
         # Check if the path already exists and if so return

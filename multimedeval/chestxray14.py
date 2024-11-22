@@ -103,7 +103,7 @@ class ChestXray14(ImageClassification):
             prompt: Adds the answer to the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+            An instance of BatcherInput with the formatted prompt and the images.
         """
         batcher_input = BatcherInput()
 

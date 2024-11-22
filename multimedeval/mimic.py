@@ -9,7 +9,7 @@ import pandas as pd
 from PIL import Image
 
 from multimedeval.task_families import ReportComparison
-from multimedeval.utils import section_text
+from multimedeval.utils import section_text, BatcherInput
 
 
 class MIMICCXRReportgen(ReportComparison):
@@ -97,7 +97,7 @@ class MIMICCXRReportgen(ReportComparison):
                 the report in the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+            An instance of BatcherInput with the formatted prompt and the images.
         """
         sample_path = os.path.join(
             self.path,
@@ -126,15 +126,20 @@ class MIMICCXRReportgen(ReportComparison):
             f"Can you provide a radiology report for this medical image? {img_tags}"
         )
 
-        formatted_text = [
-            {
-                "role": "user",
-                "content": question,
-            },
-            # {"role": "assistant", "content": f"Findings: {sample['findings']}"},
-        ]
+        # formatted_text = [
+        #     {
+        #         "role": "user",
+        #         "content": question,
+        #     },
+        #     # {"role": "assistant", "content": f"Findings: {sample['findings']}"},
+        # ]
+        images = [Image.open(imagePath) for imagePath in images_path]
 
-        return (formatted_text, [Image.open(imagePath) for imagePath in images_path])
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', question)
+        batcher_input._add_images(image = images)
+
+        return batcher_input
 
     def get_correct_answer(self, sample):
         """Get the correct answer for the sample.
