@@ -237,7 +237,7 @@ class RadFMBatcher:
             The generated text.
         """
         model_inputs = [
-            apply_chat_template(messages[0], self.text_tokenizer)
+            apply_chat_template(messages.conversation, self.text_tokenizer)
             for messages in prompts
         ]
 
@@ -245,7 +245,7 @@ class RadFMBatcher:
         visions = []
 
         for idx, question in enumerate(model_inputs):
-            images = prompts[idx][1]
+            images = prompts[idx].images
 
             images_formatted = []
             while "<img>" in question:

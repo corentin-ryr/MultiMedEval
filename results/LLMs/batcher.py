@@ -53,7 +53,7 @@ class batcherMistral:
         """
         model_inputs = [
             self.tokenizer.apply_chat_template(
-                messages[0], return_tensors="pt", tokenize=False
+                messages.conversation, return_tensors="pt", tokenize=False
             )
             for messages in prompts
         ]
@@ -124,7 +124,7 @@ class batcherLlama:
         """
         model_inputs = [
             self.tokenizer.apply_chat_template(
-                messages[0], return_tensors="pt", tokenize=False
+                messages.conversation, return_tensors="pt", tokenize=False
             )
             for messages in prompts
         ]
@@ -222,7 +222,7 @@ class batcherPMCLlama(batcherLlama):
         instruction = "You're a doctor, kindly address the medical queries according to the patient's account. Answer with the best option directly."
 
         prompts = [
-            [{"role": "system", "content": instruction}] + prompt[0]
+            [{"role": "system", "content": instruction}] + prompt.conversation
             for prompt in prompts
         ]
 

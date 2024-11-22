@@ -139,7 +139,7 @@ class batcherLLaVA_Med:
         listImage = []
         for prompt in prompts:
             conv = conv_templates["multimodal"].copy()
-            for message in prompt[0]:
+            for message in prompt.conversation:
                 qs: str = message["content"]
                 qs = qs.replace("<img>", imagePlaceHolder, 3)
 
@@ -150,7 +150,7 @@ class batcherLLaVA_Med:
 
             listText.append(textPrompt)
 
-            for image in prompt[1]:
+            for image in prompt.images:
                 image = image.convert("RGB")
                 image_tensor = (
                     self.image_processor.preprocess([image], return_tensors="pt")[
