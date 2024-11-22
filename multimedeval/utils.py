@@ -219,7 +219,7 @@ class BatcherInput:
     segmentation_masks: Optional[List[Image]] = field(default_factory = list)
 
     def _add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
-        self.conversation.extend({
+        self.conversation.append({
             "role": role,
             "content": content
         })
@@ -235,7 +235,7 @@ class BatcherInput:
         if isinstance(seg_mask, list):
             self.segmentation_masks.extend(seg_mask)
         else:
-            self.segmentation_masks.append(seg_mask)
+            self.s.append(seg_mask)
     
     def __add__(self, other: 'BatcherInput') -> 'BatcherInput':
         if not isinstance(other, BatcherInput):
