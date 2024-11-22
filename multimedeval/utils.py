@@ -225,10 +225,17 @@ class BatcherInput:
         })
 
     def _add_images(self, image: Image|List[Image]):
-        self.images.extend(image)
+        if isinstance(image, list):
+            self.images.extend(image)
+        else:
+            self.images.append(image)
+        
     
     def _add_segmentation_mask(self, seg_mask: Image|List[Image]):
-        self.segmentation_masks.extend(seg_mask)
+        if isinstance(seg_mask, list):
+            self.segmentation_masks.extend(seg_mask)
+        else:
+            self.segmentation_masks.append(seg_mask)
     
     def __add__(self, other: 'BatcherInput') -> 'BatcherInput':
         if not isinstance(other, BatcherInput):
