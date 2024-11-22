@@ -224,10 +224,10 @@ class BatcherInput:
             "content": content
         })
 
-    def _add_images(self, image: Image):
+    def _add_images(self, image: Image|List[Image]):
         self.images.extend(image)
     
-    def _add_segmentation_mask(self, seg_mask: Image):
+    def _add_segmentation_mask(self, seg_mask: Image|List[Image]):
         self.segmentation_masks.extend(seg_mask)
 
 
