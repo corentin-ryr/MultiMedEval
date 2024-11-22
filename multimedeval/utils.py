@@ -229,16 +229,17 @@ class BatcherInput:
     
     def _add_segmentation_mask(self, seg_mask: Image|List[Image]):
         self.segmentation_masks.extend(seg_mask)
-
-
-def concat_batcher_input(batcher_list: List[BatcherInput]) -> BatcherInput:
-    res_batcher = BatcherInput()
-    for i in batcher_list:
-        res_batcher.conversation.extend(i.conversation)
-        res_batcher.images.extend(i.images)
-        res_batcher.segmentation_masks.extend(i.segmentation_masks)
     
-    return res_batcher
+    def __add__(self, other: 'BatcherInput') -> 'BatcherInput':
+        if not isinstance(other, BatcherInput):
+            return NotImplemented
+        
+        # Combine the attributes of both instances
+        return BatcherInput(
+            conversation = self.conversation + other.conversation,
+            images = self.images + other.images ,
+            segmentation_masks = self.segmentation_masks + other.segmentation_masks
+        )
 
 def remove_punctuation(input_string: str):
     """Removes punctuation from a string.
