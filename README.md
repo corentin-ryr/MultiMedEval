@@ -117,28 +117,33 @@ Here we initialize the `SetupParams` dataclass with only the path for the MedQA 
 
 The user must implement one Callable: `batcher`. It takes a batch of input and must return the answer.
 The batch is a list of inputs.
-Each input is a tuple of:
+Each input is an instance of @dataclass `BatcherInput`, containing the following fields:
 
-- a prompt in the form of a Hugginface style conversation between a user and an assistant.
-- a list of Pillow images. The number of images matches the number of <img> tokens in the prompt and are ordered.
+- `conversation`: a prompt in the form of a Hugginface style conversation between a user and an assistant.
+- `images`: a list of Pillow images. The number of images matches the number of <img> tokens in the prompt and are ordered.
+- `segmentation_masks`: (optional) a list of segmentation masks, the number of which matches that of <seg> tokens in the prompt and are ordered.
 
 ```python
 [
-    (
-        [
-            {"role": "user", "content": "This is a question with an image <img>."},
-            {"role": "assistant", "content": "This is the answer."},
-            {"role": "user", "content": "This is a question with an image <img>."},
-        ],
-        [PIL.Image(), PIL.Image()]
+    BatcherInput(
+        conversation = 
+          [
+              {"role": "user", "content": "This is a question with an image <img>."},
+              {"role": "assistant", "content": "This is the answer."},
+              {"role": "user", "content": "This is a question with an image <img>."},
+          ],
+        images = [PIL.Image(), PIL.Image()],
+        segmentation_masks = [PIL.Image(), PIL.Image()]
     ),
-    (
-        [
-            {"role": "user", "content": "This is a question without images."},
-            {"role": "assistant", "content": "This is the answer."},
-            {"role": "user", "content": "This is a question without images."},
-        ],
-        []
+    BatcherInput(
+        conversation =
+          [
+              {"role": "user", "content": "This is a question without images."},
+              {"role": "assistant", "content": "This is the answer."},
+              {"role": "user", "content": "This is a question without images."},
+          ],
+        images = [],
+        segmentation_masks = []
     ),
 
 ]
@@ -161,7 +166,7 @@ class batcherMistral:
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def __call__(self, prompts):
-        model_inputs = [self.tokenizer.apply_chat_template(messages[0], return_tensors="pt", tokenize=False) for messages in prompts]
+        model_inputs = [self.tokenizer.apply_chat_template(messages.conversation, return_tensors="pt", tokenize=False) for messages in prompts]
         model_inputs = self.tokenizer(model_inputs, padding="max_length", truncation=True, max_length=1024, return_tensors="pt")
 
         generated_ids = self.model.generate(**model_inputs, max_new_tokens=200, do_sample=True, pad_token_id=self.tokenizer.pad_token_id)
