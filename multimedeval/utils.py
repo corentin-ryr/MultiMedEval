@@ -17,6 +17,7 @@ import torch
 from datasets import Dataset
 from tqdm import tqdm
 from PIL.Image import Image
+from nibabel.spatialimages import SpatialImage
 
 if TYPE_CHECKING:
     from multimedeval import MultiMedEval
@@ -215,8 +216,8 @@ class BatcherInput:
     """Dataclass for unified formatting of the basic (conversation, images, seg(optional)) batcher input"""
     
     conversation: List[dict] = field(default_factory = list)
-    images: Optional[List[Image]] = field(default_factory = list)
-    segmentation_masks: Optional[List[Image]] = field(default_factory = list)
+    images: Optional[List[Image] | List[SpatialImage]] = field(default_factory = list)
+    segmentation_masks: Optional[List[Image]| List[SpatialImage]] = field(default_factory = list)
 
     def _add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
         self.conversation.append({
@@ -224,14 +225,14 @@ class BatcherInput:
             "content": content
         })
 
-    def _add_images(self, image: Image|List[Image]):
+    def _add_images(self, image: Image|list|SpatialImage):
         if isinstance(image, list):
             self.images.extend(image)
         else:
             self.images.append(image)
         
     
-    def _add_segmentation_mask(self, seg_mask: Image|List[Image]):
+    def _add_segmentation_mask(self, seg_mask: Image|list|SpatialImage):
         if isinstance(seg_mask, list):
             self.segmentation_masks.extend(seg_mask)
         else:
