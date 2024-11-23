@@ -54,11 +54,9 @@ class Benchmark(ABC):
                 single_turn_input = self.format_question(
                     self.train_dataset[index],
                     prompt=True,
-                )
-                
-                batcher_input.conversation.extend(single_turn_input.conversation)
-                batcher_input.images.extend(single_turn_input.images)
-                batcher_input.segmentation_masks.extend(single_turn_input.segmentation_masks)
+                )        
+                batcher_input = batcher_input + single_turn_input
+        
             self._prompt = batcher_input
         return self._prompt
 
