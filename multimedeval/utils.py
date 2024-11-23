@@ -17,7 +17,7 @@ import torch
 from datasets import Dataset
 from tqdm import tqdm
 from PIL.Image import Image
-from nibabel.spatialimages import SpatialImage
+
 
 if TYPE_CHECKING:
     from multimedeval import MultiMedEval
@@ -158,6 +158,7 @@ class SetupParams:
         mnist_tissue_dir: The path to the MNIST-Tissue dataset.
         chestxray14_dir: The path to the ChestXray14 dataset.
         chexbert_dir: The path to the CheXpert dataset.
+        ctrate_dir: The path to the CT-RATE dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
 
@@ -189,6 +190,7 @@ class SetupParams:
     mmlu_dir: Optional[Union[str, os.PathLike]] = None
     chestxray14_dir: Optional[Union[str, os.PathLike]] = None
     chexbert_dir: Optional[Union[str, os.PathLike]] = None
+    ctrate_dir:Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     device: Optional[str] = "cuda"
@@ -216,8 +218,8 @@ class BatcherInput:
     """Dataclass for unified formatting of the basic (conversation, images, seg(optional)) batcher input"""
     
     conversation: List[dict] = field(default_factory = list)
-    images: Optional[List[Image] | List[SpatialImage]] = field(default_factory = list)
-    segmentation_masks: Optional[List[Image]| List[SpatialImage]] = field(default_factory = list)
+    images: Optional[Union[List[Image]]] = field(default_factory = list)
+    segmentation_masks:Optional[Union[List[Image]]] = field(default_factory = list)
 
     def _add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
         self.conversation.append({
@@ -225,18 +227,18 @@ class BatcherInput:
             "content": content
         })
 
-    def _add_images(self, image: Image|list|SpatialImage):
+    def _add_images(self, image: Union[Image, list]):
         if isinstance(image, list):
             self.images.extend(image)
         else:
             self.images.append(image)
         
     
-    def _add_segmentation_mask(self, seg_mask: Image|list|SpatialImage):
+    def _add_segmentation_mask(self, seg_mask: Union[Image, list]):
         if isinstance(seg_mask, list):
             self.segmentation_masks.extend(seg_mask)
         else:
-            self.s.append(seg_mask)
+            self.segmentation_masks.append(seg_mask)
     
     def __add__(self, other: 'BatcherInput') -> 'BatcherInput':
         if not isinstance(other, BatcherInput):
