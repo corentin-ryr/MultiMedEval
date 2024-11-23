@@ -338,7 +338,10 @@ class MultiMedEval:
             answers = batcher(batch_prompts)
 
             for el, answer in zip(batch, answers):
-                predictions.append({"idx": el["idx"], "answer": answer})
+                if isinstance(answer, dict):
+                    predictions.append({"idx": el["idx"], "answer": answer['text_answer'], "seg_mask":answer['segmentation_mask']})
+                else:
+                    predictions.append({"idx": el["idx"], "answer": answer})
 
         return predictions
 
