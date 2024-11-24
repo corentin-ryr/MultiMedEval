@@ -4,7 +4,7 @@ from datasets import Dataset, load_dataset
 from torchmetrics.text import BLEUScore
 
 from multimedeval.task_families import QA
-from multimedeval.utils import clean_str
+from multimedeval.utils import clean_str, BatcherInput
 
 
 class MedQA(QA):
@@ -50,7 +50,7 @@ class MedQA(QA):
             prompt: Whether or not to add the answer in the prompt. Defaults to False.
 
         Returns:
-            The formatted question.
+            An instance of BatcherInput with The formatted question.
         """
         question = sample["question"]
         options = sample["options"]
@@ -62,13 +62,16 @@ class MedQA(QA):
             + "\n"
         )
         formatted_question += "What is the correct answer?"
+        batcher_input = BatcherInput()
 
-        question = [{"role": "user", "content": formatted_question}]
+        batcher_input._add_text_prompt('user',formatted_question)
+
+        # question = [{"role": "user", "content": formatted_question}]
         if prompt:
             formatted_answer = "The answer is " + sample["answer_idx"] + "."
-            question.append({"role": "assistant", "content": formatted_answer})
-
-        return (question, [])
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
+        return batcher_input
 
     def get_correct_answer(self, sample, full_text=False):
         """Get the correct answer for the sample.
@@ -169,7 +172,7 @@ class PubMedQA(QA):
             prompt: Whether or not to add the answer in the prompt. Defaults to False.
 
         Returns:
-            The formatted question.
+            An instance of BatcherInput with the formatted question.
         """
         context = sample["context"]
         question = sample["question"]
@@ -180,10 +183,14 @@ class PubMedQA(QA):
 
         formatted_answer = answer[0]
 
-        question = [{"role": "user", "content": formatted_question}]
+        # question = [{"role": "user", "content": formatted_question}]
+        batcher_input = BatcherInput()
+
+        batcher_input._add_text_prompt('user',formatted_question)
         if prompt:
-            question.append({"role": "assistant", "content": formatted_answer})
-        return (question, [])
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
+        return batcher_input
 
     def get_predicted_answer(self, pred: str, sample):
         """Get the answer predicted by the model.
@@ -247,7 +254,7 @@ class MedMCQA(QA):
             prompt: Whether or not to add the answer in the prompt. Defaults to False.
 
         Returns:
-            The formatted question.
+            An instance of BatcherInput with formatted question.
         """
         question = sample["question"]
         options = self._get_options(sample)
@@ -259,10 +266,15 @@ class MedMCQA(QA):
 
         formatted_answer = f"The answer is {options[answer]}."
 
-        question = [{"role": "user", "content": formatted_question}]
+        # question = [{"role": "user", "content": formatted_question}]
+
+        batcher_input = BatcherInput()
+
+        batcher_input._add_text_prompt('user',formatted_question)
         if prompt:
-            question.append({"role": "assistant", "content": formatted_answer})
-        return (question, [])
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
+        return batcher_input
 
     def get_correct_answer(self, sample, full_text=False):
         """Get the correct answer for the sample.
@@ -361,7 +373,7 @@ class MMLU(QA):
             prompt: Whether or not to add the answer in the prompt. Defaults to False.
 
         Returns:
-            The formatted question.
+            An instance of BatcherInput with formatted question.
         """
         question = sample["question"]
         options = self._get_options(sample)
@@ -373,10 +385,14 @@ class MMLU(QA):
 
         formatted_answer = f"The answer is {options[answer]}."
 
-        question = [{"role": "user", "content": formatted_question}]
+        # question = [{"role": "user", "content": formatted_question}]
+        batcher_input = BatcherInput()
+
+        batcher_input._add_text_prompt('user', formatted_question)
         if prompt:
-            question.append({"role": "assistant", "content": formatted_answer})
-        return (question, [])
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
+        return batcher_input
 
     def get_correct_answer(self, sample, full_text=False):
         """Get the correct answer for the sample.

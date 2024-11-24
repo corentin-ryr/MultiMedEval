@@ -7,7 +7,7 @@ import pandas as pd
 from datasets import Dataset
 
 from multimedeval.task_families import QA
-from multimedeval.utils import download_file
+from multimedeval.utils import download_file, BatcherInput
 
 
 class MedNLI(QA):
@@ -54,7 +54,7 @@ class MedNLI(QA):
             prompt: Whether or not to add the answer to the prompt. Defaults to False.
 
         Returns:
-            The formatted question and images.
+            An instance of BatcherInput with the formatted question and images.
         """
         formatted_question = (
             f"Sentence 1: {sample['sentence1']}\nSentence 2: {sample['sentence2']}\n"
@@ -65,15 +65,17 @@ class MedNLI(QA):
             "contradicts the first (contradiction), or if there is no clear logical "
             "relationship between them (neutral)?"
         )
-
-        question = [{"role": "user", "content": formatted_question}]
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', formatted_question)
+        # question = [{"role": "user", "content": formatted_question}]
         if prompt:
             formatted_answer = (
                 "The logical relationship is " + sample["gold_label"] + "."
             )
-            question.append({"role": "assistant", "content": formatted_answer})
+            # question.append({"role": "assistant", "content": formatted_answer})
+            batcher_input._add_text_prompt('assistant', formatted_answer)
 
-        return (question, [])
+        return batcher_input
 
     def get_correct_answer(self, sample, full_text=False):
         """Returns the correct answer for the MedNLI task.

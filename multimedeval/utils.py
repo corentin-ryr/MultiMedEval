@@ -7,15 +7,17 @@ import os
 import re
 import string
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, Literal
 
 import numpy as np
 import requests
 import torch
 from datasets import Dataset
 from tqdm import tqdm
+from PIL.Image import Image
+
 
 if TYPE_CHECKING:
     from multimedeval import MultiMedEval
@@ -46,18 +48,16 @@ class Benchmark(ABC):
             return None
 
         if self._prompt is None:
-            prompt = []
-            images = []
+            batcher_input = BatcherInput()
             for i in range(5):
                 index = int(i / 5 * len(self.train_dataset))
-                text, img = self.format_question(
+                single_turn_input = self.format_question(
                     self.train_dataset[index],
                     prompt=True,
-                )
-                prompt += text
-                images += img
-            self._prompt = (prompt, images)
-
+                )        
+                batcher_input = batcher_input + single_turn_input
+        
+            self._prompt = batcher_input
         return self._prompt
 
     def __len__(self):
@@ -156,6 +156,7 @@ class SetupParams:
         mnist_tissue_dir: The path to the MNIST-Tissue dataset.
         chestxray14_dir: The path to the ChestXray14 dataset.
         chexbert_dir: The path to the CheXpert dataset.
+        ctrate_dir: The path to the CT-RATE dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
 
@@ -187,6 +188,7 @@ class SetupParams:
     mmlu_dir: Optional[Union[str, os.PathLike]] = None
     chestxray14_dir: Optional[Union[str, os.PathLike]] = None
     chexbert_dir: Optional[Union[str, os.PathLike]] = None
+    ctrate_dir:Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     device: Optional[str] = "cuda"
@@ -209,6 +211,43 @@ class EvaluationOutput:
     metrics: Dict[str, float]
     answer_log: Optional[List[tuple]] = None
 
+@dataclass
+class BatcherInput:
+    """Dataclass for unified formatting of the basic (conversation, images, seg(optional)) batcher input"""
+    
+    conversation: List[dict] = field(default_factory = list)
+    images: Optional[Union[List[Image]]] = field(default_factory = list)
+    segmentation_masks:Optional[Union[List[Image]]] = field(default_factory = list)
+
+    def _add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
+        self.conversation.append({
+            "role": role,
+            "content": content
+        })
+
+    def _add_images(self, image: Union[Image, list]):
+        if isinstance(image, list):
+            self.images.extend(image)
+        else:
+            self.images.append(image)
+        
+    
+    def _add_segmentation_mask(self, seg_mask: Union[Image, list]):
+        if isinstance(seg_mask, list):
+            self.segmentation_masks.extend(seg_mask)
+        else:
+            self.segmentation_masks.append(seg_mask)
+    
+    def __add__(self, other: 'BatcherInput') -> 'BatcherInput':
+        if not isinstance(other, BatcherInput):
+            return NotImplemented
+        
+        # Combine the attributes of both instances
+        return BatcherInput(
+            conversation = self.conversation + other.conversation,
+            images = self.images + other.images ,
+            segmentation_masks = self.segmentation_masks + other.segmentation_masks
+        )
 
 def remove_punctuation(input_string: str):
     """Removes punctuation from a string.

@@ -13,7 +13,7 @@ import nltk
 
 from torch.utils.data import DataLoader
 
-from multimedeval.ChestXray14 import ChestXray14
+from multimedeval.chestxray14 import ChestXray14
 from multimedeval.chexbert.label import _encode, _label
 from multimedeval.dynamic_datasets import find_datasets
 from multimedeval.image_classification import (
@@ -46,6 +46,7 @@ from multimedeval.utils import (
     EvaluationOutput,
     SetupParams,
     file_writer_factory,
+    BatcherInput
 )
 from multimedeval.visualization import BenchmarkVisualizer
 from multimedeval.vqa import SLAKE, DiffVQA, PathVQA, VQARad
@@ -327,14 +328,13 @@ class MultiMedEval:
             batch_prompts = []
             for el in batch:
                 sample = el["sample"]
-                text, img = task.format_question(sample, **kwargs_format_question)
+                batcher_input = task.format_question(sample, **kwargs_format_question)
                 if self.eval_params.fewshot and task.get_prompt() is not None:
-                    batch_prompts.append(
-                        (task.get_prompt()[0] + text, task.get_prompt()[1] + img)
-                    )
+                    few_shot_input = task.get_prompt()
+                    few_shot_input_plus_one = few_shot_input + batcher_input
+                    batch_prompts.append(few_shot_input_plus_one)
                 else:
-                    batch_prompts.append((text, img))
-
+                    batch_prompts.append(batcher_input)
             answers = batcher(batch_prompts)
 
             for el, answer in zip(batch, answers):

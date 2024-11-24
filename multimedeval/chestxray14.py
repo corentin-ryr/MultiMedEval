@@ -5,7 +5,7 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from PIL import Image
 
 from multimedeval.task_families import ImageClassification
-from multimedeval.utils import clean_str, download_file
+from multimedeval.utils import clean_str, download_file, BatcherInput
 from glob import glob
 
 class ChestXray14(ImageClassification):
@@ -103,31 +103,37 @@ class ChestXray14(ImageClassification):
             prompt: Adds the answer to the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+            An instance of BatcherInput with the formatted prompt and the images.
         """
+        batcher_input = BatcherInput()
+
         question = "<img> Options:\n"
         question += " \n ".join(
             [f"{option}" for option in self.options]
         )
         question += " \n List the options that can be seen in this picture."
 
-        formatted_text = [
-            {
-                "role": "user",
-                "content": question,
-            }
-        ]
+        # formatted_text = [
+        #     {
+        #         "role": "user",
+        #         "content": question,
+        #     }
+        # ]
+        batcher_input._add_text_prompt("user", question)
         if prompt:
-            formatted_text.append(
-                {
-                    "role": "assistant",
-                    "content": f"{self.get_correct_answer(sample, full_text=True)}",
-                }
-            )
+            # formatted_text.append(
+            #     {
+            #         "role": "assistant",
+            #         "content": f"{self.get_correct_answer(sample, full_text=True)}",
+            #     }
+            # )
+            batcher_input._add_text_prompt('assistant', f"{self.get_correct_answer(sample, full_text=True)}")
+
 
         image = Image.open(sample['full_path'])
+        batcher_input._add_images(image)
 
-        return (formatted_text, image)
+        return batcher_input
 
     def _train_test_split(self, dataset):
         '''
@@ -176,20 +182,3 @@ class ChestXray14(ImageClassification):
         api.dataset_download_files(
             "nih-chest-xrays/data", path=self.path, unzip=True
         )
-
-
-# if __name__ == '__main__':
-#     from multimedeval import MultiMedEval, SetupParams, EvalParams
-#     engine = MultiMedEval()
-#
-#     setupParams = SetupParams(chestray14_dir="../data/chestxray14/")
-#     tasksReady = engine.setup(setup_params= setupParams)
-#
-#
-#     def batcher(prompts) -> list[str]:
-#         return ["Answer" for _ in prompts]
-#
-#
-#     evalParams = EvalParams(batch_size=128)
-#     results = engine.eval(["ChestXray14"], batcher, eval_params=evalParams)
-#     results

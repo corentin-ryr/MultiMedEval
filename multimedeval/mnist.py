@@ -19,7 +19,7 @@ from medmnist.dataset import (
 )
 
 from multimedeval.task_families import ImageClassification
-from multimedeval.utils import clean_str
+from multimedeval.utils import clean_str, BatcherInput
 
 NAME_TO_MNIST = {
     "OCTMNIST": {"class": OCTMNIST, "modality": "OCT"},
@@ -121,7 +121,7 @@ class MNIST(ImageClassification):
             prompt: Adds the answer to the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+            An instance of BatcherInput with the formatted prompt and the images.
         """
         question = "<img> Options:\n"
         question += " \n ".join(
@@ -129,21 +129,24 @@ class MNIST(ImageClassification):
         )
         question += " \n Which options correspond to the image?"
 
-        formatted_text = [
-            {
-                "role": "user",
-                "content": question,
-            }
-        ]
+        # formatted_text = [
+        #     {
+        #         "role": "user",
+        #         "content": question,
+        #     }
+        # ]
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', question)
         if prompt:
-            formatted_text.append(
-                {
-                    "role": "assistant",
-                    "content": f"{self.get_correct_answer(sample, full_text=True)}",
-                }
-            )
-
-        return (formatted_text, [sample["image"]])
+            # formatted_text.append(
+            #     {
+            #         "role": "assistant",
+            #         "content": f"{self.get_correct_answer(sample, full_text=True)}",
+            #     }
+            # )
+            batcher_input._add_text_prompt('assistant', f"{self.get_correct_answer(sample, full_text=True)}")
+        batcher_input._add_images([sample["image"]])
+        return batcher_input
 
     def get_predicted_answer(self, answer) -> Union[int, List[int]]:
         """Converts the free form text output to the answer index.

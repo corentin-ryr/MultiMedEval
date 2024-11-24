@@ -7,7 +7,7 @@ from PIL import Image
 from torchmetrics.text import BLEUScore
 
 from multimedeval.task_families import QA, VQA, ImageClassification, ReportComparison
-from multimedeval.utils import clean_str
+from multimedeval.utils import clean_str, BatcherInput
 
 
 def make_constructor(new_class, dataset, dataset_name, dataset_samples):
@@ -35,8 +35,9 @@ def format_question(self, sample, prompt=False):
         prompt: Add the answer to the prompt. Defaults to False.
 
     Returns:
-        A tuple with the formatted prompt and the images.
+        An instance of BatcherInput with the formatted prompt and the images.
     """
+    batcher_input = BatcherInput()
     if "images" in sample:
         images = [
             Image.open(os.path.join(self.path, imagePath))
@@ -44,18 +45,21 @@ def format_question(self, sample, prompt=False):
         ]
     else:
         images = []
+    batcher_input._add_images(images)
 
     question = " ".join(["<img>" for _ in images]) + " " + sample["question"]
 
     if "options" in sample:
         question += " " + " ".join(sample["options"])
 
-    formatted_prompt = [{"role": "user", "content": question}]
+    batcher_input._add_text_prompt('user', question)
+    # formatted_prompt = [{"role": "user", "content": question}]
 
     if prompt:
-        formatted_prompt.append({"role": "assistant", "content": sample["answer"]})
+        batcher_input._add_text_prompt('assistant', sample["answer"])
+        # formatted_prompt.append({"role": "assistant", "content": sample["answer"]})
 
-    return (formatted_prompt, images)
+    return batcher_input
 
 
 def get_correct_answer(

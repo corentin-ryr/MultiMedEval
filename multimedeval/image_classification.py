@@ -20,7 +20,7 @@ from PIL import Image
 from multimedeval.chexbert.constants import CONDITIONS
 from multimedeval.task_families import ImageClassification
 from multimedeval.tqdm_loggable import TqdmLogging
-from multimedeval.utils import clean_str, download_file
+from multimedeval.utils import clean_str, download_file, BatcherInput
 
 
 class MIMICCXRImageClassification(ImageClassification):
@@ -87,8 +87,9 @@ class MIMICCXRImageClassification(ImageClassification):
             prompt: Add the answer to the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+            An instance of BatcherInput with the formatted prompt and the images.
         """
+        batcher_input = BatcherInput()
         sample_path = os.path.join(
             self.path,
             "files",
@@ -98,19 +99,24 @@ class MIMICCXRImageClassification(ImageClassification):
         image_path = os.path.join(
             sample_path, "s" + str(sample["study_id"]), sample["dicom_id"] + ".jpg"
         )
+        batcher_input._add_images([Image.open(image_path)])
+
         question = "<img> List the conditions that can be seen in this picture."
-        formatted_text = [
-            {
-                "role": "user",
-                "content": question,
-            }
-        ]
-        answer = self.get_correct_answer(sample, full_text=True)
+        # formatted_text = [
+        #     {
+        #         "role": "user",
+        #         "content": question,
+        #     }
+        # ]
+        batcher_input._add_text_prompt("user", question)
+        
 
         if prompt:
-            formatted_text.append({"role": "assistant", "content": answer})
+            answer = self.get_correct_answer(sample, full_text=True)
+            batcher_input._add_text_prompt('assistant', answer)
+            # formatted_text.append({"role": "assistant", "content": answer})
 
-        return (formatted_text, [Image.open(image_path)])
+        return batcher_input
 
     def get_predicted_answer(self, answer: str) -> Union[int, List[int]]:
         """Convert the free form text output to the answer index.
@@ -226,19 +232,14 @@ class VinDrMammo(ImageClassification):
             prompt: Whether or not to add the answer to the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+           An instance of BatcherInput with the formatted prompt and the images.
         """
-        formatted_text = [
-            {
-                "role": "user",
-                "content": "<img> What is the BI-RADS level in this mammography (from 1 to 5)?",
-            }
-        ]
+        batcher_input = BatcherInput()
+        question = "<img> What is the BI-RADS level in this mammography (from 1 to 5)?"
+        batcher_input._add_text_prompt('user', question)
 
         if prompt:
-            formatted_text.append(
-                {"role": "assistant", "content": f"{sample['finding_birads']}"}
-            )
+            batcher_input._add_text_prompt('assistant', f"{sample['finding_birads']}")
 
         dicom = pydicom.dcmread(
             os.path.join(
@@ -257,7 +258,8 @@ class VinDrMammo(ImageClassification):
         data = (data * 255).astype(np.uint8)
 
         image = Image.fromarray(data)
-        return (formatted_text, [image])
+        batcher_input._add_images(image)
+        return batcher_input
 
     def get_predicted_answer(self, answer: str) -> int:
         """Convert the free form text output to the answer index.
@@ -382,7 +384,7 @@ class PadUFES20(ImageClassification):
             prompt: Whether or not to add the answer to the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+           An instance of BatcherInput with the formatted prompt and the images.
         """
         patient_info = {
             "smokes": sample["smoke"],
@@ -408,26 +410,25 @@ class PadUFES20(ImageClassification):
         # options = "Options:\n" + "\n".join(
         #     [self.mapAcronymToName[option] for option in self.options]
         # )
+        batcher_input = BatcherInput()
 
-        formatted_text = [
-            {
-                "role": "user",
-                "content": f"<img> {patient_info} Which of the following is "
-                "the most likely diagnosis of the patient's skin lesion? {options}",
-            }
-        ]
+        batcher_input._add_text_prompt('user', f"<img> {patient_info} Which of the following is "
+                "the most likely diagnosis of the patient's skin lesion? {options}")
 
         if prompt:
-            formatted_text.append(
-                {
-                    "role": "assistant",
-                    "content": f"{self.map_acronym_to_name[sample['diagnostic']]}"
-                    f" ({sample['diagnostic']})",
-                }
-            )
+            # formatted_text.append(
+            #     {
+            #         "role": "assistant",
+            #         "content": f"{self.map_acronym_to_name[sample['diagnostic']]}"
+            #         f" ({sample['diagnostic']})",
+            #     }
+            # )
+            batcher_input._add_text_prompt('assistant',f"{self.map_acronym_to_name[sample['diagnostic']]}"
+                    f" ({sample['diagnostic']})")
 
         image = Image.open(os.path.join(self.path, "images", sample["img_id"]))
-        return (formatted_text, [image])
+        batcher_input._add_images(image)
+        return batcher_input
 
     def get_predicted_answer(self, answer: str) -> int:
         """Convert the free form text output to the answer index.
@@ -663,25 +664,30 @@ class CBISDDSMCalcification(CBISDDSM):
             prompt: Whether or not to add the answe rto the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+            An instance of BatcherInput with the formatted prompt and the images.
         """
         path = Path(sample["cropped image file path"])
         path = Path(self.path) / Path(*path.parts[1:])
 
-        formatted_text = [
-            {
-                "role": "user",
-                "content": "<img> Is the calcification benign, "
-                "malignant or benign without callback?",
-            }
-        ]
+        # formatted_text = [
+        #     {
+        #         "role": "user",
+        #         "content": "<img> Is the calcification benign, "
+        #         "malignant or benign without callback?",
+        #     }
+        # ]
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', "<img> Is the calcification benign, malignant or benign without callback?")
+        
         if prompt:
-            formatted_text.append(
-                {"role": "assistant", "content": f"{sample['pathology'].lower()}"}
-            )
+            # formatted_text.append(
+            #     {"role": "assistant", "content": f"{sample['pathology'].lower()}"}
+            # )
+            batcher_input._add_text_prompt('assistant', f"{sample['pathology'].lower()}")
 
         image = Image.open(os.path.join(self.path, "images", path))
-        return (formatted_text, [image])
+        batcher_input._add_images(image)
+        return batcher_input
 
 
 class CBISDDSMMass(CBISDDSM):
@@ -700,21 +706,27 @@ class CBISDDSMMass(CBISDDSM):
             prompt: Whether or not to add the answer to the prompt. Defaults to False.
 
         Returns:
-            A tuple with the formatted prompt and the images.
+            An instance of BatcherInput with the formatted prompt and the images.
         """
         path = Path(sample["cropped image file path"])
         path = Path(self.path) / Path(*path.parts[1:])
 
-        formatted_text = [
-            {
-                "role": "user",
-                "content": "<img> Is the mass benign, malignant or benign without callback?",
-            }
-        ]
-        if prompt:
-            formatted_text.append(
-                {"role": "assistant", "content": f"{sample['pathology'].lower()}"}
-            )
+        # formatted_text = [
+        #     {
+        #         "role": "user",
+        #         "content": "<img> Is the mass benign, malignant or benign without callback?",
+        #     }
+        # ]
 
+        batcher_input = BatcherInput()
+        batcher_input._add_text_prompt('user', "<img> Is the mass benign, malignant or benign without callback?")
+
+
+        if prompt:
+            # formatted_text.append(
+            #     {"role": "assistant", "content": f"{sample['pathology'].lower()}"}
+            # )
+            batcher_input._add_text_prompt('assistant', f"{sample['pathology'].lower()}")
         image = Image.open(os.path.join(self.path, "images", path))
-        return (formatted_text, [image])
+        batcher_input._add_images(image)
+        return batcher_input
