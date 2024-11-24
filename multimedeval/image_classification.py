@@ -677,8 +677,7 @@ class CBISDDSMCalcification(CBISDDSM):
         #     }
         # ]
         batcher_input = BatcherInput()
-        batcher_input._add_text_prompt('user', "<img> Is the calcification benign, "
-                "malignant or benign without callback?",)
+        batcher_input._add_text_prompt('user', "<img> Is the calcification benign, malignant or benign without callback?")
         
         if prompt:
             # formatted_text.append(
