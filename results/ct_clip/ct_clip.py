@@ -1,19 +1,22 @@
 import copy
-from contextlib import contextmanager
 from functools import partial, wraps
 from pathlib import Path
-
+from typing import List
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn, einsum
 from torch.utils.checkpoint import checkpoint
+import tqdm
 from einops import rearrange, repeat, reduce
 from einops.layers.torch import Rearrange, Reduce
-
+from multimedeval.utils import BatcherInput
 from results.ct_clip.mlm import MLM
 from results.ct_clip.visual_ssl import SimSiam, SimCLR
-
 from transformers import BertTokenizer
+from results.ct_clip.cvit import CTViT
+from transformers import BertTokenizer, BertModel
+from PIL import Image
 
 # helper functions
 
@@ -24,11 +27,6 @@ def identity(t, *args, **kwargs):
 
 def exists(val):
     return val is not None
-
-
-@contextmanager
-def null_context():
-    yield
 
 
 def max_neg_value(dtype):
@@ -485,6 +483,8 @@ class CTCLIP(nn.Module):
         self.image_channels = channels
         self.image_size = visual_image_size
 
+        self.device = kwargs["device"] if "device" in kwargs else "cpu"
+
         # instantiate text transformer
 
         self.text_pad_id = text_pad_id
@@ -634,8 +634,8 @@ class CTCLIP(nn.Module):
     def load(self, path):
         path = Path(path)
         assert path.exists()
-        pt = torch.load(str(path))
-        self.load_state_dict(pt)
+        pt = torch.load(str(path), map_location="cpu")
+        print(self.load_state_dict(pt, strict=False))
 
     def tokenize(self, prompt):
         text_tokens = self.tokenizer(
@@ -644,7 +644,7 @@ class CTCLIP(nn.Module):
             padding="max_length",
             truncation=True,
             max_length=512,
-        ).to(torch.cuda)
+        ).to(self.device)
         return text_tokens
 
     def token_embedding(self, input_ids):
@@ -803,7 +803,6 @@ class CTCLIP(nn.Module):
         # print(enc_image.shape, flush=True)
         # enc_image = enc_image[:,0,:]
         # print(enc_image.shape, flush=True)
-        print("test all pooling")
 
         enc_image = enc_image.view(enc_image.shape[0], -1)
 
@@ -1037,17 +1036,145 @@ class CTCLIP(nn.Module):
 class BatcherCTClip:
     """Batcher for the CT-CLIP model."""
 
-    def __init__(self, device=None) -> None:
-        """Initialize the CT-CLIP batcher."""
-        self.model - CTCLIP()
+    def __init__(self, ct_clip_path, device, **kwargs):
+        super().__init__()
 
-    def __call__(self, prompts):
-        """Call the CT-CLIP batcher.
+        self.tokenizer = BertTokenizer.from_pretrained(
+            "microsoft/BiomedVLP-CXR-BERT-specialized", do_lower_case=True
+        )
 
-        Args:
-            prompts: The prompt to start the generation.
+        text_encoder = BertModel.from_pretrained(
+            "microsoft/BiomedVLP-CXR-BERT-specialized"
+        )
 
-        Returns:
-            The generated text.
-        """
-        pass
+        text_encoder.resize_token_embeddings(len(self.tokenizer))
+
+        image_encoder = CTViT(
+            dim=512,
+            codebook_size=8192,
+            image_size=480,
+            patch_size=20,
+            temporal_patch_size=10,
+            spatial_depth=4,
+            temporal_depth=4,
+            dim_head=32,
+            heads=8,
+        )
+
+        self.model = CTCLIP(
+            image_encoder=image_encoder,
+            text_encoder=text_encoder,
+            dim_image=294912,
+            dim_text=768,
+            dim_latent=512,
+            extra_latent_projection=False,  # whether to use separate projections for text-to-image vs image-to-text comparisons (CLOOB)
+            use_mlm=False,
+            downsample_image_embeds=False,
+            use_all_token_embeds=False,
+        )
+
+        self.model.load(ct_clip_path)
+
+        self.device = device
+        self.model = self.model.to(self.device)
+
+    def __call__(self, batch: List[BatcherInput]):
+        model = self.model
+
+        model.eval()
+        answers = []
+        pathologies = [
+            "Medical material",
+            "Arterial wall calcification",
+            "Cardiomegaly",
+            "Pericardial effusion",
+            "Coronary artery wall calcification",
+            "Hiatal hernia",
+            "Lymphadenopathy",
+            "Emphysema",
+            "Atelectasis",
+            "Lung nodule",
+            "Lung opacity",
+            "Pulmonary fibrotic sequela",
+            "Pleural effusion",
+            "Mosaic attenuation pattern",
+            "Peribronchial thickening",
+            "Consolidation",
+            "Bronchiectasis",
+            "Interlobular septal thickening",
+        ]
+        for sample in tqdm.tqdm(batch):
+
+            text = sample.conversation[0]
+
+            image = sample.images[0]
+            image = pad_square(image, fill_color=(255, 255, 255, 0)).resize((480, 480))
+
+            image_tensor = (
+                torch.tensor(np.array(image))
+                .permute(2, 0, 1)
+                .unsqueeze(1)
+                .repeat(1, 10, 1, 1)
+                .unsqueeze(0)
+                / 255.0
+            )
+            # Convert to grayscale
+            image_tensor = image_tensor.mean(1, keepdim=True)
+
+            predictedlabels = []
+
+            for pathology in pathologies:
+                text = [
+                    f"{pathology} is present.",
+                    f"{pathology} is not present.",
+                ]
+                text_tokens = self.tokenizer(
+                    text,
+                    return_tensors="pt",
+                    padding="max_length",
+                    truncation=True,
+                    max_length=512,
+                ).to(self.device)
+
+                with torch.no_grad():
+                    output = model(
+                        text_tokens, image_tensor.to(self.device), device=self.device
+                    )
+                    output = apply_softmax(output)
+                    append_out = output.detach().cpu().numpy()
+
+                predictedlabels.append(append_out[0])
+
+            # Get the index of the maximum value
+            max_index = np.argmax(predictedlabels)
+            # Get the corresponding label
+            predicted_label = pathologies[max_index]
+            answers.append(predicted_label)
+
+            print(predicted_label)
+            # raise Exception
+
+        return answers
+
+
+def apply_softmax(array):
+    """
+    Applies softmax function to a torch array.
+
+    Args:
+        array (torch.Tensor): Input tensor array.
+
+    Returns:
+        torch.Tensor: Tensor array after applying softmax.
+    """
+    softmax = torch.nn.Softmax(dim=0)
+    softmax_array = softmax(array)
+    return softmax_array
+
+
+def pad_square(im: Image, fill_color=(0, 0, 0, 0)) -> Image:
+    x, y = im.size
+    size = max(x, y)
+    new_im = Image.new("RGBA", (size, size), fill_color)
+    new_im.paste(im, (int((size - x) / 2), int((size - y) / 2)))
+    return new_im
