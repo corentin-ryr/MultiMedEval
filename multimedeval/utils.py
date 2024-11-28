@@ -17,6 +17,7 @@ import torch
 from datasets import Dataset
 from tqdm import tqdm
 from PIL.Image import Image
+from nibabel.spatialimages import SpatialImage
 
 
 if TYPE_CHECKING:
@@ -159,7 +160,7 @@ class SetupParams:
         ctrate_dir: The path to the CT-RATE dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
-
+        hf_token:The hugging face User Access Token to authenticate to the Hub.
     """
 
     medqa_dir: Optional[Union[str, os.PathLike]] = None
@@ -191,6 +192,7 @@ class SetupParams:
     ctrate_dir:Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
+    hf_token: Optional[str] = None
     device: Optional[str] = "cuda"
 
     def __post_init__(self):
@@ -216,8 +218,8 @@ class BatcherInput:
     """Dataclass for unified formatting of the basic (conversation, images, seg(optional)) batcher input"""
     
     conversation: List[dict] = field(default_factory = list)
-    images: Optional[Union[List[Image]]] = field(default_factory = list)
-    segmentation_masks:Optional[Union[List[Image]]] = field(default_factory = list)
+    images: Optional[Union[List[Image], List[SpatialImage]]] = field(default_factory = list)
+    segmentation_masks:Optional[Union[List[Image], List[SpatialImage]]] = field(default_factory = list)
 
     def _add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
         self.conversation.append({
@@ -225,14 +227,14 @@ class BatcherInput:
             "content": content
         })
 
-    def _add_images(self, image: Union[Image, list]):
+    def _add_images(self, image: Union[Image, list, SpatialImage]):
         if isinstance(image, list):
             self.images.extend(image)
         else:
             self.images.append(image)
         
     
-    def _add_segmentation_mask(self, seg_mask: Union[Image, list]):
+    def _add_segmentation_mask(self, seg_mask: Union[Image, list, SpatialImage]):
         if isinstance(seg_mask, list):
             self.segmentation_masks.extend(seg_mask)
         else:
