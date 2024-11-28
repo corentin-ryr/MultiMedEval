@@ -13,6 +13,8 @@ import nltk
 
 from torch.utils.data import DataLoader
 
+
+from multimedeval.ct_rate import CTRATEReportGen
 from multimedeval.chestxray14 import ChestXray14
 from multimedeval.chexbert.label import _encode, _label
 from multimedeval.dynamic_datasets import find_datasets
@@ -80,7 +82,8 @@ TASKS: Set[Type[Benchmark]] = {
     MNISTRetina,
     MNISTTissue,
     MMLU,
-    ChestXray14
+    ChestXray14,
+    CTRATEReportGen,
     # # # "MNIST-OrganA": MNIST_OrganA,
     # # # "MNIST-Chest": MNIST_Chest,
 }
