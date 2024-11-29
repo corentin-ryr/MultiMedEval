@@ -35,7 +35,7 @@ class Benchmark(ABC):
             logger: A logger object.
         """
         self.task_name: str = "None"
-        self.engine: MultiMedEval = engine
+        self.engine: 'MultiMedEval' = engine
         self.modality: str = "None"
         self.task: str = "None"
         self._prompt = None
