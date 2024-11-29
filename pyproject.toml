@@ -39,6 +39,7 @@ medmnist = "*"
 Pillow = ">=10.2.0"
 types-requests = "*"
 protobuf = "*"
+nibabel = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0"
