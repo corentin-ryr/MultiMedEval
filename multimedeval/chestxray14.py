@@ -35,10 +35,10 @@ class ChestXray14(ImageClassification):
         self._generate_dataset()
 
         # After the dataset generation
-        full_dataset = pd.read_csv(self.path + 'Data_Entry_2017.csv')
+        full_dataset = pd.read_csv(os.path.join(self.path, 'Data_Entry_2017.csv'))
 
         # map the image path as a new column in dataframe
-        my_glob = glob(self.path + 'images*/images/*.png')
+        my_glob = glob(os.path.join(self.path, 'images*/images/*.png'))
         full_img_paths = {os.path.basename(x): x for x in my_glob}
         full_dataset['full_path'] = full_dataset['Image Index'].map(full_img_paths.get)
 
@@ -139,12 +139,12 @@ class ChestXray14(ImageClassification):
         '''
             Split the dataset according to dataset documents.
         '''
-        with open(self.path + 'train_val_list.txt', 'r') as file:
+        with open(os.path.join(self.path, 'train_val_list.txt'), 'r') as file:
             # Read each line into a list and remove any trailing newlines
             train_list = [line.strip() for line in file]
             train_dataset = dataset[dataset['Image Index'].isin(train_list)]
 
-        with open(self.path + 'test_list.txt', 'r') as file:
+        with open(os.path.join(self.path, 'test_list.txt'), 'r') as file:
             test_list = [line.strip() for line in file]
             test_dataset = dataset[dataset['Image Index'].isin(test_list)]
 
