@@ -36,7 +36,7 @@ def main(batcherName):
     mmb.setup(setupParams)
 
     mmb.eval(
-        ["VQA-Rad"],
+        ["CT-RATE Image Classification"],
         batcher,
         EvalParams(
             batch_size=32,

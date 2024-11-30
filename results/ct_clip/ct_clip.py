@@ -1,5 +1,6 @@
 import copy
 from functools import partial, wraps
+import os
 from pathlib import Path
 from typing import List
 import numpy as np
@@ -17,6 +18,7 @@ from transformers import BertTokenizer
 from results.ct_clip.cvit import CTViT
 from transformers import BertTokenizer, BertModel
 from PIL import Image
+from huggingface_hub import hf_hub_download
 
 # helper functions
 
@@ -1036,8 +1038,20 @@ class CTCLIP(nn.Module):
 class BatcherCTClip:
     """Batcher for the CT-CLIP model."""
 
-    def __init__(self, ct_clip_path, device, **kwargs):
+    def __init__(self, ct_clip_folder, device, **kwargs):
         super().__init__()
+
+        os.makedirs("models", exist_ok=True)
+
+        # Download the CT-CLIP model from the Hugging Face model hub
+        # https://huggingface.co/datasets/ibrahimhamamci/CT-RATE/resolve/main/models/CT-CLIP-Related/CT-CLIP_v2.pt?download=true
+        hf_hub_download(
+            repo_id="ibrahimhamamci/CT-RATE",
+            filename="CT-CLIP_v2.pt",
+            subfolder="models/CT-CLIP-Related",
+            local_dir=ct_clip_folder,
+            repo_type="dataset",
+        )
 
         self.tokenizer = BertTokenizer.from_pretrained(
             "microsoft/BiomedVLP-CXR-BERT-specialized", do_lower_case=True
@@ -1073,7 +1087,9 @@ class BatcherCTClip:
             use_all_token_embeds=False,
         )
 
-        self.model.load(ct_clip_path)
+        self.model.load(
+            os.path.join(ct_clip_folder, "models", "CT-CLIP-Related", "CT-CLIP_v2.pt")
+        )
 
         self.device = device
         self.model = self.model.to(self.device)
