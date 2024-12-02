@@ -38,6 +38,7 @@ from multimedeval.mnist import (
     MNISTRetina,
     MNISTTissue,
 )
+from multimedeval.kits19 import KITS19
 from multimedeval.qa import MMLU, MedMCQA, MedQA, PubMedQA
 from multimedeval.tqdm_loggable import TqdmLogging
 from multimedeval.utils import (
@@ -80,9 +81,10 @@ TASKS: Set[Type[Benchmark]] = {
     MNISTRetina,
     MNISTTissue,
     MMLU,
-    ChestXray14
+    ChestXray14,
     # # # "MNIST-OrganA": MNIST_OrganA,
     # # # "MNIST-Chest": MNIST_Chest,
+    KITS19
 }
 
 
