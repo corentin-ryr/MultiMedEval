@@ -47,7 +47,7 @@ class KITS19(Segmentation):
 
         config_contents = [[i, self._get_destination(i), self._get_destination(i, False)] 
                            for i in range(300)]
-        config_df = pd.DataFrame(columns=["index","img_path","seg_path"])
+        config_df = pd.DataFrame(data=config_contents, columns=["index","img_path","seg_path"])
         self.dataset = datasets.Dataset.from_pandas(config_df)
 
     def get_predicted_answer(self, answer: np.ndarray):
