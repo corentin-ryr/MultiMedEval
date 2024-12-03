@@ -409,15 +409,10 @@ class Segmentation(Benchmark):
             ground_truth.append(gt)
 
         if self.seg_type == "seg_mask":
-            scorer_args = {"num_classes": self.num_classes, "per_class" :False, "include_background": False}
+            scorer_args = {"num_classes": self.num_classes, "per_class" :True, "include_background": True}
 
             dice_scorer = GeneralizedDiceScore(**scorer_args)
-
-            predicted_answers = torch.tensor(predicted_answers)
-            predicted_answers = predicted_answers.to(torch.float32)
-            ground_truth = torch.tensor(ground_truth)
-
-            dice = dice_scorer(predicted_answers, ground_truth).item()
+            dice = dice_scorer(predicted_answers, ground_truth)
 
             metrics = {"dice": dice}
         elif self.seg_type == "bbox":
@@ -440,7 +435,8 @@ class Segmentation(Benchmark):
 
             # print(metric.compute())
             metrics = {"mAP": metric}
-
+        else:
+            metrics = {}
         return EvaluationOutput(metrics=metrics)
 
 class ReportComparison(Benchmark):
