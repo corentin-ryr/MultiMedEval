@@ -5,7 +5,7 @@ from kaggle.api.kaggle_api_extended import KaggleApi
 from PIL import Image
 
 from multimedeval.task_families import Segmentation
-from multimedeval.utils import clean_str, download_file, BatcherInput
+from multimedeval.utils import clean_str, download_file, BatcherInput, clone_repository
 from glob import glob
 
 from pathlib import Path
@@ -13,9 +13,13 @@ from shutil import move
 import sys
 import time
 
+import torch
+from torch.nn.functional import one_hot
 from tqdm import tqdm
 import requests
 import numpy as np
+import nibabel as nib
+
 
 class KITS19(Segmentation):
     """KITS19 Image Classification task."""
@@ -25,6 +29,7 @@ class KITS19(Segmentation):
         super().__init__(**kwargs)
         self.modality = "CT"
         self.task_name = "KITS19"
+        self.num_classes = 3
 
     def setup(self):
         """Setup the KITS19 Segmentation task."""
@@ -40,66 +45,40 @@ class KITS19(Segmentation):
 
         self._generate_dataset()
 
-        # After the dataset generation
-        # full_dataset = pd.read_csv(self.path + 'Data_Entry_2017.csv')
+        config_contents = [[i, self._get_destination(i), self._get_destination(i, False)] 
+                           for i in range(300)]
+        config_df = pd.DataFrame(columns=["index","img_path","seg_path"])
+        self.dataset = datasets.Dataset.from_pandas(config_df)
 
-        # # map the image path as a new column in dataframe
-        # my_glob = glob(self.path + 'images*/images/*.png')
-        # full_img_paths = {os.path.basename(x): x for x in my_glob}
-        # full_dataset['full_path'] = full_dataset['Image Index'].map(full_img_paths.get)
-
-        # # Replace backslashes with forward slashes in the 'file_paths' column
-        # full_dataset['full_path'] = full_dataset['full_path'].str.replace("\\", "/")
-
-        # self.dataset, self.train_dataset = self._train_test_split(full_dataset)
-
-    def get_predicted_answer(self, answer):
-        """Convert the free form text output to the answer index.
+    def get_predicted_answer(self, answer: np.ndarray):
+        """Convert the predicted mask to one-hot encoding.
 
         Args:
-            answer: The free form text output of the model.
+            answer: The predicted segmentation mask.
 
         Returns:
-            A list of predicted indices of the answer, e.g. [1,1,0,...,0].
+            The one-hot encoded segmentation mask.
         """
-        answer = clean_str(answer)
-        # Find the best bleu score between the answer and the options
-        scores = [self.bleu([answer], [[clean_str(option)]]) for option in self.options]
+        answer = torch.LongTensor(answer)
+        one_hot_answer = one_hot(answer, num_classes= self.num_classes).movedim(-1, 1)
 
-        # for each 1 if above a threshold, 0 otherwise,
-        return [1 if score > 0.5 else 0 for score in scores]
+        return one_hot_answer
 
-    def get_correct_answer(self, sample, full_text=False):
-        """Returns the indices of correct answer for the sample.
+    def get_correct_answer(self, sample):
+        """Returns the ground truth mask for the sample.
 
         Args:
-            sample: The sample to get the correct answer from. 'label' may be a string with multiple labels separated by '|'.
-            full_text: Whether to return the full text of the answer. Defaults to False.
+            sample: The sample to get the correct mask from.
 
         Returns:
-            The correct answer as a list of true indices or a full-text string.
+            The one-hot encoded ground truth mask.
         """
+        gt_mask = nib.load(sample["seg_path"])
+        gt_mask_tr = torch.LongTensor(gt_mask.get_fdata())
 
-        label = sample["Finding Labels"]
-        # Split by '|' if necessary
-        if isinstance(label, str) and '|' in label:
-            label = label.split('|')
-        else:
-            label = [label] if isinstance(label, (int, str)) else label
+        one_hot_gt = one_hot(gt_mask_tr, num_classes= self.num_classes).movedim(-1, 1)
 
-
-        if full_text:
-            # Return the full text for each label
-            return ",".join([str(lbl) for lbl in label])
-
-        label_presence = [0] * len(self.options)
-
-        for lbl in label:
-            if lbl in self.options:
-                idx = self.options.index(lbl)
-                label_presence[idx] =  1
-
-        return label_presence
+        return one_hot_gt
 
     def format_question(self, sample, prompt=False):
         """Formats the question.
@@ -109,79 +88,39 @@ class KITS19(Segmentation):
             prompt: Adds the answer to the prompt. Defaults to False.
 
         Returns:
-            An instance of BatcherInput with the formatted prompt and the images.
+            An instance of BatcherInput with the formatted prompt,
+              images, and segmentation mask.
         """
         batcher_input = BatcherInput()
 
-        question = "<img> Options:\n"
-        question += " \n ".join(
-            [f"{option}" for option in self.options]
-        )
-        question += " \n List the options that can be seen in this picture."
+        question = "<img> Please segment the kidney and tumor in the CT images."
 
-        # formatted_text = [
-        #     {
-        #         "role": "user",
-        #         "content": question,
-        #     }
-        # ]
         batcher_input._add_text_prompt("user", question)
         if prompt:
-            # formatted_text.append(
-            #     {
-            #         "role": "assistant",
-            #         "content": f"{self.get_correct_answer(sample, full_text=True)}",
-            #     }
-            # )
-            batcher_input._add_text_prompt('assistant', f"{self.get_correct_answer(sample, full_text=True)}")
+            batcher_input._add_text_prompt('assistant', "This is the answers <seg>.")
+            seg = nib.load(sample["seg_path"])
+            batcher_input._add_segmentation_mask(seg)
 
-
-        image = Image.open(sample['full_path'])
+        image = nib.load(sample["img_path"])
         batcher_input._add_images(image)
 
         return batcher_input
-
-    def _train_test_split(self, dataset):
-        '''
-            Split the dataset according to dataset documents.
-        '''
-        with open(self.path + 'train_val_list.txt', 'r') as file:
-            # Read each line into a list and remove any trailing newlines
-            train_list = [line.strip() for line in file]
-            train_dataset = dataset[dataset['Image Index'].isin(train_list)]
-
-        with open(self.path + 'test_list.txt', 'r') as file:
-            test_list = [line.strip() for line in file]
-            test_dataset = dataset[dataset['Image Index'].isin(test_list)]
-
-        train_dataset = self._final_prepare_dataset(train_dataset)
-        test_dataset = self._final_prepare_dataset(test_dataset)
-
-        return test_dataset, train_dataset
-
-    def _final_prepare_dataset(self, dataset):
-        '''
-            Clean Up Useless columns and final prep the dataset.
-        '''
-        assert 'full_path' in dataset.columns and 'Finding Labels' in dataset.columns, "Key Columns are missing."
-        f_dataset = dataset[['full_path','Finding Labels']]
-        f_dataset = datasets.Dataset.from_pandas(f_dataset)
-
-        return f_dataset
 
 
     def _generate_dataset(self):
         '''
             Generate datasets through provided scripts on Kaggle, Data size: about 20 GB.
         '''
-        
-        def get_destination(i):
-            destination = os.path.join(self.path, 'data',  f"case_{i:05d}", "imaging.nii.gz")
-            dest_parent = os.path.join(self.path, 'data',  f"case_{i:05d}")
-            if not os.path.exists(dest_parent):
-                os.makedirs(dest_parent, exist_ok=True)
-            return destination
+        if os.path.exists(os.path.join(self.path,"data")):
+            return
 
+        #Step 1: Download the repo, incl. segmentation mask under data folder
+        repository_url = "https://github.com/neheller/kits19"
+        target_directory = self.path
+
+        clone_repository(repository_url, target_directory)
+
+        #Step 2: Download the image data from a different source.
         def cleanup(bar, msg):
             bar.close()
             if os.path.exists(temp_f):
@@ -190,24 +129,22 @@ class KITS19(Segmentation):
             sys.exit()
 
         os.makedirs(self.path, exist_ok=True)
+
         imaging_url = "https://kits19.sfo2.digitaloceanspaces.com/"
         imaging_name_tmplt = "master_{:05d}.nii.gz"
         temp_f = os.path.join(self.path, 'temp.tmp')
 
         left_to_download = []
         for i in range(300):
-            if not os.path.exists(get_destination(i)):
+            if not os.path.exists(self._get_destination(i)):
                 left_to_download = left_to_download + [i]
-        
-        if len(left_to_download) == 0:
-            return 
 
         print("{} cases to download...".format(len(left_to_download)))
         for i, cid in enumerate(left_to_download):
             print("Download {}/{}: ".format(
                 i+1, len(left_to_download)
             ))
-            destination = get_destination(cid)
+            destination = self._get_destination(cid)
             remote_name = imaging_name_tmplt.format(cid)
             uri = imaging_url + remote_name 
 
@@ -247,3 +184,23 @@ class KITS19(Segmentation):
                 cleanup(bar, "KeyboardInterrupt")
             except Exception as e:
                 cleanup(bar, str(e))
+    
+    def _get_destination(self,index, isImage = True):
+        """
+            Get the full path for sample of given index.
+            index: integer index of the samples.
+            isImage: Default True, returns the path of image data.False for segmentation.
+        """
+        if isImage:
+            destination = os.path.join(
+                self.path, 'data',  f"case_{index:05d}", "imaging.nii.gz"
+                )
+        else:
+            destination = os.path.join(
+                self.path, 'data',  f"case_{index:05d}", "segmentation.nii.gz"
+                )
+        
+        dest_parent = os.path.join(self.path, 'data',  f"case_{index:05d}")
+        if not os.path.exists(dest_parent):
+            os.makedirs(dest_parent, exist_ok=True)
+        return destination

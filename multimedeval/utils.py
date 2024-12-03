@@ -17,6 +17,7 @@ import torch
 from datasets import Dataset
 from tqdm import tqdm
 from PIL.Image import Image
+import subprocess
 
 
 if TYPE_CHECKING:
@@ -821,3 +822,29 @@ def clean_str(token):
     token = " ".join(_token)
     token = token.replace(",", "")
     return token
+
+
+def clone_repository(repo_url, target_dir):
+    """
+    Clones a GitHub repository into a specific target directory.
+
+    Parameters:
+        repo_url (str): The URL of the GitHub repository to clone.
+        target_dir (str): The full path to the directory where the repository will be cloned.
+    """
+    try:
+        # Ensure the target directory's parent exists
+        os.makedirs(os.path.dirname(target_dir), exist_ok=True)
+
+        # Clone the repository into the target directory
+        print(f"Cloning repository from {repo_url} into {target_dir}...")
+        subprocess.run(["git", "clone", repo_url, target_dir], check=True)
+
+        # Change into the cloned repository directory
+        os.chdir(target_dir)
+        print(f"Changed directory to {os.getcwd()}")
+
+    except subprocess.CalledProcessError as e:
+        print(f"Error during git operations: {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
