@@ -110,6 +110,7 @@ class MultiMedEval:
         self._config: Optional[SetupParams] = None
         self._physionet_username = None
         self._physionet_password = None
+        self._hf_token = None
 
         if logger is None:
             self.logger = logging.getLogger("MultiMedEval")
