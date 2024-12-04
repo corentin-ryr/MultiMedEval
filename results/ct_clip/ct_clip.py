@@ -14,7 +14,6 @@ from einops.layers.torch import Rearrange, Reduce
 from multimedeval.utils import BatcherInput
 from results.ct_clip.mlm import MLM
 from results.ct_clip.visual_ssl import SimSiam, SimCLR
-from transformers import BertTokenizer
 from results.ct_clip.cvit import CTViT
 from transformers import BertTokenizer, BertModel
 from PIL import Image
