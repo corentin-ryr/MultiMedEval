@@ -3,10 +3,12 @@
 import json
 import logging
 import os
+from typing import List
 
 import pytest
 
 from multimedeval import EvalParams, MultiMedEval, SetupParams
+from multimedeval.utils import BatcherInput, BatcherOutput
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,13 +37,16 @@ TASKS = [
     "CBIS-DDSM Calcification",
     "exampleDatasetQA",
     "exampleDatasetVQA",
-    "MMLU"
+    "MMLU",
 ]
 
 
-def batcher(prompts):
+def batcher(prompts: List[BatcherInput]) -> List[BatcherOutput]:
     """Dummy batcher for the tests."""
-    return ["Dummy answer" for _ in range(len(prompts))]
+    output = []
+    for _ in prompts:
+        output.append(BatcherOutput("Dummy answer"))
+    return output
 
 
 class TestLoadingAll:

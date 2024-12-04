@@ -43,12 +43,13 @@ from multimedeval.mnist import (
 from multimedeval.qa import MMLU, MedMCQA, MedQA, PubMedQA
 from multimedeval.tqdm_loggable import TqdmLogging
 from multimedeval.utils import (
+    BatcherOutput,
     Benchmark,
     EvalParams,
     EvaluationOutput,
     SetupParams,
     file_writer_factory,
-    BatcherInput
+    BatcherInput,
 )
 from multimedeval.visualization import BenchmarkVisualizer
 from multimedeval.vqa import SLAKE, DiffVQA, PathVQA, VQARad
@@ -312,7 +313,7 @@ class MultiMedEval:
         metrics.update(results)
         file_writer_factory("json")(metrics, f"{self.eval_params.run_name}/results")
 
-    def _run_inference(self, task: Benchmark, batcher):
+    def _run_inference(self, task: Benchmark, batcher) -> List[Dict[str, Union[int, BatcherOutput]]]:
         info_message = (
             f"======================== Running inference on {task.task_name} "
             "========================"
@@ -340,7 +341,16 @@ class MultiMedEval:
                     batch_prompts.append(few_shot_input_plus_one)
                 else:
                     batch_prompts.append(batcher_input)
-            answers = batcher(batch_prompts)
+
+            answers: List[BatcherOutput] = batcher(batch_prompts)
+
+            # Validate that the answers are the same length as the batch and that they are instances of BatcherOutput
+            if len(answers) != len(batch) or not all(
+                isinstance(answer, BatcherOutput) for answer in answers
+            ):
+                raise ValueError(
+                    "The batcher should return a list of BatcherOutput instances with the same length as the input batch."
+                )
 
             for el, answer in zip(batch, answers):
                 predictions.append({"idx": el["idx"], "answer": answer})
@@ -380,21 +390,20 @@ class MultiMedEval:
                 self._physionet_password = getpass.getpass("Enter your password: ")
 
         return self._physionet_username, self._physionet_password
-    
+
     def get_huggingface_token(self):
         if self._hf_token is None:
             self._hf_token = self.get_config()["hf_token"]
             if not self._hf_token:
-                if 'HF_TOKEN' in os.environ and os.environ['HF_TOKEN']:
-                    self._hf_token = os.environ['HF_TOKEN']
+                if "HF_TOKEN" in os.environ and os.environ["HF_TOKEN"]:
+                    self._hf_token = os.environ["HF_TOKEN"]
                 else:
                     self.logger.info(
-                    "To setup the tasks that use a protected hugggingface dataset, the scripts "
-                    "requires the personal hugging face token."
-                )
+                        "To setup the tasks that use a protected hugggingface dataset, the scripts "
+                        "requires the personal hugging face token."
+                    )
                 self._hf_token = input("Enter your personal huggingface_token: ")
         return self._hf_token
-        
 
     def get_config(self) -> dict:
         """Get the evaluation parameters as a dictionary.
@@ -428,6 +437,7 @@ class MultiMedEval:
 
     def _prepare_radgraph(self):
         from radgraph import F1RadGraph
+
         # Check if deepspeed is installed and initialized
         try:
             from deepspeed.comm.comm import (  # noqa # pylint: disable=import-outside-toplevel  # type: ignore

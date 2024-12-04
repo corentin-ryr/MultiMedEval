@@ -2,10 +2,12 @@
 
 import json
 import os
+from typing import List
 
 import pytest
 
 from multimedeval import EvalParams, MultiMedEval, SetupParams
+from multimedeval.utils import BatcherInput, BatcherOutput
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
@@ -28,8 +30,11 @@ def test_mednli(batcher_answer, expected_accuracy):
         expected_accuracy: The expected accuracy.
     """
 
-    def batcher(prompts):
-        return [batcher_answer for _ in range(len(prompts))]
+    def batcher(prompts: List[BatcherInput]) -> List[BatcherOutput]:
+        output = []
+        for _ in prompts:
+            output.append(BatcherOutput(batcher_answer))
+        return output
 
     engine = MultiMedEval()
 

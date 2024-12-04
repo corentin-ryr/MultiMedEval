@@ -2,10 +2,12 @@
 
 import json
 import os
+from typing import List
 
 import pytest
 
 from multimedeval import EvalParams, MultiMedEval, SetupParams
+from multimedeval.utils import BatcherInput, BatcherOutput
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
@@ -32,8 +34,11 @@ def test_image_classification(
         expected_macro_auc: Expected macro AUC.
     """
 
-    def batcher(prompts):
-        return [batcher_answer for _ in range(len(prompts))]
+    def batcher(prompts: List[BatcherInput]) -> List[BatcherOutput]:
+        output = []
+        for _ in prompts:
+            output.append(BatcherOutput(batcher_answer))
+        return output
 
     engine = MultiMedEval()
 
@@ -56,30 +61,28 @@ def test_image_classification(
     assert (results["OCTMNIST"]["F1-macro"] - expected_macro_f1) < 0.01
     assert (results["OCTMNIST"]["AUC-macro"] - expected_macro_auc) < 0.01
 
+
 @pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions.")
 @pytest.mark.parametrize(
     "batcher_answer, expected_macro_f1, expected_macro_auc",
     [
-        ('Atelectasis', 0.0162226352840662, 0.5),
-         ('Cardiomegaly', 0.005727143492549658, 0.5),
-         ('Effusion', 0.021994730457663536, 0.5),
-         ('Infiltration', 0.027536988258361816, 0.5),
-         ('Mass', 0.0091323247179389, 0.5),
-         ('Nodule', 0.008518209680914879, 0.5),
-         ('Pneumonia', 0.0030318424105644226, 0.5),
-         ('Pneumothorax', 0.01347136590629816, 0.5),
-         ('Consolidation', 0.009459184482693672, 0.5),
-         ('Edema', 0.0049825748428702354, 0.5),
-         ('Emphysema', 0.0058504571206867695, 0.5),
-         ('Fibrosis', 0.002387263346463442, 0.5),
-         ('Pleural_Thickening', 0.006106649991124868, 0.5),
-         ('Hernia', 0.00047837840975262225, 0.5)
+        ("Atelectasis", 0.0162226352840662, 0.5),
+        ("Cardiomegaly", 0.005727143492549658, 0.5),
+        ("Effusion", 0.021994730457663536, 0.5),
+        ("Infiltration", 0.027536988258361816, 0.5),
+        ("Mass", 0.0091323247179389, 0.5),
+        ("Nodule", 0.008518209680914879, 0.5),
+        ("Pneumonia", 0.0030318424105644226, 0.5),
+        ("Pneumothorax", 0.01347136590629816, 0.5),
+        ("Consolidation", 0.009459184482693672, 0.5),
+        ("Edema", 0.0049825748428702354, 0.5),
+        ("Emphysema", 0.0058504571206867695, 0.5),
+        ("Fibrosis", 0.002387263346463442, 0.5),
+        ("Pleural_Thickening", 0.006106649991124868, 0.5),
+        ("Hernia", 0.00047837840975262225, 0.5),
     ],
 )
-
-def test_chestxray14(
-    batcher_answer, expected_macro_f1, expected_macro_auc
-):
+def test_chestxray14(batcher_answer, expected_macro_f1, expected_macro_auc):
     """Tests the chestxray14 task.
 
     Args:
@@ -88,13 +91,18 @@ def test_chestxray14(
         expected_macro_auc: Expected macro AUC.
     """
 
-    def batcher(prompts):
-        return [batcher_answer for _ in range(len(prompts))]
+    def batcher(prompts: List[BatcherInput]) -> List[BatcherOutput]:
+        output = []
+        for _ in prompts:
+            output.append(BatcherOutput(batcher_answer))
+        return output
 
     engine = MultiMedEval()
 
     config_file_path = (
-        "tests/test_config.json" if IN_GITHUB_ACTIONS else "test_config_chestxray14.json"
+        "tests/test_config.json"
+        if IN_GITHUB_ACTIONS
+        else "test_config_chestxray14.json"
     )
     with open(config_file_path, encoding="utf-8") as config_file:
         config = json.load(config_file)
