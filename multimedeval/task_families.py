@@ -64,7 +64,7 @@ class QA(Benchmark):
         answers_log = []
 
         for prediction in predictions:
-            answer = prediction["answer"]
+            answer = prediction["answer"].text
             idx = prediction["idx"]
             sample = self[idx]["sample"]
 
@@ -139,7 +139,7 @@ class VQA(Benchmark):
         closed_questions_correct = 0
 
         for prediction in predictions:
-            answer = prediction["answer"]
+            answer = prediction["answer"].text
             idx = prediction["idx"]
             sample = self[idx]["sample"]
 
@@ -305,7 +305,7 @@ class ImageClassification(Benchmark):
         answers_log = []
 
         for prediction in predictions:
-            answer = prediction["answer"]
+            answer = prediction["answer"].text
             idx = prediction["idx"]
             sample = self[idx]["sample"]
 
@@ -447,7 +447,7 @@ class ReportComparison(Benchmark):
         hyp_reports = []
 
         for prediction in predictions:
-            answer = prediction["answer"]
+            answer = prediction["answer"].text
             idx = prediction["idx"]
             sample = self[idx]["sample"]
 

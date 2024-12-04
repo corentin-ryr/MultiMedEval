@@ -24,71 +24,6 @@ if TYPE_CHECKING:
     from multimedeval import MultiMedEval
 
 
-class Benchmark(ABC):
-    """Abstract class for benchmarks."""
-
-    def __init__(self, engine, logger) -> None:
-        """Initialize the benchmark.
-
-        Args:
-            engine: Reference to the engine class.
-            logger: A logger object.
-        """
-        self.task_name: str = "None"
-        self.engine: 'MultiMedEval' = engine
-        self.modality: str = "None"
-        self.task: str = "None"
-        self._prompt = None
-        self.train_dataset = None
-        self.dataset: Optional[Dataset] = None
-        self.logger: logging.Logger = logger
-
-    def get_prompt(self):
-        """Get the fewshot prompt."""
-        if not self.train_dataset:
-            return None
-
-        if self._prompt is None:
-            batcher_input = BatcherInput()
-            for i in range(5):
-                index = int(i / 5 * len(self.train_dataset))
-                single_turn_input = self.format_question(
-                    self.train_dataset[index],
-                    prompt=True,
-                )        
-                batcher_input = batcher_input + single_turn_input
-        
-            self._prompt = batcher_input
-        return self._prompt
-
-    def __len__(self):
-        """Get the length of the dataset."""
-        return len(self.dataset)
-
-    @abstractmethod
-    def format_question(self, sample, prompt=False):
-        """Format the question in a Huggingface format."""
-
-    @abstractmethod
-    def setup(self):
-        """Setup the benchmark and download the dataset."""
-
-    def __getitem__(self, idx):
-        """Get an item from the dataset.
-
-        Args:
-            idx: The index of the item to get.
-
-        Returns:
-            The item from the dataset.
-        """
-        return {"idx": idx, "sample": self.dataset[idx]}
-
-    @abstractmethod
-    def evaluate(self, predictions):
-        """Runs the evaluation on the predictions."""
-
-
 @dataclass
 class EvalParams:
     """Dataclass defining the parameters for evaluation.
@@ -189,7 +124,7 @@ class SetupParams:
     mmlu_dir: Optional[Union[str, os.PathLike]] = None
     chestxray14_dir: Optional[Union[str, os.PathLike]] = None
     chexbert_dir: Optional[Union[str, os.PathLike]] = None
-    ctrate_dir:Optional[Union[str, os.PathLike]] = None
+    ctrate_dir: Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     hf_token: Optional[str] = None
@@ -213,43 +148,159 @@ class EvaluationOutput:
     metrics: Dict[str, float]
     answer_log: Optional[List[tuple]] = None
 
+
 @dataclass
 class BatcherInput:
     """Dataclass for unified formatting of the basic (conversation, images, seg(optional)) batcher input"""
-    
-    conversation: List[dict] = field(default_factory = list)
-    images: Optional[Union[List[Image], List[SpatialImage]]] = field(default_factory = list)
-    segmentation_masks:Optional[Union[List[Image], List[SpatialImage]]] = field(default_factory = list)
 
-    def _add_text_prompt(self, role: Literal["assistant", "user", "system"], content: str):
-        self.conversation.append({
-            "role": role,
-            "content": content
-        })
+    conversation: List[dict] = field(default_factory=list)
+    images: Optional[Union[List[Image], List[SpatialImage]]] = field(
+        default_factory=list
+    )
+    segmentation_masks: Optional[Union[List[Image], List[SpatialImage]]] = field(
+        default_factory=list
+    )
+
+    def _add_text_prompt(
+        self, role: Literal["assistant", "user", "system"], content: str
+    ):
+        self.conversation.append({"role": role, "content": content})
 
     def _add_images(self, image: Union[Image, list, SpatialImage]):
         if isinstance(image, list):
             self.images.extend(image)
         else:
             self.images.append(image)
-        
-    
+
     def _add_segmentation_mask(self, seg_mask: Union[Image, list, SpatialImage]):
         if isinstance(seg_mask, list):
             self.segmentation_masks.extend(seg_mask)
         else:
             self.segmentation_masks.append(seg_mask)
-    
-    def __add__(self, other: 'BatcherInput') -> 'BatcherInput':
+
+    def __add__(self, other: "BatcherInput") -> "BatcherInput":
         if not isinstance(other, BatcherInput):
             return NotImplemented
-        
+
         # Combine the attributes of both instances
         return BatcherInput(
-            conversation = self.conversation + other.conversation,
-            images = self.images + other.images ,
-            segmentation_masks = self.segmentation_masks + other.segmentation_masks
+            conversation=self.conversation + other.conversation,
+            images=self.images + other.images,
+            segmentation_masks=self.segmentation_masks + other.segmentation_masks,
         )
+
+
+@dataclass
+class BatcherOutput:
+    text: str
+    masks: Optional[List[np.ndarray]] = None
+
+    def __post_init__(self):
+
+        if self.text is None:
+            raise ValueError("Text cannot be None.")
+
+        if self.masks is not None and len(self.masks) == 0:
+            self.masks = None
+
+        if self.masks is not None:
+            self._validate_masks()
+
+        # Count the number of <segX> tokens in the text
+        seg_pattern = re.compile(r"<seg\d>")
+        num_segs = len(seg_pattern.findall(self.text))
+
+        # Check that the number of segmentation masks matches the number of <segX> tokens
+        if num_segs > 0:
+            if self.masks is None or len(self.masks) != num_segs:
+                raise ValueError(
+                    f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
+                )
+        else:
+            if self.masks is not None:
+                raise ValueError(
+                    f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
+                )
+
+    def _validate_masks(self):
+        """Validate the segmentation masks."""
+        for mask in self.masks:
+            if not isinstance(mask, np.ndarray):
+                raise ValueError(
+                    f"Segmentation mask must be a numpy array, got {type(mask)}"
+                )
+            if len(mask.shape) != 2:
+                raise ValueError(f"Segmentation mask must be 2D, got {mask.shape}")
+            if mask.dtype != np.uint8:
+                raise ValueError(
+                    f"Segmentation mask must be of type np.uint8, got {mask.dtype}"
+                )
+
+
+class Benchmark(ABC):
+    """Abstract class for benchmarks."""
+
+    def __init__(self, engine, logger) -> None:
+        """Initialize the benchmark.
+
+        Args:
+            engine: Reference to the engine class.
+            logger: A logger object.
+        """
+        self.task_name: str = "None"
+        self.engine: "MultiMedEval" = engine
+        self.modality: str = "None"
+        self.task: str = "None"
+        self._prompt = None
+        self.train_dataset = None
+        self.dataset: Optional[Dataset] = None
+        self.logger: logging.Logger = logger
+
+    def get_prompt(self):
+        """Get the fewshot prompt."""
+        if not self.train_dataset:
+            return None
+
+        if self._prompt is None:
+            batcher_input = BatcherInput()
+            for i in range(5):
+                index = int(i / 5 * len(self.train_dataset))
+                single_turn_input = self.format_question(
+                    self.train_dataset[index],
+                    prompt=True,
+                )
+                batcher_input = batcher_input + single_turn_input
+
+            self._prompt = batcher_input
+        return self._prompt
+
+    def __len__(self):
+        """Get the length of the dataset."""
+        return len(self.dataset)
+
+    @abstractmethod
+    def format_question(self, sample, prompt=False):
+        """Format the question in a Huggingface format."""
+
+    @abstractmethod
+    def setup(self):
+        """Setup the benchmark and download the dataset."""
+
+    def __getitem__(self, idx):
+        """Get an item from the dataset.
+
+        Args:
+            idx: The index of the item to get.
+
+        Returns:
+            The item from the dataset.
+        """
+        return {"idx": idx, "sample": self.dataset[idx]}
+
+    @abstractmethod
+    def evaluate(self, predictions: List[Dict[str, Union[int, BatcherOutput]]]):
+        """Runs the evaluation on the predictions."""
+
 
 def remove_punctuation(input_string: str):
     """Removes punctuation from a string.
