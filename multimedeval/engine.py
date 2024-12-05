@@ -390,6 +390,21 @@ class MultiMedEval:
                 self._physionet_password = getpass.getpass("Enter your password: ")
 
         return self._physionet_username, self._physionet_password
+    
+    def get_huggingface_token(self):
+        if self._hf_token is None:
+            self._hf_token = self.get_config()["hf_token"]
+            if not self._hf_token:
+                if 'HF_TOKEN' in os.environ and os.environ['HF_TOKEN']:
+                    self._hf_token = os.environ['HF_TOKEN']
+                else:
+                    self.logger.info(
+                    "To setup the tasks that use a protected hugggingface dataset, the scripts "
+                    "requires the personal hugging face token."
+                )
+                self._hf_token = input("Enter your personal huggingface_token: ")
+        return self._hf_token
+        
 
     def get_huggingface_token(self):
         if self._hf_token is None:
