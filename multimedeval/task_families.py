@@ -2,13 +2,14 @@
 
 import os
 from abc import abstractmethod
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Literal
 import nltk
 import pandas as pd
 import torch
 from nltk.stem import WordNetLemmatizer
 from torchmetrics import AUROC, Accuracy, F1Score
 from torchmetrics.text import BLEUScore, ROUGEScore
+from torchmetrics.segmentation import GeneralizedDiceScore
 
 from multimedeval.report_comparison_utils import (
     compute_bertscore,
@@ -339,6 +340,103 @@ class ImageClassification(Benchmark):
         metrics = {"AUC-macro": auroc, "F1-macro": f1_macro, "Accuracy": acc}
 
         return EvaluationOutput(answer_log=answers_log, metrics=metrics)
+
+
+class Segmentation(Benchmark):
+    """A benchmark for segmentation tasks."""
+
+    def __init__(self, **kwargs) -> None:
+        """Initialize the Segmentation task."""
+        super().__init__(**kwargs)
+
+        self.seg_type: Optional[Literal["seg_mask", "bbox"]] = "seg_mask"
+        self.task = "Segmentation"
+        self.num_classes = 1
+        self.path: Optional[os.PathLike] = None
+
+    @abstractmethod
+    def get_correct_answer(self, sample):
+        """Get the correct answer for the sample.
+
+        Args:
+            sample: The sample to get the correct answer from.
+
+        Returns:
+            The correct segmentation mask/bounding box.
+        """
+
+    @abstractmethod
+    def format_question(self, sample, prompt=False):
+        """Format the question for the model.
+
+        Args:
+            sample: The sample to format.
+            prompt: Whether or not to have the answer in the fromatted question. Defaults to False.
+        """
+
+    @abstractmethod
+    def get_predicted_answer(self, answer):
+        """Get the predicted answer for the sample.
+
+        Args:
+            sample (_type_): The sample used to generate the answer
+            answer (_type_): The predicted segmentation mask/bounding box.
+
+        Returns:
+            The processed segmentation mask/bounding box.
+        """
+
+    @abstractmethod
+    def get_correct_label(self, sample):
+        """Get the label of segmentation target for the sample.
+
+        Args:
+            sample (_type_): The sample used to generate the answer
+
+        Returns:
+            The label of segmentation target.
+        """
+
+    def evaluate(self, predictions):
+        """Evaluate the predictions against the ground truth.
+
+        Args:
+            predictions: The predictions made by the model.
+
+        Returns:
+            The evaluation output.
+        """
+        predicted_answers = []
+        ground_truth = []
+
+        for prediction in predictions:
+            answer = prediction["answer"].masks
+            idx = prediction["idx"]
+            sample = self[idx]["sample"]
+
+            pred = self.get_predicted_answer(answer)
+            gt = self.get_correct_answer(sample)
+
+            predicted_answers.append(pred)
+            ground_truth.append(gt)
+
+        if self.seg_type == "seg_mask":
+            if self.num_classes == 1:
+                scorer_args = {"num_classes": self.num_classes, "per_class": False}
+            else:
+                scorer_args = {"num_classes": self.num_classes, "per_class": True}
+
+            dice_scorer = GeneralizedDiceScore(**scorer_args)
+
+            predicted_answers = torch.tensor(predicted_answers, dtype=torch.long)
+            ground_truth = torch.tensor(ground_truth, dtype=torch.long)
+
+            dice = dice_scorer(predicted_answers, ground_truth).item()
+
+            metrics = {"dice": dice}
+        else:
+            metrics = {}
+        return EvaluationOutput(metrics=metrics)
 
 
 class ReportComparison(Benchmark):
