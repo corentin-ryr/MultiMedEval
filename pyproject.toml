@@ -40,6 +40,8 @@ Pillow = ">=10.2.0"
 types-requests = "*"
 protobuf = "*"
 nibabel = "*"
+radgraph = { git = "https://github.com/corentin-ryr/radgraph.git", branch = "relax-dependencies" }
+
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.0"
