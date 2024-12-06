@@ -13,7 +13,7 @@ import nltk
 
 from torch.utils.data import DataLoader
 
-
+from multimedeval.refuge import REFUGE
 from multimedeval.ct_rate import CTRATEReportGen, CTRATEClassification
 from multimedeval.chestxray14 import ChestXray14
 from multimedeval.chexbert.label import _encode, _label
@@ -86,6 +86,7 @@ TASKS: Set[Type[Benchmark]] = {
     ChestXray14,
     CTRATEReportGen,
     CTRATEClassification,
+    REFUGE,
     # # # "MNIST-OrganA": MNIST_OrganA,
     # # # "MNIST-Chest": MNIST_Chest,
 }
@@ -313,7 +314,9 @@ class MultiMedEval:
         metrics.update(results)
         file_writer_factory("json")(metrics, f"{self.eval_params.run_name}/results")
 
-    def _run_inference(self, task: Benchmark, batcher) -> List[Dict[str, Union[int, BatcherOutput]]]:
+    def _run_inference(
+        self, task: Benchmark, batcher
+    ) -> List[Dict[str, Union[int, BatcherOutput]]]:
         info_message = (
             f"======================== Running inference on {task.task_name} "
             "========================"
