@@ -5,6 +5,7 @@ from abc import abstractmethod
 from typing import List, Optional, Union, Literal
 import nltk
 import pandas as pd
+import numpy as np
 import torch
 from nltk.stem import WordNetLemmatizer
 from torchmetrics import AUROC, Accuracy, F1Score
@@ -387,14 +388,11 @@ class Segmentation(Benchmark):
         """
 
     @abstractmethod
-    def get_correct_label(self, sample):
-        """Get the label of segmentation target for the sample.
-
-        Args:
-            sample (_type_): The sample used to generate the answer
+    def get_all_labels(self):
+        """Get the list of all labels in the data.
 
         Returns:
-            The label of segmentation target.
+            A list of all the labels.
         """
 
     def evaluate(self, predictions):
@@ -406,37 +404,57 @@ class Segmentation(Benchmark):
         Returns:
             The evaluation output.
         """
-        predicted_answers = []
-        ground_truth = []
 
-        for prediction in predictions:
-            answer = prediction["answer"].masks
-            idx = prediction["idx"]
-            sample = self[idx]["sample"]
-
-            pred = self.get_predicted_answer(answer)
-            gt = self.get_correct_answer(sample)
-
-            predicted_answers.append(pred)
-            ground_truth.append(gt)
+        # labels_list contains each possible segmentation labels in the sub-class
+        # plus an overall class incl. all labels
+        labels_list = self.get_all_labels() + ["all_labels"]
+        answers_log = []
+        answers_log.append((f"These are the available labels: {labels_list}"))
+        metrics = {}
 
         if self.seg_type == "seg_mask":
             if self.num_classes == 1:
                 scorer_args = {"num_classes": self.num_classes, "per_class": False}
             else:
                 scorer_args = {"num_classes": self.num_classes, "per_class": True}
-
             dice_scorer = GeneralizedDiceScore(**scorer_args)
+        else:
+            return metrics
+
+        for label in labels_list:
+            predicted_answers = []
+            ground_truth = []
+
+            for prediction in predictions:
+                answer = prediction["answer"].masks
+                idx = prediction["idx"]
+                sample = self[idx]["sample"]
+
+                if label == "all_labels" or sample["label"] == label:
+
+                    pred = self.get_predicted_answer(answer)
+                    gt = self.get_correct_answer(sample)
+
+                    predicted_answers.append(pred)
+                    ground_truth.append(gt)
+
+            predicted_answers = np.array(predicted_answers)
+            ground_truth = np.array(ground_truth)
+            print(predicted_answers.shape, ground_truth.shape)
 
             predicted_answers = torch.tensor(predicted_answers, dtype=torch.long)
             ground_truth = torch.tensor(ground_truth, dtype=torch.long)
 
             dice = dice_scorer(predicted_answers, ground_truth).item()
+            answers_log.append(
+                (
+                    f"Label {label} have {len(predicted_answers)} data points, and the dice score is: {dice}."
+                )
+            )
 
-            metrics = {"dice": dice}
-        else:
-            metrics = {}
-        return EvaluationOutput(metrics=metrics)
+            metrics[f"{label}_dice"] = dice
+
+        return EvaluationOutput(metrics=metrics, answer_log=answers_log)
 
 
 class ReportComparison(Benchmark):

@@ -144,8 +144,8 @@ class REFUGE(Segmentation):
 
         return batcher_input
 
-    def get_correct_label(self, sample):
-        return sample["label"]
+    def get_all_labels(self):
+        return list(self.class_mapping.keys())
 
     def _generate_dataset(self):
         """

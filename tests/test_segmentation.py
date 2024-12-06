@@ -42,4 +42,6 @@ def test_refuge(expected_dice):
         # Find the element in the list that has that "name" metrics_REFUGE
         raise AssertionError()
 
-    assert (results["REFUGE"]["dice"] - expected_dice) < 0.01
+    assert (results["REFUGE"]["Optic Disk_dice"] - expected_dice) < 0.01
+    assert (results["REFUGE"]["Optic Cup_dice"] - expected_dice) < 0.01
+    assert (results["REFUGE"]["all_labels_dice"] - expected_dice) < 0.01
