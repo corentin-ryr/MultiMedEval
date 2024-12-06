@@ -93,6 +93,7 @@ class SetupParams:
         chestxray14_dir: The path to the ChestXray14 dataset.
         chexbert_dir: The path to the CheXpert dataset.
         ctrate_dir: The path to the CT-RATE dataset.
+        refuge_dir: The path to the REFUGE dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
         hf_token:The hugging face User Access Token to authenticate to the Hub.
@@ -125,6 +126,7 @@ class SetupParams:
     chestxray14_dir: Optional[Union[str, os.PathLike]] = None
     chexbert_dir: Optional[Union[str, os.PathLike]] = None
     ctrate_dir: Optional[Union[str, os.PathLike]] = None
+    refuge_dir: Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     hf_token: Optional[str] = None
@@ -157,9 +159,9 @@ class BatcherInput:
     images: Optional[Union[List[Image], List[SpatialImage]]] = field(
         default_factory=list
     )
-    segmentation_masks: Optional[Union[List[Image], List[SpatialImage]]] = field(
-        default_factory=list
-    )
+    segmentation_masks: Optional[
+        Union[List[Image], List[SpatialImage], List[np.array]]
+    ] = field(default_factory=list)
 
     def _add_text_prompt(
         self, role: Literal["assistant", "user", "system"], content: str
@@ -172,7 +174,9 @@ class BatcherInput:
         else:
             self.images.append(image)
 
-    def _add_segmentation_mask(self, seg_mask: Union[Image, list, SpatialImage]):
+    def _add_segmentation_mask(
+        self, seg_mask: Union[Image, list, SpatialImage, np.array]
+    ):
         if isinstance(seg_mask, list):
             self.segmentation_masks.extend(seg_mask)
         else:
