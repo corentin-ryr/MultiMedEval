@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import torch
 from nltk.stem import WordNetLemmatizer
-from torchmetrics import AUROC, Accuracy, F1Score
+from torchmetrics import AUROC, Accuracy, F1Score, Precision, Recall
 from torchmetrics.text import BLEUScore, ROUGEScore
 from torchmetrics.segmentation import GeneralizedDiceScore
 
@@ -298,9 +298,18 @@ class ImageClassification(Benchmark):
             if self.scoring_type == "multiclass"
             else {"num_labels": self.num_classes}
         )
-        f1_scorer = F1Score(**scorer_args)
-        auroc_scorer = AUROC(**scorer_args)
-        accuracy = Accuracy(**scorer_args)
+        f1_scorer_macro = F1Score(**scorer_args)
+        auroc_scorer_macro = AUROC(**scorer_args)
+        accuracy_scorer_macro = Accuracy(**scorer_args)
+        precision_scorer_macro = Precision(**scorer_args)
+        recall_scorer_macro = Recall(**scorer_args)
+
+        scorer_args.update({"average": "micro"})
+        f1_scorer_micro = F1Score(**scorer_args)
+        # auroc_scorer_micro = AUROC(**scorer_args)
+        accuracy_scorer_micro = Accuracy(**scorer_args)
+        precision_scorer_micro = Precision(**scorer_args)
+        recall_scorer_micro = Recall(**scorer_args)
 
         predicted_answers = []
         ground_truth = []
@@ -334,11 +343,30 @@ class ImageClassification(Benchmark):
         predicted_answers = predicted_answers.to(torch.float32)
         ground_truth = torch.tensor(ground_truth)
 
-        f1_macro = f1_scorer(predicted_answers, ground_truth).item()
-        auroc = auroc_scorer(predicted_answers, ground_truth).item()
-        acc = accuracy(predicted_answers, ground_truth).item()
+        f1_macro = f1_scorer_macro(predicted_answers, ground_truth).item()
+        auroc_macro = auroc_scorer_macro(predicted_answers, ground_truth).item()
+        acc_macro = accuracy_scorer_macro(predicted_answers, ground_truth).item()
+        precision_macro = precision_scorer_macro(predicted_answers, ground_truth).item()
+        recall_macro = recall_scorer_macro(predicted_answers, ground_truth).item()
 
-        metrics = {"AUC-macro": auroc, "F1-macro": f1_macro, "Accuracy": acc}
+        f1_micro = f1_scorer_micro(predicted_answers, ground_truth).item()
+        # auroc_micro = auroc_scorer_micro(predicted_answers, ground_truth).item()
+        acc_micro = accuracy_scorer_micro(predicted_answers, ground_truth).item()
+        precision_micro = precision_scorer_micro(predicted_answers, ground_truth).item()
+        recall_micro = recall_scorer_micro(predicted_answers, ground_truth).item()
+
+        metrics = {
+            "AUROC-macro": auroc_macro,
+            "F1-macro": f1_macro,
+            "Accuracy-macro": acc_macro,
+            "Precision-macro": precision_macro,
+            "Recall-macro": recall_macro,
+            # "AUROC-micro": auroc_micro,
+            "F1-micro": f1_micro,
+            "Accuracy-micro": acc_micro,
+            "Precision-micro": precision_micro,
+            "Recall-micro": recall_micro,
+        }
 
         return EvaluationOutput(answer_log=answers_log, metrics=metrics)
 
