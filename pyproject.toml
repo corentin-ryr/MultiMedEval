@@ -64,6 +64,11 @@ flake8-pyi = "*"
 appdirs = "^1.4.4"
 kaleido = "0.2.1"
 
+[tool.poetry.group.ctclip.dependencies]
+einops = "*"
+vector-quantize-pytorch = "^1.20.9"
+
+
 
 [tool.pytest.ini_options]
 addopts = "--cov=multimedeval"
