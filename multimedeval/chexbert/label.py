@@ -78,12 +78,14 @@ class _label:
                 print("Using", torch.cuda.device_count(), "GPUs!")
             model = nn.DataParallel(model)  # type: ignore  # to utilize multiple GPU's
             model = model.to(device)
-            checkpoint = torch.load(checkpoint_path)
+            checkpoint = torch.load(checkpoint_path, weights_only=True)
             model.load_state_dict(
                 checkpoint["model_state_dict"], strict=False
             )  # TODO check if it works
         else:
-            checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
+            checkpoint = torch.load(
+                checkpoint_path, map_location=torch.device("cpu"), weights_only=True
+            )
             new_state_dict = OrderedDict()
             for k, v in checkpoint["model_state_dict"].items():
                 name = k[7:]  # remove `module.`
@@ -134,7 +136,7 @@ class _encode:
             with deepspeed.zero.GatheredParameters(
                 model.parameters(),
             ):
-                checkpoint = torch.load(checkpoint_path)
+                checkpoint = torch.load(checkpoint_path, weights_only=True)
                 model.load_state_dict(checkpoint["model_state_dict"], strict=False)
         else:
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -143,13 +145,13 @@ class _encode:
                     print("Using", torch.cuda.device_count(), "GPUs!")
                 model = nn.DataParallel(model)  # type: ignore  # to utilize multiple GPU's
                 model = model.to(device)
-                checkpoint = torch.load(checkpoint_path)
+                checkpoint = torch.load(checkpoint_path, weights_only=True)
                 model.load_state_dict(
                     checkpoint["model_state_dict"], strict=False
                 )  # TODO check if it works
             else:
                 checkpoint = torch.load(
-                    checkpoint_path, map_location=torch.device("cpu")
+                    checkpoint_path, map_location=torch.device("cpu"), weights_only=True
                 )
                 new_state_dict = OrderedDict()
                 for k, v in checkpoint["model_state_dict"].items():

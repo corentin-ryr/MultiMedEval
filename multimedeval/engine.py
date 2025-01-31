@@ -122,9 +122,9 @@ class MultiMedEval:
         self.eval_params = EvalParams()
 
         dynamic_datasets = find_datasets()
-        print(f"Dynamic datasets: {dynamic_datasets}")
+        # print(f"Dynamic datasets: {dynamic_datasets}")
         TASKS.update(dynamic_datasets)
-        print(f"TASKS: {TASKS}")
+        # print(f"TASKS: {TASKS}")
 
         self.tasks_ready = {}
 
@@ -147,7 +147,7 @@ class MultiMedEval:
                 "error": "Not setup yet",
             }
 
-        print(f"Task names: {self.name_to_task}")
+        # print(f"Task names: {self.name_to_task}")
 
     def setup(self, setup_params: SetupParams, verbose: bool = True):
         """Setup the engine and all the tasks.
