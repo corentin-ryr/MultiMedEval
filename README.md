@@ -99,6 +99,8 @@ To run the benchmark on your model, you first need to create an instance of the 
 
 ```python
 from multimedeval import MultiMedEval, SetupParams, EvalParams
+from multimedeval.utils import BatcherInput, BatcherOutput
+
 engine = MultiMedEval()
 ```
 
@@ -152,7 +154,7 @@ Each input is an instance of @dataclass `BatcherInput`, containing the following
 Here is an example of a `batcher` without any logic:
 
 ```python
-def batcher(prompts) -> list[str]:
+def batcher(prompts: List[BatcherInput]) -> List[BatcherOutput]:
     return ["Answer" for _ in prompts]
 ```
 
@@ -165,7 +167,7 @@ class batcherMistral:
         self.tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.1")
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-    def __call__(self, prompts):
+    def __call__(self, prompts: List[BatcherInput]) -> List[BatcherOutput]:
         model_inputs = [self.tokenizer.apply_chat_template(messages.conversation, return_tensors="pt", tokenize=False) for messages in prompts]
         model_inputs = self.tokenizer(model_inputs, padding="max_length", truncation=True, max_length=1024, return_tensors="pt")
 
@@ -175,7 +177,7 @@ class batcherMistral:
         generated_ids = generated_ids[:, model_inputs["input_ids"].shape[1] :]
 
         answers = self.tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
-        return answers
+        return [BatcherOutput(text=answer) for answer in answers]
 ```
 
 ### Run the benchmark
