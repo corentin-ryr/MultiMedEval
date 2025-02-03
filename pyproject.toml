@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "multimedeval"
-version = "0.1.2.dev0"
+version = "1.0.0"
 description = "A Python tool to evaluate the performance of VLM on the medical domain."
 authors = ["Corentin Royer"]
 readme = "README.md"
@@ -13,6 +13,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent"
 ]
@@ -23,7 +24,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.9,<3.13"
 torch = "*"
 transformers = "*"
 datasets = ">=2.16"
@@ -40,7 +41,11 @@ Pillow = ">=10.2.0"
 types-requests = "*"
 protobuf = "*"
 nibabel = "*"
-radgraph = { git = "https://github.com/corentin-ryr/radgraph.git", branch = "relax-dependencies" }
+spacy = ">=3.6.0,<3.8.4"
+dotmap = "*"
+overrides = "*"
+jsonpickle = "*"
+h5py = "*"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -75,7 +80,7 @@ addopts = "--cov=multimedeval"
 testpaths = "tests"
 
 [tool.coverage.run]
-omit = ["multimedeval/chexbert/*", "multimedeval/tqdm_loggable.py"]
+omit = ["multimedeval/chexbert/*", "multimedeval/tqdm_loggable.py", "multimedeval/radgraph/*"]
 
 [tool.isort]
 profile = "black"
