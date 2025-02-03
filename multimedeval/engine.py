@@ -439,7 +439,7 @@ class MultiMedEval:
             )
 
     def _prepare_radgraph(self):
-        from radgraph import F1RadGraph
+        from multimedeval.radgraph.radgraph import F1RadGraph
 
         # Check if deepspeed is installed and initialized
         try:
