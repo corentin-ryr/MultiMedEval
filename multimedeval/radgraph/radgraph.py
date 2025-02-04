@@ -1,4 +1,5 @@
 import logging
+from dotmap import DotMap
 import torch.nn as nn
 import numpy as np
 
@@ -8,7 +9,6 @@ import sys
 import tarfile
 import warnings
 import torch
-from dotmap import DotMap
 
 from multimedeval.radgraph.allennlp.data import Vocabulary
 from multimedeval.radgraph.allennlp.data.dataset_readers import AllennlpDataset
