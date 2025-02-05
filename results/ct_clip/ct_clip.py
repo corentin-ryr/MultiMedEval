@@ -25,6 +25,10 @@ from transformers.modeling_outputs import BaseModelOutputWithPoolingAndCrossAtte
 # helper functions
 
 
+def sigmoid(tensor):
+    return 1 / (1 + torch.exp(-tensor))
+
+
 def identity(t, *args, **kwargs):
     return t
 
@@ -374,21 +378,8 @@ class CTCLIP(nn.Module):
 
         self.text_eos_id = text_eos_id
 
-        if exists(text_encoder):
-            self.text_transformer = text_encoder
-        else:
-            raise Exception
-            self.text_transformer = TextTransformer(
-                dim=dim_text,
-                num_tokens=num_text_tokens + (1 if use_mlm else 0),
-                max_seq_len=text_seq_len,
-                depth=text_enc_depth,
-                heads=text_heads,
-                causal=False,
-                dim_head=text_dim_head,
-                rotary_pos_emb=text_rotary_pos_emb,
-                checkpoint_during_training=checkpoint_during_training,
-            )
+        self.text_transformer = text_encoder
+
 
         # instantiate image transformer
 
@@ -509,6 +500,35 @@ class CTCLIP(nn.Module):
         return sim
 
 
+class ImageLatentsClassifier(nn.Module):
+    def __init__(
+        self, trained_model: CTCLIP, latent_dim, num_classes, dropout_prob=0.3
+    ):
+        super(ImageLatentsClassifier, self).__init__()
+        self.trained_model = trained_model
+        for param in self.trained_model.parameters():
+            param.requires_grad = False
+        self.dropout = nn.Dropout(dropout_prob)  # Add dropout layer
+        self.relu = nn.ReLU()
+        self.classifier = nn.Linear(
+            latent_dim, num_classes
+        )  # Assuming trained_model.image_latents_dim gives the size of the image_latents
+
+    def forward(self, *args, **kwargs):
+        image_latents = self.trained_model.image_embedding(*args, **kwargs)
+        image_latents = l2norm(image_latents)
+        image_latents = self.relu(image_latents)
+        image_latents = self.dropout(image_latents)  # Apply dropout on the latents
+        return self.classifier(image_latents)
+
+    def save(self, file_path):
+        torch.save(self.state_dict(), file_path)
+
+    def load(self, file_path):
+        loaded_state_dict = torch.load(file_path)
+        logging.info(f"{self.load_state_dict(loaded_state_dict, strict=False)=}")
+
+
 class BatcherCTClip:
     """Batcher for the CT-CLIP model."""
 
@@ -517,14 +537,39 @@ class BatcherCTClip:
 
         os.makedirs("models", exist_ok=True)
         self.device = device
+        self.ct_clip_variant = ct_clip_variant
 
-        assert ct_clip_variant in ["CT-CLIP", "CT-VocabFine", "CT-LiPro"]
+        assert self.ct_clip_variant in ["CT-CLIP", "CT-VocabFine", "CT-LiPro"]
 
         model_name = {
             "CT-CLIP": "CT-CLIP_v2.pt",
             "CT-VocabFine": "CT_VocabFine_v2.pt",
             "CT-LiPro": "CT_LiPro_v2.pt",
-        }[ct_clip_variant]
+        }[self.ct_clip_variant]
+
+        self.pathologies = [
+            "Medical material",
+            "Arterial wall calcification",
+            "Cardiomegaly",
+            "Pericardial effusion",
+            "Coronary artery wall calcification",
+            "Hiatal hernia",
+            "Lymphadenopathy",
+            "Emphysema",
+            "Atelectasis",
+            "Lung nodule",
+            "Lung opacity",
+            "Pulmonary fibrotic sequela",
+            "Pleural effusion",
+            "Mosaic attenuation pattern",
+            "Peribronchial thickening",
+            "Consolidation",
+            "Bronchiectasis",
+            "Interlobular septal thickening",
+        ]
+        self.thresholds = json.load(
+            open(f"results/ct_clip/thresholds_{self.ct_clip_variant}.json")
+        )
 
         # Download the CT-CLIP model from the Hugging Face model hub
         # https://huggingface.co/datasets/ibrahimhamamci/CT-RATE/resolve/main/models/CT-CLIP-Related/CT-CLIP_v2.pt?download=true
@@ -567,127 +612,93 @@ class BatcherCTClip:
             use_mlm=False,
         )
 
+        if self.ct_clip_variant == "CT-LiPro":
+            self.model = ImageLatentsClassifier(
+                self.model, latent_dim=512, num_classes=len(self.pathologies)
+            )
+
         self.model.load(
             os.path.join(ct_clip_folder, "models", "CT-CLIP-Related", model_name)
         )
 
         self.model = self.model.to(self.device)
 
-        self.pathologies = [
-            "Medical material",
-            "Arterial wall calcification",
-            "Cardiomegaly",
-            "Pericardial effusion",
-            "Coronary artery wall calcification",
-            "Hiatal hernia",
-            "Lymphadenopathy",
-            "Emphysema",
-            "Atelectasis",
-            "Lung nodule",
-            "Lung opacity",
-            "Pulmonary fibrotic sequela",
-            "Pleural effusion",
-            "Mosaic attenuation pattern",
-            "Peribronchial thickening",
-            "Consolidation",
-            "Bronchiectasis",
-            "Interlobular septal thickening",
-        ]
-        self.thresholds = json.load(
-            open(f"results/ct_clip/thresholds_{ct_clip_variant}.json")
-        )
-
         self.pathology_embeddings = {}
 
-        for pathology in self.pathologies:
-            # Compute the embeddings for the pathology
-            text = [
-                f"{pathology} is present.",
-                f"{pathology} is not present.",
-            ]
-            text_tokens = self.tokenizer(
-                text,
-                return_tensors="pt",
-                padding="max_length",
-                truncation=True,
-                max_length=512,
-            ).to(self.device)
+        if self.ct_clip_variant != "CT-LiPro":
+            for pathology in self.pathologies:
+                # Compute the embeddings for the pathology
+                text = [
+                    f"{pathology} is present.",
+                    f"{pathology} is not present.",
+                ]
+                text_tokens = self.tokenizer(
+                    text,
+                    return_tensors="pt",
+                    padding="max_length",
+                    truncation=True,
+                    max_length=512,
+                ).to(self.device)
 
-            with torch.no_grad():
-                path_emb = self.model.text_embedding(
-                    text_tokens.input_ids, attention_mask=text_tokens.attention_mask
-                )
-                self.pathology_embeddings[pathology] = path_emb
+                with torch.no_grad():
+                    path_emb = self.model.text_embedding(
+                        text_tokens.input_ids, attention_mask=text_tokens.attention_mask
+                    )
+                    self.pathology_embeddings[pathology] = path_emb
 
     def __call__(self, batch: List[BatcherInput]):
-        model = self.model
-
-        start_time = time.time()
-
-        model.eval()
+        self.model.eval()
         answers = []
 
-        # To be revisited TODO ========================================
         video_tensors = []
         for sample in batch:
             image = sample.images[0]
             video_tensors.append(self.nii_img_to_tensor(image))
 
-            # logging.info(f"{video_tensor.shape=}")
-        with torch.no_grad():
-            image_embeddings: torch.Tensor = model.image_embedding(
-                torch.stack(video_tensors).to(self.device)
-            )
+        if self.ct_clip_variant != "CT-LiPro":
+            with torch.no_grad():
+                image_embeddings: torch.Tensor = self.model.image_embedding(
+                    torch.stack(video_tensors).to(self.device)
+                )
 
-            # pad_square(image, fill_color=(255, 255, 255, 0)).resize((480, 480))
+            for image_embedding in image_embeddings:
+                logits = []
 
-        # image_tensor = torch.stack([torch.tensor(np.array(image)) for image in images])
+                for pathology in self.pathologies:
+                    path_emb = self.pathology_embeddings[pathology]
 
-        # image_tensor = (
-        #     image_tensor.permute(0, 3, 1, 2).unsqueeze(2).repeat(1, 1, 10, 1, 1) / 255.0
-        # )
-        # image_tensor = image_tensor.mean(1, keepdim=True)
-        # raise Exception
+                    with torch.no_grad():
+                        output = self.model.compute_similarity(
+                            path_emb, image_embedding.unsqueeze(0)
+                        )
+                        output = torch.softmax(output, dim=-1)
+                        append_out = output.detach().cpu().numpy()
 
-        # =============================================================
+                    logits.append(append_out[0])
 
-        # logging.info(f"Time taken to get image embeddings: {time.time() - start_time}")
-        start_time = time.time()
-
-        for image_embedding in image_embeddings:
+                predicted_labels = " ".join(
+                    [
+                        self.pathologies[idx]
+                        for idx in range(len(logits))
+                        if logits[idx] > self.thresholds[idx]
+                    ]
+                )
+                answers.append(predicted_labels)
+        else:
             predicted_probs = []
+            with torch.no_grad():
+                logits = self.model(torch.stack(video_tensors).to(self.device)).tolist()
+                predicted_probs = sigmoid(torch.tensor(logits)).cpu().numpy()
 
-            for pathology in self.pathologies:
-                path_emb = self.pathology_embeddings[pathology]
-
-                # logging.info(f"{path_emb.shape=}")
-                with torch.no_grad():
-                    output = model.compute_similarity(
-                        path_emb, image_embedding.unsqueeze(0)
-                    )
-                    # print(output)
-                    output = torch.softmax(output, dim=-1)
-                    append_out = output.detach().cpu().numpy()
-
-                predicted_probs.append(append_out[0])
-
-            # logging.info(f"{predicted_probs=}")
-            # Get the index of the maximum value
-            # max_index = np.argmax(predicted_probs)
-            # Get the corresponding label
-            predicted_labels = " ".join(
-                [
-                    self.pathologies[idx]
-                    for idx in range(len(predicted_probs))
-                    if predicted_probs[idx] > self.thresholds[idx]
-                ]
-            )
-            answers.append(predicted_labels)
-
-        # print(answers)
-        # raise Exception
-
-        # logging.info(f"Time taken: {time.time() - start_time}")
+            for predicted_prob in predicted_probs:
+                predicted_labels = " ".join(
+                    [
+                        self.pathologies[idx]
+                        for idx in range(len(predicted_prob))
+                        if predicted_prob[idx] > self.thresholds[idx]
+                    ]
+                )
+                answers.append(predicted_labels)
 
         return [BatcherOutput(text=answer) for answer in answers]
 
