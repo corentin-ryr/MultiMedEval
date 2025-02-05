@@ -9,8 +9,11 @@ import numpy as np
 import torch
 from nltk.stem import WordNetLemmatizer
 from torchmetrics import AUROC, Accuracy, F1Score, Precision, Recall
+from torchmetrics.classification import BinaryF1Score
 from torchmetrics.text import BLEUScore, ROUGEScore
 from torchmetrics.segmentation import GeneralizedDiceScore
+from sklearn.metrics import auc, f1_score, precision_score, accuracy_score, roc_curve
+
 
 from multimedeval.report_comparison_utils import (
     compute_bertscore,
@@ -311,6 +314,16 @@ class ImageClassification(Benchmark):
         precision_scorer_micro = Precision(**scorer_args)
         recall_scorer_micro = Recall(**scorer_args)
 
+        scorer_args.update({"average": "weighted"})
+        f1_scorer_weighted = F1Score(**scorer_args)
+        # auroc_scorer_micro = AUROC(**scorer_args)
+        accuracy_scorer_weighted = Accuracy(**scorer_args)
+        precision_scorer_weighted = Precision(**scorer_args)
+        recall_scorer_weighted = Recall(**scorer_args)
+
+        scorer_args.update({"average": "micro", "multidim_average": "samplewise"})
+        # f1_scorer_samplewise = F1Score(**scorer_args)
+
         predicted_answers = []
         ground_truth = []
         answers_log = []
@@ -344,7 +357,7 @@ class ImageClassification(Benchmark):
         ground_truth = torch.tensor(ground_truth)
 
         f1_macro = f1_scorer_macro(predicted_answers, ground_truth).item()
-        auroc_macro = auroc_scorer_macro(predicted_answers, ground_truth).item()
+        # auroc_macro = auroc_scorer_macro(predicted_answers, ground_truth).item()
         acc_macro = accuracy_scorer_macro(predicted_answers, ground_truth).item()
         precision_macro = precision_scorer_macro(predicted_answers, ground_truth).item()
         recall_macro = recall_scorer_macro(predicted_answers, ground_truth).item()
@@ -355,8 +368,16 @@ class ImageClassification(Benchmark):
         precision_micro = precision_scorer_micro(predicted_answers, ground_truth).item()
         recall_micro = recall_scorer_micro(predicted_answers, ground_truth).item()
 
+        f1_weighted = f1_scorer_weighted(predicted_answers, ground_truth).item()
+        # auroc_micro = auroc_scorer_micro(predicted_answers, ground_truth).item()
+        acc_weighted = accuracy_scorer_weighted(predicted_answers, ground_truth).item()
+        precision_weighted = precision_scorer_weighted(
+            predicted_answers, ground_truth
+        ).item()
+        recall_weighted = recall_scorer_weighted(predicted_answers, ground_truth).item()
+
         metrics = {
-            "AUROC-macro": auroc_macro,
+            # "AUROC-macro": auroc_macro,
             "F1-macro": f1_macro,
             "Accuracy-macro": acc_macro,
             "Precision-macro": precision_macro,
@@ -366,7 +387,47 @@ class ImageClassification(Benchmark):
             "Accuracy-micro": acc_micro,
             "Precision-micro": precision_micro,
             "Recall-micro": recall_micro,
+            # "AUROC-weighted": auroc_micro,
+            "F1-weighted": f1_weighted,
+            "Accuracy-weighted": acc_weighted,
+            "Precision-weighted": precision_weighted,
+            "Recall-weighted": recall_weighted,
+            # "F1-samplewise": f1_samplewise,
         }
+
+        if self.scoring_type == "multilabel":
+            f1_binary_averaged = []
+            acc_binary_averaged = []
+            precision_binary_averaged = []
+            # auroc_binary_averaged = []
+            # f1_averaged_scorer = BinaryF1Score()
+            for i in range(self.num_classes):
+                label = ground_truth[:, i]
+                pred = predicted_answers[:, i]
+
+                f1_binary_averaged.append(f1_score(label, pred, average="weighted"))
+                acc_binary_averaged.append(accuracy_score(label, pred))
+                precision_binary_averaged.append(precision_score(label, pred))
+
+                # fpr, tpr, thresholds = roc_curve(label, pred)
+                # roc_auc = auc(fpr, tpr)
+                # auroc_binary_averaged.append(roc_auc)
+
+            f1_binary_averaged = sum(f1_binary_averaged) / len(f1_binary_averaged)
+            acc_binary_averaged = sum(acc_binary_averaged) / len(acc_binary_averaged)
+            precision_binary_averaged = sum(precision_binary_averaged) / len(
+                precision_binary_averaged
+            )
+            # auroc_binary_averaged = sum(auroc_binary_averaged) / len(auroc_binary_averaged)
+
+            metrics.update(
+                {
+                    "F1-binary-averaged": f1_binary_averaged,
+                    "Accuracy-binary-averaged": acc_binary_averaged,
+                    "Precision-binary-averaged": precision_binary_averaged,
+                    # "AUROC-binary-averaged": auroc_binary_averaged,
+                }
+            )
 
         return EvaluationOutput(answer_log=answers_log, metrics=metrics)
 
