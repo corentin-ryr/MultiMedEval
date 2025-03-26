@@ -94,6 +94,7 @@ class SetupParams:
         chexbert_dir: The path to the CheXpert dataset.
         ctrate_dir: The path to the CT-RATE dataset.
         refuge_dir: The path to the REFUGE dataset.
+        biomedparse_dir: The path to the BiomedParse dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
         hf_token:The hugging face User Access Token to authenticate to the Hub.
@@ -127,6 +128,7 @@ class SetupParams:
     chexbert_dir: Optional[Union[str, os.PathLike]] = None
     ctrate_dir: Optional[Union[str, os.PathLike]] = None
     refuge_dir: Optional[Union[str, os.PathLike]] = None
+    biomedparse_dir: Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     hf_token: Optional[str] = None

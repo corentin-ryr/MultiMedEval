@@ -53,6 +53,15 @@ from multimedeval.utils import (
 )
 from multimedeval.visualization import BenchmarkVisualizer
 from multimedeval.vqa import SLAKE, DiffVQA, PathVQA, VQARad
+from multimedeval.biomedparse import (
+    RadBiomedParse,
+    DermaBiomedParse,
+    PathBiomedParse,
+    EndoBiomedParse,
+    CTBiomedParse,
+    MRI_HS_BiomedParse,
+    MRI_FS_BiomedParse,
+)
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -87,6 +96,13 @@ TASKS: Set[Type[Benchmark]] = {
     CTRATEReportGen,
     CTRATEClassification,
     REFUGE,
+    RadBiomedParse,
+    CTBiomedParse,
+    MRI_FS_BiomedParse,
+    MRI_HS_BiomedParse,
+    # DermaBiomedParse,
+    # EndoBiomedParse,
+    # PathBiomedParse,
     # # # "MNIST-OrganA": MNIST_OrganA,
     # # # "MNIST-Chest": MNIST_Chest,
 }
