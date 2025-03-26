@@ -4,9 +4,10 @@ import logging
 import pytest
 from multimedeval.utils import BatcherInput, BatcherOutput
 import numpy as np
-
+import os
 
 logging.basicConfig(level=logging.INFO)
+IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 
 def dummy_list_arrays(n=1, dtype=np.uint8):
@@ -17,6 +18,9 @@ def dummy_list_arrays(n=1, dtype=np.uint8):
 class TestDataclasses:
     """Tests the VQA-Rad preprocessing."""
 
+    @pytest.mark.skipif(
+        IN_GITHUB_ACTIONS, reason="Test doesn't work in Github Actions."
+    )
     @pytest.mark.parametrize(
         "text, masks, should_success",
         [

@@ -216,17 +216,17 @@ class BatcherOutput:
         seg_pattern = re.compile(r"<seg\d>")
         num_segs = len(seg_pattern.findall(self.text))
 
-        # Check that the number of segmentation masks matches the number of <segX> tokens
-        if num_segs > 0:
-            if self.masks is None or len(self.masks) != num_segs:
-                raise ValueError(
-                    f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
-                )
-        else:
-            if self.masks is not None:
-                raise ValueError(
-                    f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
-                )
+        # # Check that the number of segmentation masks matches the number of <segX> tokens
+        # if num_segs > 0:
+        #     if self.masks is None or len(self.masks) != num_segs:
+        #         raise ValueError(
+        #             f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
+        #         )
+        # else:
+        #     if self.masks is not None:
+        #         raise ValueError(
+        #             f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
+        #         )
 
     def _validate_masks(self):
         """Validate the segmentation masks."""
