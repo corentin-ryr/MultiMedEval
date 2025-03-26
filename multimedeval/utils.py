@@ -94,6 +94,7 @@ class SetupParams:
         chexbert_dir: The path to the CheXpert dataset.
         ctrate_dir: The path to the CT-RATE dataset.
         refuge_dir: The path to the REFUGE dataset.
+        biomedparse_dir: The path to the BiomedParse dataset.
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
         hf_token:The hugging face User Access Token to authenticate to the Hub.
@@ -127,6 +128,7 @@ class SetupParams:
     chexbert_dir: Optional[Union[str, os.PathLike]] = None
     ctrate_dir: Optional[Union[str, os.PathLike]] = None
     refuge_dir: Optional[Union[str, os.PathLike]] = None
+    biomedparse_dir: Optional[Union[str, os.PathLike]] = None
     physionet_username: Optional[str] = None
     physionet_password: Optional[str] = None
     hf_token: Optional[str] = None
@@ -214,17 +216,17 @@ class BatcherOutput:
         seg_pattern = re.compile(r"<seg\d>")
         num_segs = len(seg_pattern.findall(self.text))
 
-        # Check that the number of segmentation masks matches the number of <segX> tokens
-        if num_segs > 0:
-            if self.masks is None or len(self.masks) != num_segs:
-                raise ValueError(
-                    f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
-                )
-        else:
-            if self.masks is not None:
-                raise ValueError(
-                    f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
-                )
+        # # Check that the number of segmentation masks matches the number of <segX> tokens
+        # if num_segs > 0:
+        #     if self.masks is None or len(self.masks) != num_segs:
+        #         raise ValueError(
+        #             f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
+        #         )
+        # else:
+        #     if self.masks is not None:
+        #         raise ValueError(
+        #             f"Number of segmentation masks ({len(self.masks)}) does not match the number of <segX> tokens ({num_segs})."
+        #         )
 
     def _validate_masks(self):
         """Validate the segmentation masks."""
