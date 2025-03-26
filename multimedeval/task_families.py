@@ -498,7 +498,9 @@ class Segmentation(Benchmark):
         # plus an overall class incl. all labels
         labels_list = self.get_all_labels() + ["all_labels"]
         answers_log = []
-        answers_log.append((f"These are the available labels: {labels_list}"))
+        answers_log.append(
+            ("text answer", "true label", "dice score coefficient (dsc)")
+        )
         metrics = {}
 
         if self.seg_type == "seg_mask":
@@ -511,39 +513,88 @@ class Segmentation(Benchmark):
             return metrics
 
         for label in labels_list:
-            predicted_answers = []
-            ground_truth = []
+            # predicted_answers = []
+            # ground_truth = []
+            dsc_list = []
+            null_predictions = 0
 
             for prediction in predictions:
                 answer = prediction["answer"].masks
+                text_answer = prediction["answer"].text
                 idx = prediction["idx"]
                 sample = self[idx]["sample"]
 
-                if label == "all_labels" or sample["label"] == label:
-
-                    pred = self.get_predicted_answer(answer)
+                if label == "all_labels" or sample["labels"] == label:
                     gt = self.get_correct_answer(sample)
+                    if answer is None:
+                        # The model return doesn't contain a mask
+                        pred = np.zeros_like(gt)
+                        null_predictions += 1
+                    else:
+                        pred = self.get_predicted_answer(answer)
 
-                    predicted_answers.append(pred)
-                    ground_truth.append(gt)
+                    dice_similarity_coefficient = self.compute_dice_coefficient(
+                        gt, pred
+                    )
+                    answers_log.append(
+                        (text_answer, sample["labels"], dice_similarity_coefficient)
+                    )
+                    # print(dice_similarity_coefficient)
+                    dsc_list.append(dice_similarity_coefficient)
+                    # predicted_answers.append(pred)
+                    # ground_truth.append(gt)
 
-            predicted_answers = np.array(predicted_answers)
-            ground_truth = np.array(ground_truth)
-            print(predicted_answers.shape, ground_truth.shape)
+            # predicted_answers = np.array(predicted_answers)
+            # ground_truth = np.array(ground_truth)
+            # print(predicted_answers.shape, ground_truth.shape)
 
-            predicted_answers = torch.tensor(predicted_answers, dtype=torch.long)
-            ground_truth = torch.tensor(ground_truth, dtype=torch.long)
+            # dice_similarity_coefficient = self.compute_dice_coefficient(
+            #     ground_truth, predicted_answers
+            # )
 
-            dice = dice_scorer(predicted_answers, ground_truth).item()
-            answers_log.append(
-                (
-                    f"Label {label} have {len(predicted_answers)} data points, and the dice score is: {dice}."
-                )
+            # predicted_answers = torch.tensor(predicted_answers, dtype=torch.long)
+            # ground_truth = torch.tensor(ground_truth, dtype=torch.long)
+
+            # dice = dice_scorer(predicted_answers, ground_truth).item()
+            # answers_log.append(
+            #     (
+            #         f"Label {label} have {len(predicted_answers)} data points, and the dice score is: {dice}."
+            #     )
+            # )
+
+            # metrics[f"{label}_generalized_dice_score"] = dice
+            # print(sum(dsc_list), len(dsc_list))
+            # metrics["name"] = "Dice Score Coefficient (DSC)"
+            metrics[f"mean"] = sum(dsc_list) / len(dsc_list)
+            metrics[f"median"] = np.median(dsc_list)
+            metrics[f"p25"] = np.percentile(dsc_list, 25)
+            metrics[f"p75"] = np.percentile(dsc_list, 75)
+            metrics[f"null preds %"] = null_predictions / len(dsc_list)
+            metrics[f"revised_mean"] = sum(dsc_list) / max(
+                len(dsc_list) - null_predictions, 1
             )
-
-            metrics[f"{label}_dice"] = dice
-
+            metrics[f"sample_size"] = len(dsc_list)
+            # del predicted_answers, ground_truth
         return EvaluationOutput(metrics=metrics, answer_log=answers_log)
+
+    def compute_dice_coefficient(self, mask_gt, mask_pred):
+        """Compute soerensen-dice coefficient.
+
+        compute the soerensen-dice coefficient between the ground truth mask `mask_gt`
+        and the predicted mask `mask_pred`.
+
+        Args:
+        mask_gt: 3-dim Numpy array of type bool. The ground truth mask.
+        mask_pred: 3-dim Numpy array of type bool. The predicted mask.
+
+        Returns:
+        the dice coeffcient as float. If both masks are empty, the result is NaN
+        """
+        volume_sum = mask_gt.sum() + mask_pred.sum()
+        if volume_sum == 0:
+            return np.NaN
+        volume_intersect = (mask_gt & mask_pred).sum()
+        return 2 * volume_intersect / volume_sum
 
 
 class ReportComparison(Benchmark):
