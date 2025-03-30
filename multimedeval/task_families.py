@@ -556,7 +556,9 @@ class Segmentation(Benchmark):
                             pred_mask=pred,
                             gt_mask=gt,
                             dice_score=dice_similarity_coefficient,
-                            folderpath=f"seg_vis_{folder_timestamp}",
+                            folderpath=os.path.join(
+                                f"seg_vis_{folder_timestamp}", f"{self.modality}"
+                            ),
                         )
                     answers_log.append(
                         (text_answer, sample["labels"], dice_similarity_coefficient)
