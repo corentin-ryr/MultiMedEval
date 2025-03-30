@@ -518,6 +518,8 @@ class Segmentation(Benchmark):
         else:
             return metrics
 
+        folder_timestamp = datetime.now().strftime("%m%d%H")
+        path = os.makedirs(f"seg_vis_{folder_timestamp}", exist_ok=True)
         for label in labels_list:
             # predicted_answers = []
             # ground_truth = []
@@ -551,6 +553,7 @@ class Segmentation(Benchmark):
                             pred_mask=pred,
                             gt_mask=gt,
                             dice_score=dice_similarity_coefficient,
+                            folderpath=path,
                         )
                     answers_log.append(
                         (text_answer, sample["labels"], dice_similarity_coefficient)
@@ -612,7 +615,9 @@ class Segmentation(Benchmark):
         volume_intersect = (mask_gt & mask_pred).sum()
         return 2 * volume_intersect / volume_sum
 
-    def visualize_masks(self, image, true_label, pred_mask, gt_mask, dice_score):
+    def visualize_masks(
+        self, image, true_label, pred_mask, gt_mask, dice_score, folderpath
+    ):
         timestamp = datetime.now().strftime("%m-%d_%H:%M:%S")
 
         def overlay_masks(image, masks, colors):
@@ -649,7 +654,9 @@ class Segmentation(Benchmark):
 
         plt.tight_layout()
         plt.savefig(
-            f"pred_masks/{clear_label}_{timestamp}.png", bbox_inches="tight", dpi=300
+            os.path.join(folderpath, f"{clear_label}_{timestamp}.png"),
+            bbox_inches="tight",
+            dpi=300,
         )
 
 
