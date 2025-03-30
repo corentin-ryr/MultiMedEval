@@ -519,7 +519,7 @@ class Segmentation(Benchmark):
             return metrics
 
         folder_timestamp = datetime.now().strftime("%m%d%H")
-        path = os.makedirs(f"seg_vis_{folder_timestamp}", exist_ok=True)
+        os.makedirs(f"seg_vis_{folder_timestamp}", exist_ok=True)
         for label in labels_list:
             # predicted_answers = []
             # ground_truth = []
@@ -553,7 +553,7 @@ class Segmentation(Benchmark):
                             pred_mask=pred,
                             gt_mask=gt,
                             dice_score=dice_similarity_coefficient,
-                            folderpath=path,
+                            folderpath=f"seg_vis_{folder_timestamp}",
                         )
                     answers_log.append(
                         (text_answer, sample["labels"], dice_similarity_coefficient)
