@@ -16,12 +16,12 @@ import random
 
 NAME_TO_BIOMEDPARSE = {
     "PathBiomedParse": {"modality": "Pathology"},
-    "RadBiomedParse": {"modality": "X-Ray", "num_sample": 500},
+    "RadBiomedParse": {"modality": "X-Ray", "num_sample": 5},
     "EndoBiomedParse": {"modality": "Endoscopy", "num_sample": None},
     "DermaBiomedParse": {"modality": "Dermatology", "num_sample": None},
-    "MRI_FS_BiomedParse": {"modality": "MRI", "num_sample": 2000},
-    "MRI_HS_BiomedParse": {"modality": "MRI", "num_sample": 2000},
-    "CTBiomedParse": {"modality": "CT", "num_sample": 1000},
+    "MRI_FS_BiomedParse": {"modality": "MRI", "num_sample": 20},
+    "MRI_HS_BiomedParse": {"modality": "MRI", "num_sample": 20},
+    "CTBiomedParse": {"modality": "CT", "num_sample": 10},
 }
 
 
@@ -34,13 +34,13 @@ class BiomedParse(Segmentation):
         self.modality = NAME_TO_BIOMEDPARSE[biomedparse_name]["modality"]
         self.sample_size = NAME_TO_BIOMEDPARSE[biomedparse_name]["num_sample"]
         self.task_name = biomedparse_name
-
         self.dataset_file_names = None
 
     def setup(self):
         self.fewshot_counter = 0
         """Setup the BiomedParse Segmentation task."""
         self.path = self.engine.get_config()["biomedparse_dir"]
+        self.vis_sample_prob = self.engine.get_config()["vis_prob"]
 
         if self.path is None:
             raise ValueError(

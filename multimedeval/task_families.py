@@ -14,6 +14,11 @@ from torchmetrics.text import BLEUScore, ROUGEScore
 from torchmetrics.segmentation import GeneralizedDiceScore
 from sklearn.metrics import auc, f1_score, precision_score, accuracy_score, roc_curve
 
+import matplotlib.pyplot as plt
+from PIL import Image
+import matplotlib.patches as mpatches
+from datetime import datetime
+import random
 
 from multimedeval.report_comparison_utils import (
     compute_bertscore,
@@ -443,6 +448,7 @@ class Segmentation(Benchmark):
         self.task = "Segmentation"
         self.num_classes = 1
         self.path: Optional[os.PathLike] = None
+        self.vis_sample_prob = 0
 
     @abstractmethod
     def get_correct_answer(self, sample):
@@ -536,6 +542,16 @@ class Segmentation(Benchmark):
                     dice_similarity_coefficient = self.compute_dice_coefficient(
                         gt, pred
                     )
+
+                    if random.random() < self.vis_sample_prob:
+                        # Use random number [0,1] to control the number of vis, default 0
+                        self.visualize_masks(
+                            image=sample["abs_img_path"],
+                            true_label=sample["labels"],
+                            pred_mask=pred,
+                            gt_mask=gt,
+                            dice_score=dice_similarity_coefficient,
+                        )
                     answers_log.append(
                         (text_answer, sample["labels"], dice_similarity_coefficient)
                     )
@@ -574,7 +590,7 @@ class Segmentation(Benchmark):
                 len(dsc_list) - null_predictions, 1
             )
             metrics[f"sample_size"] = len(dsc_list)
-            # del predicted_answers, ground_truth
+
         return EvaluationOutput(metrics=metrics, answer_log=answers_log)
 
     def compute_dice_coefficient(self, mask_gt, mask_pred):
@@ -595,6 +611,46 @@ class Segmentation(Benchmark):
             return np.NaN
         volume_intersect = (mask_gt & mask_pred).sum()
         return 2 * volume_intersect / volume_sum
+
+    def visualize_masks(self, image, true_label, pred_mask, gt_mask, dice_score):
+        timestamp = datetime.now().strftime("%m-%d_%H:%M:%S")
+
+        def overlay_masks(image, masks, colors):
+            overlay = image.copy()
+            overlay = np.array(overlay, dtype=np.uint8)
+            for mask, color in zip(masks, colors):
+                overlay[mask > 0] = (
+                    overlay[mask > 0] * 0.4 + np.array(color) * 0.6
+                ).astype(np.uint8)
+            return Image.fromarray(overlay)
+
+        def generate_colors(n):
+            cmap = plt.get_cmap("tab10")
+            colors = [tuple(int(255 * val) for val in cmap(i)[:3]) for i in range(n)]
+            return colors
+
+        original_image = Image.open(image).convert("RGB")
+
+        colors = generate_colors(2)
+        pred_overlay = overlay_masks(original_image, [pred_mask], [colors[0]])
+        gt_overlay = overlay_masks(pred_overlay, [gt_mask], [colors[1]])
+
+        legend_patches = [
+            mpatches.Patch(color=np.array(color) / 255, label=prompt)
+            for color, prompt in zip(colors, ["pred_mask", "gt_mask"])
+        ]
+
+        clear_label = true_label.replace(" ", "_")
+        plt.figure(figsize=(5, 5))
+        plt.imshow(gt_overlay)
+        plt.axis("off")
+        plt.title(f"{true_label}-dice:{dice_score:.3f}")
+        plt.legend(handles=legend_patches, loc="upper right", fontsize="small")
+
+        plt.tight_layout()
+        plt.savefig(
+            f"pred_masks/{clear_label}_{timestamp}.png", bbox_inches="tight", dpi=300
+        )
 
 
 class ReportComparison(Benchmark):

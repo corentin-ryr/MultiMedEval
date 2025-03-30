@@ -98,6 +98,7 @@ class SetupParams:
         physionet_username: The username for the physionet dataset.
         physionet_password: The password for the physionet dataset.
         hf_token:The hugging face User Access Token to authenticate to the Hub.
+        vis_prob:Probalbility to create visualizations, default to 0.
     """
 
     medqa_dir: Optional[Union[str, os.PathLike]] = None
@@ -133,6 +134,7 @@ class SetupParams:
     physionet_password: Optional[str] = None
     hf_token: Optional[str] = None
     device: Optional[str] = "cuda"
+    vis_prob: Optional[float] = 0.0
 
     def __post_init__(self):
         """Checking that the device is available."""
