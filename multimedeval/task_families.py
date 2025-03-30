@@ -519,7 +519,10 @@ class Segmentation(Benchmark):
             return metrics
 
         folder_timestamp = datetime.now().strftime("%m%d%H")
-        os.makedirs(f"seg_vis_{folder_timestamp}", exist_ok=True)
+        os.makedirs(
+            os.path.join(f"seg_vis_{folder_timestamp}", f"{self.modality}"),
+            exist_ok=True,
+        )
         for label in labels_list:
             # predicted_answers = []
             # ground_truth = []
@@ -658,6 +661,8 @@ class Segmentation(Benchmark):
             bbox_inches="tight",
             dpi=300,
         )
+        plt.close()
+        original_image.close()
 
 
 class ReportComparison(Benchmark):
