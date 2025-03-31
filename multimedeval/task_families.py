@@ -519,10 +519,11 @@ class Segmentation(Benchmark):
             return metrics
 
         folder_timestamp = datetime.now().strftime("%m%d%H")
-        os.makedirs(
-            os.path.join(f"seg_vis_{folder_timestamp}", f"{self.modality}"),
-            exist_ok=True,
-        )
+        if self.vis_sample_prob > 0:
+            os.makedirs(
+                os.path.join(f"seg_vis_{folder_timestamp}", f"{self.modality}"),
+                exist_ok=True,
+            )
         for label in labels_list:
             # predicted_answers = []
             # ground_truth = []
