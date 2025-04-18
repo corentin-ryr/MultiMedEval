@@ -324,7 +324,7 @@ class MultiMedEval:
                 f"{self.eval_params.run_name}/results.json", "r", encoding="utf-8"
             ) as f:
                 metrics = json.load(f)
-        except IOError:
+        except (IOError, ValueError) as e:
             metrics = {}
 
         metrics.update(results)
