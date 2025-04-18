@@ -553,7 +553,7 @@ class Segmentation(Benchmark):
                         # Use random number [0,1] to control the number of vis, default 0
                         self.visualize_masks(
                             image=sample["abs_img_path"],
-                            true_label=sample["labels"],
+                            true_label=sample["raw_label"],
                             pred_mask=pred,
                             gt_mask=gt,
                             dice_score=dice_similarity_coefficient,
@@ -562,8 +562,9 @@ class Segmentation(Benchmark):
                             ),
                         )
                     answers_log.append(
-                        (text_answer, sample["labels"], dice_similarity_coefficient)
+                        (text_answer, sample["raw_label"], dice_similarity_coefficient)
                     )
+
                     # print(dice_similarity_coefficient)
                     dsc_list.append(dice_similarity_coefficient)
                     # predicted_answers.append(pred)
@@ -666,8 +667,7 @@ class Segmentation(Benchmark):
         )
         plt.close()
         original_image.close()
-
-
+    
 class ReportComparison(Benchmark):
     """A benchmark for report comparison tasks."""
 

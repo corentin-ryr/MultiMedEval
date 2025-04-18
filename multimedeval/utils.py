@@ -18,7 +18,7 @@ from datasets import Dataset
 from tqdm import tqdm
 from PIL.Image import Image
 from nibabel.spatialimages import SpatialImage
-
+import pandas as pd
 
 if TYPE_CHECKING:
     from multimedeval import MultiMedEval
@@ -880,3 +880,50 @@ def clean_str(token):
     token = " ".join(_token)
     token = token.replace(",", "")
     return token
+
+
+def get_stats_seg(input_folder):
+    all_stats = []
+
+    for file_name in os.listdir(input_folder):
+        if file_name.endswith(".csv"):
+            file_path = os.path.join(input_folder, file_name)
+
+            try:
+                df = pd.read_csv(file_path)
+
+                # Skip files without the required DSC column
+                if "dice score coefficient (dsc)" not in df.columns:
+                    continue
+
+                df["dice score coefficient (dsc)"] = pd.to_numeric(
+                    df["dice score coefficient (dsc)"], errors="coerce"
+                )
+                df = df.dropna(subset=["dice score coefficient (dsc)"])
+
+                grouped = (
+                    df.groupby("true label")["dice score coefficient (dsc)"]
+                    .agg(
+                        count="count",
+                        mean="mean",
+                        median="median",
+                        std="std",
+                        min="min",
+                        max="max",
+                    )
+                    .reset_index()
+                )
+
+                grouped["source_file"] = file_name  # Add file name column
+                all_stats.append(grouped)
+
+            except Exception as e:
+                print(f"Failed to process {file_name}: {e}")
+
+    output_file = os.path.join(input_folder, "aggr_stats.csv")
+    # Combine all results
+    if all_stats:
+        final_df = pd.concat(all_stats, ignore_index=True)
+        final_df.to_csv(output_file, index=False)
+    else:
+        print("No CSV files were processed.")

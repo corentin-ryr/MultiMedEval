@@ -65,7 +65,7 @@ class BiomedParse(Segmentation):
         For the given dataset, convert the data into pd.DataFrame(label, image_path, seg_path)
 
         Return:
-            pd.DataFrame[labels, abs_img_path, abs_seg_path].
+            pd.DataFrame[labels, abs_img_path, abs_seg_path, raw_label].
         """
         img_folder, seg_folder, config = None, None, None
         data_folder = os.path.join(self.path, dataset)
@@ -85,13 +85,14 @@ class BiomedParse(Segmentation):
 
             # BioMedParse provides n different prompts, here a random one is selected
             df["labels"] = df["sentences"].apply(lambda x: random.choice(x)["sent"])
+            df["raw_label"] = df["sentences"].apply(lambda x: random.choice(x)["raw"])
             df["abs_seg_path"] = df["mask_file"].apply(
                 lambda x: os.path.join(data_folder, seg_folder, x)
             )
             df["abs_img_path"] = df["file_name"].apply(
                 lambda x: os.path.join(data_folder, img_folder, x)
             )
-            df_selected = df[["labels", "abs_img_path", "abs_seg_path"]]
+            df_selected = df[["labels", "abs_img_path", "abs_seg_path", "raw_label"]]
             return df_selected
 
     def get_predicted_answer(self, answer: Union[List[np.array]]):
